@@ -302,9 +302,21 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
           type="text" list="tx-desc-history" placeholder={tipoConfig.label}
           value={form.descricao}
           onChange={e => {
-            set('descricao', e.target.value);
+            const val = e.target.value;
+            set('descricao', val);
             // Reset escolha de duplicata ao alterar descrição
             if (dupChoice !== null) { setDupChoice(null); setOverwriteTarget(null); }
+            
+            // Autocompletar Inteligente
+            if (!form.categoria && val.trim().length >= 3) {
+              const desc = val.trim().toLowerCase();
+              const match = sortedHistory.find(
+                tx => tx.descricao?.trim().toLowerCase() === desc && tx.categoria && TIPOS_COM_CATEGORIA.includes(tx.tipo)
+              );
+              if (match) {
+                setForm(f => ({ ...f, categoria: match.categoria }));
+              }
+            }
           }}
           maxLength={60} autoComplete="off"
         />
@@ -605,7 +617,26 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
               <input
                 type="text" list="tx-item-desc-history" placeholder="Descrição"
                 value={novoItem.descricao}
-                onChange={e => setNovoItem(i => ({ ...i, descricao: e.target.value }))}
+                onChange={e => {
+                  const val = e.target.value;
+                  setNovoItem(i => {
+                    const next = { ...i, descricao: val };
+                    // Autocompletar Inteligente para itens
+                    if (!next.categoria && val.trim().length >= 3) {
+                      const desc = val.trim().toLowerCase();
+                      for (const tx of sortedHistory) {
+                        if (tx.itens?.length) {
+                          const match = tx.itens.find(it => it.descricao?.trim().toLowerCase() === desc && it.categoria);
+                          if (match) {
+                            next.categoria = match.categoria;
+                            break;
+                          }
+                        }
+                      }
+                    }
+                    return next;
+                  });
+                }}
                 maxLength={60} autoComplete="off" style={{ flex: 2 }}
               />
             </div>

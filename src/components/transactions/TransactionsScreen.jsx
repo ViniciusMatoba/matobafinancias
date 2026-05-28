@@ -40,7 +40,15 @@ export default function TransactionsScreen({ transactions, onEdit, onDelete }) {
       .flatMap(tx => expandOccurrences(tx, from, to).map(o => ({ ...o, tx })))
       .filter(o => {
         if (filterTipo && o.tx.tipo !== filterTipo) return false;
-        if (search && !o.tx.descricao?.toLowerCase().includes(search.toLowerCase())) return false;
+        if (search) {
+          const s = search.toLowerCase();
+          const matchDesc = o.tx.descricao?.toLowerCase().includes(s);
+          const matchCat = o.tx.categoria?.toLowerCase().includes(s);
+          const matchItems = o.tx.itens?.some(item => 
+            item.descricao?.toLowerCase().includes(s) || item.categoria?.toLowerCase().includes(s)
+          );
+          if (!matchDesc && !matchCat && !matchItems) return false;
+        }
         return true;
       })
       .sort((a, b) => a.date.localeCompare(b.date));
