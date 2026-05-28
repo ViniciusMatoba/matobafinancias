@@ -13,6 +13,37 @@ export default function SettingsScreen({ user, cards, transactions, config, onSa
   const [telegramOpen, setTelegramOpen] = useState(false);
   const { prompt: deferredPrompt, handleInstall } = useInstallPrompt();
 
+  const handleExportCSV = () => {
+    let csv = 'Data,Tipo,Categoria,Descricao,Valor,Frequencia,Parcela,CartaoCredito\n';
+
+    transactions.forEach(tx => {
+      if (tx.tipo === 'cartao' && tx.itens && tx.itens.length > 0) {
+        tx.itens.forEach(item => {
+           const data = item.dataCompra || tx.dataInicio;
+           const valor = (Number(item.valor) || 0).toFixed(2);
+           const parc = item.isParcelado ? `${item.parcelaAtual}/${item.totalParcelas}` : '-';
+           const desc = `"${(item.descricao || tx.descricao || '').replace(/"/g, '""')}"`;
+           csv += `${data},${tx.tipo},${item.categoria || tx.categoria || ''},${desc},${valor},${tx.frequencia},${parc},Sim\n`;
+        });
+      } else {
+         const data = tx.dataInicio || '';
+         const valor = (Number(tx.valor) || 0).toFixed(2);
+         const parc = tx.frequencia === 'parcelado' ? `${tx.parcelaAtual}/${tx.totalParcelas}` : '-';
+         const desc = `"${(tx.descricao || '').replace(/"/g, '""')}"`;
+         csv += `${data},${tx.tipo},${tx.categoria || ''},${desc},${valor},${tx.frequencia},${parc},Nao\n`;
+      }
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `matoba_financas_export_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
       <div style={{ padding: '20px 20px 0' }}>
@@ -200,6 +231,20 @@ export default function SettingsScreen({ user, cards, transactions, config, onSa
             Instalar Aplicativo (App Nativo)
           </button>
         )}
+
+        {/* Exportar Excel */}
+        <button
+          onClick={handleExportCSV}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '14px', marginBottom: 16, borderRadius: 14,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          <Download size={18} />
+          Exportar Dados (Excel CSV)
+        </button>
 
         {/* Nota de segurança */}
         <div style={{
