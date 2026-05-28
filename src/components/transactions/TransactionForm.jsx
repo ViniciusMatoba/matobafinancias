@@ -37,12 +37,13 @@ const EMPTY = {
   dataFim: '',
   cartaoId: '',
   carteiraId: '',
+  metaId: '',
   categoria: '',
 };
 
 const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '' };
 
-export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, transactions = [] }) {
+export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [] }) {
   const [form, setForm] = useState(initial ? {
     ...EMPTY, ...initial,
     // diário: stored value is valor/30, so reconstitute the monthly amount for editing
@@ -266,6 +267,10 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
 
     if (form.tipo !== 'cartao' && form.carteiraId) {
       data.carteiraId = form.carteiraId;
+    }
+
+    if (form.tipo === 'investimento' && form.metaId) {
+      data.metaId = form.metaId;
     }
 
     // Subscrever (substituir) lançamento similar existente
@@ -536,6 +541,19 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
           <select value={form.carteiraId} onChange={e => set('carteiraId', e.target.value)}>
             <option value="">Saldo Global (Não vincular)</option>
             {wallets.map(w => <option key={w.id} value={w.id}>{w.nome}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* Metas selector (Apenas Investimento) */}
+      {form.tipo === 'investimento' && goals?.length > 0 && (
+        <div>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+            Destinar a uma Meta (Caixinha) <span style={{ color: 'var(--text-muted)' }}>(opcional)</span>
+          </label>
+          <select value={form.metaId} onChange={e => set('metaId', e.target.value)}>
+            <option value="">Não vincular a meta</option>
+            {goals.map(g => <option key={g.id} value={g.id}>{g.nome}</option>)}
           </select>
         </div>
       )}

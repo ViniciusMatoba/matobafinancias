@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
-import { expandOccurrences, calcSaldo } from '../../utils/projectionCalc';
+import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { SARDINHA_CATEGORIES } from '../../utils/categories';
 import BudgetSummaryCard from './BudgetSummaryCard';
 
@@ -82,6 +82,12 @@ export default function HomeScreen({ transactions, cards, wallets, metaMensal, o
       return vencDate >= today && vencDate <= weekTo;
     });
   }, [cards, today, isToday]);
+
+  // Cálculo de Sobra Segura (apenas quando é "Hoje")
+  const sobraSegura = useMemo(() => {
+    if (!isToday) return null;
+    return calcularSobraSegura(transactions, wallets, 45); // Verifica os próximos 45 dias
+  }, [transactions, wallets, isToday]);
 
   const saldoPositivo = saldoAcumulado >= 0;
   const summaryCards = [
@@ -190,6 +196,42 @@ export default function HomeScreen({ transactions, cards, wallets, metaMensal, o
           </div>
         )}
       </div>
+
+      {/* Banner de Sobra Segura Inteligente */}
+      {sobraSegura && sobraSegura.sobra > 0 && (
+        <div style={{ padding: '16px 20px 0' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            borderRadius: 16, padding: '16px', position: 'relative', overflow: 'hidden',
+            boxShadow: '0 8px 24px rgba(16,185,129,0.3)'
+          }}>
+            <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.1, transform: 'rotate(15deg)' }}>
+              <Target size={120} color="#fff" />
+            </div>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span style={{ fontSize: 20 }}>🎉</span>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#fff' }}>Dinheiro sobrando!</h3>
+              </div>
+              <p style={{ margin: '0 0 14px', fontSize: 13, color: 'rgba(255,255,255,0.9)', lineHeight: 1.5 }}>
+                Avaliamos suas despesas até <strong>{sobraSegura.dataVerificada.slice(8,10)}/{sobraSegura.dataVerificada.slice(5,7)}</strong> e você tem 
+                <strong style={{ fontSize: 15, marginLeft: 4 }}>{formatBRL(sobraSegura.sobra)}</strong> livres. 
+                <br/>Você pode guardar esse valor agora sem comprometer seu orçamento diário nem suas faturas futuras.
+              </p>
+              <button 
+                onClick={() => onNavigate('goals')} 
+                style={{ 
+                  background: '#fff', color: '#059669', border: 'none', 
+                  padding: '10px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700,
+                  display: 'flex', alignItems: 'center', gap: 6
+                }}
+              >
+                <PiggyBank size={16} /> Guardar na Caixinha
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Alertas de cartão */}
       {cardAlerts.length > 0 && (

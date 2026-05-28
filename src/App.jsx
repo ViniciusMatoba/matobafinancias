@@ -4,6 +4,7 @@ import { useAuth } from './hooks/useAuth';
 import { useTransactions } from './hooks/useTransactions';
 import { useCards } from './hooks/useCards';
 import { useWallets } from './hooks/useWallets';
+import { useGoals } from './hooks/useGoals';
 import { useConfig } from './hooks/useConfig';
 import { useToast } from './components/shared/Toast';
 import AuthScreen from './components/auth/AuthScreen';
@@ -12,6 +13,7 @@ import SetupGoalsScreen from './components/onboarding/SetupGoalsScreen';
 import HomeScreen from './components/home/HomeScreen';
 import TransactionsScreen from './components/transactions/TransactionsScreen';
 import ProjectionScreen from './components/projection/ProjectionScreen';
+import GoalsScreen from './components/goals/GoalsScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
 import BottomNav from './components/shared/BottomNav';
 import Modal from './components/shared/Modal';
@@ -23,6 +25,7 @@ export default function App() {
   const { transactions, add, update, remove } = useTransactions(user?.uid);
   const { cards, add: addCard, update: updateCard, remove: removeCard } = useCards(user?.uid);
   const { wallets, add: addWallet, update: updateWallet, remove: removeWallet } = useWallets(user?.uid);
+  const { goals, add: addGoal, update: updateGoal, remove: removeGoal } = useGoals(user?.uid);
   const { config, configLoading, saveConfig } = useConfig(user?.uid);
   const { showToast, ToastNode } = useToast();
 
@@ -184,6 +187,19 @@ export default function App() {
           onDelete={handleDelete}
         />
       )}
+      {view === 'goals' && (
+        <GoalsScreen
+          goals={goals}
+          transactions={transactions}
+          onAddGoal={addGoal}
+          onUpdateGoal={updateGoal}
+          onRemoveGoal={removeGoal}
+          onAddTransaction={(prefill) => {
+            setEditing(prefill);
+            setFormOpen(true);
+          }}
+        />
+      )}
       {view === 'projection' && (
         <ProjectionScreen
           transactions={transactions}
@@ -213,13 +229,14 @@ export default function App() {
 
       <Modal
         open={formOpen}
-        onClose={() => { setFormOpen(false); setEditing(null); }}
-        title={editing ? 'Editar lançamento' : 'Novo lançamento'}
+        onClose={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
+        title={editing?.id ? 'Editar lançamento' : 'Novo lançamento'}
       >
         <TransactionForm
           initial={editing}
           cards={cards}
           wallets={wallets}
+          goals={goals}
           transactions={transactions}
           onSave={handleSave}
           onCancel={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}

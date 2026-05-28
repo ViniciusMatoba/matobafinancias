@@ -126,3 +126,27 @@ export function calcSaldo(transactions, from, to) {
   const occs = transactions.flatMap(tx => expandOccurrences(tx, from, to));
   return occs.reduce((acc, o) => acc + o.sinal * o.valor, 0);
 }
+
+/**
+ * Calcula a sobra segura (Leftover Balance) projetando o saldo futuro.
+ * Retorna { sobra, dataVerificada }
+ */
+export function calcularSobraSegura(transactions, wallets, days = 45) {
+  const from = todayStr();
+  const to = addDays(from, days);
+  
+  const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
+  const saldoAtual = calcSaldo(transactions, '2020-01-01', addDays(from, -1)) + wInitials;
+
+  const dailyProj = buildDailyProjection(transactions, from, to, saldoAtual);
+  
+  let minSaldo = saldoAtual;
+  for (const day of dailyProj) {
+    if (day.saldo < minSaldo) minSaldo = day.saldo;
+  }
+
+  return {
+    sobra: minSaldo > 0 ? minSaldo : 0,
+    dataVerificada: to
+  };
+}

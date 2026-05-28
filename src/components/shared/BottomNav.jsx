@@ -1,11 +1,12 @@
-import { Home, List, PlusCircle, TrendingUp, Settings } from 'lucide-react';
+import { Home, List, PlusCircle, TrendingUp, Settings, Target } from 'lucide-react';
 
 const TABS = [
   { id: 'home',       icon: Home,        label: 'Início'    },
-  { id: 'history',   icon: List,        label: 'Histórico' },
+  { id: 'history',    icon: List,        label: 'Histórico' },
+  { id: 'goals',      icon: Target,      label: 'Metas'     },
   { id: 'add',        icon: PlusCircle,  label: null        },
   { id: 'projection', icon: TrendingUp,  label: 'Projeção'  },
-  { id: 'settings',  icon: Settings,    label: 'Config'    },
+  { id: 'settings',   icon: Settings,    label: 'Config'    },
 ];
 
 export default function BottomNav({ view, onNavigate }) {
