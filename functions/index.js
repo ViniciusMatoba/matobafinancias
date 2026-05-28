@@ -519,14 +519,22 @@ exports.dailyNotifications = onSchedule(
   }
 );
 
-// ─── EXPORT 3: Helper para registrar o webhook no Telegram (chamar 1x) ────────
+// ─── EXPORT 3: Status e configuração do webhook ───────────────────────────────
+// GET  → retorna informações atuais do webhook registrado no Telegram
+// POST → registra a URL passada no body { url: "https://..." }
 exports.setTelegramWebhook = onRequest(
   { region: REGION },
   async (req, res) => {
-    const webhookUrl =
-      `https://${REGION}-${PROJECT_ID}.cloudfunctions.net/telegramWebhook`;
-
-    const result = await tgFetch('setWebhook', { url: webhookUrl });
-    res.json({ webhookUrl, result });
+    if (req.method === 'POST' && req.body?.url) {
+      const result = await tgFetch('setWebhook', {
+        url:             req.body.url,
+        allowed_updates: ['message'],
+      });
+      res.json({ registered: req.body.url, result });
+    } else {
+      // GET: retorna status atual
+      const info = await tgFetch('getWebhookInfo', {});
+      res.json(info);
+    }
   }
 );
