@@ -11,6 +11,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm ci
+      - name: Create Env File
+        run: |
+          echo "VITE_FIREBASE_API_KEY=AIzaSyC_R8dD1SFnCy0aJhsM1zafJK_9AVLo5LM" > .env
+          echo "VITE_FIREBASE_AUTH_DOMAIN=matobafinancas.firebaseapp.com" >> .env
+          echo "VITE_FIREBASE_PROJECT_ID=matobafinancas" >> .env
+          echo "VITE_FIREBASE_STORAGE_BUCKET=matobafinancas.firebasestorage.app" >> .env
+          echo "VITE_FIREBASE_MESSAGING_SENDER_ID=225695230271" >> .env
+          echo "VITE_FIREBASE_APP_ID=1:225695230271:web:a0d66a56b1515738810b8a" >> .env
+          echo "VITE_FIREBASE_MEASUREMENT_ID=G-D33Q2NG71V" >> .env
       - run: npm run build
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
