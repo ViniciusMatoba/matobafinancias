@@ -67,6 +67,16 @@ function formatBRL(n) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0);
 }
 
+// Barra de progresso ASCII — ex: [████████░░] 82%
+function barra(valor, maximo, largura = 10) {
+  const pct  = maximo > 0 ? valor / maximo : 0;
+  const fill = Math.round(Math.min(pct, 1) * largura);
+  const bar  = '█'.repeat(fill) + '░'.repeat(Math.max(0, largura - fill));
+  return { bar, pct: maximo > 0 ? Math.round(pct * 100) : 0 };
+}
+
+const APP_URL = 'https://viniciusmatoba.github.io/matobafinancias/';
+
 // ─── Cálculo de saldo simples ─────────────────────────────────────────────────
 const TYPE_SIGN = { entrada: +1, saida: -1, diario: -1, cartao: -1, investimento: -1 };
 
@@ -344,54 +354,327 @@ async function handleCartoes(chatId, uid) {
   return sendMessage(chatId, text.trim());
 }
 
-async function handleAdicionar(chatId, uid, args) {
-  // /adicionar 150,00 Almoço restaurante
-  const parts = args.trim().split(/\s+/);
-  if (parts.length < 2) {
+// Mensagem padrão quando usuário tenta adicionar/editar via bot
+function msgSomenteApp(chatId) {
+  return sendMessage(chatId,
+    `📱 *Use o aplicativo para isso!*\n\n` +
+    `Para adicionar, editar ou excluir lançamentos acesse:\n` +
+    `👉 ${APP_URL}\n\n` +
+    `O bot é voltado apenas para *consultas e alertas*.\n` +
+    `Use /ajuda para ver o que está disponível aqui.`
+  );
+}
+
+// ─── Handlers de consulta ─────────────────────────────────────────────────────
+
+async function handleHoje(chatId, uid) {
+  const hoje = todayStrBrasilia();
+  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const lancamentos = txs.filter(tx =>
+    tx.dataInicio === hoje && tx.frequencia === 'unico'
+  ).sort((a, b) => (a.descricao || '').localeCompare(b.descricao || ''));
+
+  const label = hoje.split('-').reverse().join('/');
+  let entradas = 0, saidas = 0;
+  let text = `📅 *Hoje — ${label}*\n\n`;
+
+  if (lancamentos.length === 0) {
+    text += '_Nenhum lançamento registrado hoje._\n\n';
+  } else {
+    for (const tx of lancamentos) {
+      const v    = Number(tx.valor) || 0;
+      const sign = tx.tipo === 'entrada' ? '+' : '-';
+      const icon = tx.tipo === 'entrada' ? '✅' : '❌';
+      text += `${icon} ${tx.descricao || tx.tipo}: *${sign}${formatBRL(v)}*\n`;
+      if (tx.tipo === 'entrada') entradas += v; else saidas += v;
+    }
+    text += `\n─────────────────\n`;
+    if (entradas > 0) text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
+    if (saidas   > 0) text += `❌ Saídas:   *${formatBRL(saidas)}*\n`;
+    text += `💰 Saldo do dia: *${formatBRL(entradas - saidas)}*`;
+  }
+
+  return sendMessage(chatId, text.trim());
+}
+
+async function handleHistorico(chatId, uid) {
+  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  // Mostra apenas lançamentos únicos/parcelados (os recorrentes são regras, não eventos)
+  const individuais = txs
+    .filter(tx => tx.frequencia === 'unico' || tx.frequencia === 'parcelado')
+    .sort((a, b) => b.dataInicio > a.dataInicio ? 1 : b.dataInicio < a.dataInicio ? -1 : 0)
+    .slice(0, 10);
+
+  if (individuais.length === 0) {
+    return sendMessage(chatId, '📋 Nenhum lançamento encontrado.');
+  }
+
+  let text = `📋 *Últimos ${individuais.length} lançamentos*\n\n`;
+  for (const tx of individuais) {
+    const v    = Number(tx.valor) || 0;
+    const sign = tx.tipo === 'entrada' ? '+' : '-';
+    const icon = tx.tipo === 'entrada' ? '✅' : '❌';
+    const data = tx.dataInicio.split('-').reverse().join('/');
+    const desc = tx.descricao || tx.tipo;
+    const parc = tx.frequencia === 'parcelado' ? ` (${tx.parcelaAtual}/${tx.totalParcelas}x)` : '';
+    text += `${icon} ${data} · ${desc}${parc}: *${sign}${formatBRL(v)}*\n`;
+  }
+
+  return sendMessage(chatId, text.trim());
+}
+
+async function handleSemana(chatId, uid) {
+  const agora   = getNowBrasilia();
+  const hoje    = dateStrFromDate(agora);
+  const d7      = new Date(agora); d7.setDate(agora.getDate() - 6);
+  const fromStr = dateStrFromDate(d7);
+
+  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  let entradas = 0, saidas = 0;
+  const byDay = {};
+
+  for (const tx of txs) {
+    if (!tx.dataInicio || tx.dataInicio < fromStr || tx.dataInicio > hoje) continue;
+    if (tx.frequencia !== 'unico') continue;
+    const v = Number(tx.valor) || 0;
+    if (!byDay[tx.dataInicio]) byDay[tx.dataInicio] = { e: 0, s: 0 };
+    if (tx.tipo === 'entrada') { entradas += v; byDay[tx.dataInicio].e += v; }
+    else                       { saidas   += v; byDay[tx.dataInicio].s += v; }
+  }
+
+  const maxSaida = Math.max(...Object.values(byDay).map(d => d.s), 1);
+
+  let text = `📆 *Resumo dos últimos 7 dias*\n\n`;
+  for (let i = 6; i >= 0; i--) {
+    const dt  = new Date(agora); dt.setDate(agora.getDate() - i);
+    const ds  = dateStrFromDate(dt);
+    const d   = byDay[ds] || { e: 0, s: 0 };
+    const { bar } = barra(d.s, maxSaida, 8);
+    const label   = ds.slice(8, 10) + '/' + ds.slice(5, 7);
+    const marker  = ds === hoje ? '›' : ' ';
+    text += `${marker} ${label} \`[${bar}]\` ${d.s > 0 ? formatBRL(d.s) : '–'}\n`;
+  }
+
+  text += `\n─────────────────\n`;
+  text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
+  text += `❌ Saídas:   *${formatBRL(saidas)}*\n`;
+  text += `💰 Saldo:    *${formatBRL(entradas - saidas)}*`;
+
+  return sendMessage(chatId, text.trim());
+}
+
+async function handleMes(chatId, uid, args) {
+  const agora = getNowBrasilia();
+  let year  = agora.getFullYear();
+  let month = agora.getMonth() + 1;
+
+  if (args) {
+    const n = parseInt(args.trim());
+    if (n >= 1 && n <= 12) month = n;
+  }
+
+  const mesStr  = `${year}-${String(month).padStart(2, '0')}`;
+  const from    = `${mesStr}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to      = `${mesStr}-${String(lastDay).padStart(2, '0')}`;
+
+  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  let entradas = 0, saidas = 0;
+  for (const tx of txs) {
+    if (!tx.dataInicio || tx.dataInicio < from || tx.dataInicio > to) continue;
+    if (tx.frequencia !== 'unico' && tx.frequencia !== 'parcelado') continue;
+    const v = Number(tx.valor) || 0;
+    if (tx.tipo === 'entrada') entradas += v; else saidas += v;
+  }
+
+  const MESES = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const nomeMes = MESES[month];
+  const saldo   = entradas - saidas;
+
+  let text = `📊 *${nomeMes} ${year}*\n\n`;
+  text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
+  text += `❌ Saídas:   *${formatBRL(saidas)}*\n`;
+  text += `💰 Saldo:    *${formatBRL(saldo)}*\n\n`;
+  text += `_Use /categoria para ver a divisão por categoria._`;
+
+  return sendMessage(chatId, text.trim());
+}
+
+async function handleCategoria(chatId, uid) {
+  const agora = getNowBrasilia();
+  const mesStr = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
+
+  const configDoc = await db.collection('config').doc(uid).get();
+  const config    = configDoc.exists ? configDoc.data() : {};
+  const renda     = config.rendaMensal || 0;
+  const pcts      = config.budgetPcts  || {};
+
+  const txSnap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs    = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const spent  = computeSpentByCategory(txs, mesStr);
+
+  const MESES = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const nomeMes = MESES[agora.getMonth() + 1];
+
+  const ICONS = {
+    liberdade: '💎', custos_fixos: '🏠', conforto: '🛋',
+    metas: '🎯', prazeres: '🎉', conhecimento: '📚',
+  };
+  const LABELS = {
+    liberdade: 'Liberdade', custos_fixos: 'Custos Fixos', conforto: 'Conforto',
+    metas: 'Metas', prazeres: 'Prazeres', conhecimento: 'Conhecimento',
+  };
+
+  let text = `📊 *Orçamento — ${nomeMes}*\n\n`;
+
+  for (const catId of CATEGORY_ORDER) {
+    const budget = renda > 0 ? (renda * (Number(pcts[catId]) || 0)) / 100 : 0;
+    const s      = spent[catId] || 0;
+    const icon   = ICONS[catId] || '•';
+    const label  = LABELS[catId] || catId;
+
+    if (budget > 0) {
+      const { bar, pct } = barra(s, budget);
+      const status = pct > 100 ? ' ⚠️' : pct >= 80 ? ' ❕' : '';
+      text += `${icon} *${label}*${status}\n`;
+      text += `\`[${bar}] ${pct}%\`  ${formatBRL(s)} de ${formatBRL(budget)}\n\n`;
+    } else {
+      text += `${icon} *${label}*: ${formatBRL(s)}\n\n`;
+    }
+  }
+
+  if (renda === 0) {
+    text += `_Configure sua renda no app para ver as barras de progresso._`;
+  }
+
+  return sendMessage(chatId, text.trim());
+}
+
+async function handleMeta(chatId, uid) {
+  const agora = getNowBrasilia();
+  const mesStr = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
+
+  const configDoc = await db.collection('config').doc(uid).get();
+  const config    = configDoc.exists ? configDoc.data() : {};
+  const renda     = config.rendaMensal || 0;
+  const pcts      = config.budgetPcts  || {};
+
+  if (renda <= 0) {
     return sendMessage(chatId,
-      '❌ Formato: `/adicionar <valor> <descrição>`\n' +
-      'Exemplo: `/adicionar 150 Almoço`'
+      '🎯 Configure sua renda no aplicativo para acompanhar as metas.\n\n' +
+      `👉 ${APP_URL}`
     );
   }
 
-  const valorStr  = parts[0].replace(',', '.');
-  const valor     = parseFloat(valorStr);
-  if (!valor || isNaN(valor)) {
-    return sendMessage(chatId, '❌ Valor inválido. Exemplo: `/adicionar 150,00 Almoço`');
+  const txSnap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs    = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const spent  = computeSpentByCategory(txs, mesStr);
+
+  const diasNoMes  = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).getDate();
+  const diaAtual   = agora.getDate();
+  const progMes    = (diaAtual / diasNoMes) * 100; // % do mês que já passou
+
+  const MESES = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const LABELS = {
+    liberdade: '💎 Liberdade', custos_fixos: '🏠 Custos Fixos', conforto: '🛋 Conforto',
+    metas: '🎯 Metas', prazeres: '🎉 Prazeres', conhecimento: '📚 Conhecimento',
+  };
+
+  let text = `🎯 *Status das Metas — ${MESES[agora.getMonth()+1]}*\n`;
+  text += `_Mês ${Math.round(progMes)}% concluído (dia ${diaAtual}/${diasNoMes})_\n\n`;
+
+  for (const catId of CATEGORY_ORDER) {
+    const budget = (renda * (Number(pcts[catId]) || 0)) / 100;
+    if (budget <= 0) continue;
+    const s      = spent[catId] || 0;
+    const restante = budget - s;
+    const pct    = Math.round((s / budget) * 100);
+    const label  = LABELS[catId];
+
+    let status;
+    if (pct > 100)       status = `🔴 Estourou em ${formatBRL(-restante)}`;
+    else if (pct >= 80)  status = `⚠️ Restam apenas ${formatBRL(restante)}`;
+    else if (pct >= progMes) status = `✅ No ritmo — restam ${formatBRL(restante)}`;
+    else                 status = `✅ Restam ${formatBRL(restante)}`;
+
+    text += `*${label}*\n${status} _(${pct}% usado)_\n\n`;
   }
 
-  const descricao = parts.slice(1).join(' ');
-  const today     = todayStrBrasilia();
+  return sendMessage(chatId, text.trim());
+}
 
-  await db.collection('transactions').doc(uid).collection('entries').add({
-    tipo:       'saida',
-    descricao,
-    valor,
-    dataInicio: today,
-    frequencia: 'unico',
-    categoria:  null,
-    criadoVia:  'telegram',
-    criadoEm:   admin.firestore.FieldValue.serverTimestamp(),
-  });
+async function handleProjecao(chatId, uid) {
+  const agora = getNowBrasilia();
+  const hoje  = dateStrFromDate(agora);
 
-  return sendMessage(chatId,
-    `✅ *Lançamento adicionado!*\n` +
-    `• Descrição: ${descricao}\n` +
-    `• Valor: ${formatBRL(valor)}\n` +
-    `• Data: ${today.split('-').reverse().join('/')}`
-  );
+  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const saldoHoje = calcSaldoSimples(txs, hoje);
+
+  // Saldo mínimo dos próximos 7 dias (para escalar a barra)
+  const saldos = [];
+  for (let i = 1; i <= 7; i++) {
+    const dt  = new Date(agora); dt.setDate(agora.getDate() + i);
+    saldos.push({ dt, saldo: calcSaldoSimples(txs, dateStrFromDate(dt)) });
+  }
+  const minSaldo = Math.min(saldoHoje, ...saldos.map(x => x.saldo));
+  const maxSaldo = Math.max(saldoHoje, ...saldos.map(x => x.saldo));
+  const escala   = Math.max(maxSaldo - minSaldo, 1);
+
+  let text = `📈 *Projeção — próximos 7 dias*\n\n`;
+  text += `💰 Hoje: *${formatBRL(saldoHoje)}*\n\n`;
+
+  const DIAS_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  for (const { dt, saldo } of saldos) {
+    const ds     = dateStrFromDate(dt);
+    const label  = `${DIAS_PT[dt.getDay()]} ${ds.slice(8, 10)}/${ds.slice(5, 7)}`;
+    const pos    = saldo - minSaldo;
+    const { bar } = barra(pos, escala, 8);
+    const icon   = saldo < 0 ? '🔴' : saldo < saldoHoje * 0.5 ? '⚠️' : '✅';
+    text += `${icon} ${label} \`[${bar}]\`\n    *${formatBRL(saldo)}*\n`;
+  }
+
+  if (minSaldo < 0) {
+    text += `\n⚠️ _Saldo negativo previsto no período!_`;
+  }
+
+  return sendMessage(chatId, text.trim());
 }
 
 async function handleAjuda(chatId) {
   return sendMessage(chatId,
-    `🤖 *Matoba Finanças — Comandos*\n\n` +
-    `/saldo — Saldo atual\n` +
-    `/resumo — Resumo do mês corrente\n` +
-    `/cartoes — Seus cartões e vencimentos\n` +
-    `/adicionar <valor> <desc> — Registra uma saída\n` +
-    `  Ex: /adicionar 35,50 Lanche\n\n` +
-    `/ajuda — Esta mensagem\n\n` +
-    `_Para desvincular sua conta, acesse Configurações no aplicativo._`
+    `🤖 *Matoba Finanças — Comandos disponíveis*\n\n` +
+
+    `*📊 Consultas financeiras*\n` +
+    `/saldo — Saldo atual da sua conta\n` +
+    `/hoje — Lançamentos registrados hoje\n` +
+    `/historico — Últimos 10 lançamentos\n` +
+    `/semana — Gráfico de saídas dos últimos 7 dias\n` +
+    `/mes — Resumo do mês atual _(ex: /mes 4 para abril)_\n` +
+    `/resumo — Entradas, saídas e saldo do mês corrente\n\n` +
+
+    `*🎯 Orçamento e metas*\n` +
+    `/categoria — Orçamento por categoria com barras de progresso\n` +
+    `/meta — Status de cada meta do Método Sardinha\n\n` +
+
+    `*💳 Cartões*\n` +
+    `/cartoes — Seus cartões, vencimentos e limites\n\n` +
+
+    `*📈 Projeção*\n` +
+    `/projecao — Saldo projetado nos próximos 7 dias\n\n` +
+
+    `📱 *Para adicionar ou editar lançamentos use o app:*\n` +
+    `👉 ${APP_URL}\n\n` +
+    `_Para desvincular: Configurações → Bot do Telegram → Desvincular_`
   );
 }
 
@@ -426,21 +709,33 @@ async function processUpdate(update) {
     return sendMessage(chatId,
       '👋 Olá! Para usar o bot, vincule sua conta:\n\n' +
       '1. Abra o app *Matoba Finanças*\n' +
-      '2. Vá em *Configurações → Notificações → Telegram*\n' +
+      `2. Vá em *Configurações → Bot do Telegram*\n` +
       '3. Gere um código e envie `/vincular CÓDIGO` aqui'
     );
   }
 
+  // Comandos que tentam adicionar/editar → redireciona para o app
+  const CMDS_BLOQUEADOS = ['/adicionar','/add','/novo','/new','/editar','/edit','/excluir','/deletar','/delete','/remover','/remove'];
+  if (CMDS_BLOQUEADOS.includes(cmd)) {
+    return msgSomenteApp(chatId);
+  }
+
   switch (cmd) {
-    case '/saldo':      return handleSaldo(chatId, uid);
-    case '/resumo':     return handleResumo(chatId, uid);
-    case '/cartoes':    return handleCartoes(chatId, uid);
-    case '/adicionar':  return handleAdicionar(chatId, uid, args);
+    case '/saldo':     return handleSaldo(chatId, uid);
+    case '/hoje':      return handleHoje(chatId, uid);
+    case '/historico': return handleHistorico(chatId, uid);
+    case '/semana':    return handleSemana(chatId, uid);
+    case '/mes':       return handleMes(chatId, uid, args);
+    case '/resumo':    return handleResumo(chatId, uid);
+    case '/categoria': return handleCategoria(chatId, uid);
+    case '/meta':      return handleMeta(chatId, uid);
+    case '/cartoes':   return handleCartoes(chatId, uid);
+    case '/projecao':  return handleProjecao(chatId, uid);
     case '/ajuda':
-    case '/help':       return handleAjuda(chatId);
+    case '/help':      return handleAjuda(chatId);
     default:
       return sendMessage(chatId,
-        `Comando não reconhecido. Use /ajuda para ver os comandos disponíveis.`
+        `Comando não reconhecido. Use /ajuda para ver todos os comandos disponíveis.`
       );
   }
 }
@@ -523,17 +818,38 @@ exports.dailyNotifications = onSchedule(
 // ─── EXPORT 3: Status e configuração do webhook ───────────────────────────────
 // GET  → retorna informações atuais do webhook registrado no Telegram
 // POST → registra a URL passada no body { url: "https://..." }
+// Lista de comandos exibidos no menu do BotFather
+const BOT_COMMANDS = [
+  { command: 'saldo',     description: 'Saldo atual da conta' },
+  { command: 'hoje',      description: 'Lancamentos registrados hoje' },
+  { command: 'historico', description: 'Ultimos 10 lancamentos' },
+  { command: 'semana',    description: 'Grafico de saidas dos ultimos 7 dias' },
+  { command: 'mes',       description: 'Resumo do mes (ex: /mes 4 para abril)' },
+  { command: 'resumo',    description: 'Entradas, saidas e saldo do mes corrente' },
+  { command: 'categoria', description: 'Orcamento por categoria com barras de progresso' },
+  { command: 'meta',      description: 'Status das metas do Metodo Sardinha' },
+  { command: 'cartoes',   description: 'Cartoes cadastrados e vencimentos' },
+  { command: 'projecao',  description: 'Saldo projetado para os proximos 7 dias' },
+  { command: 'ajuda',     description: 'Lista completa de comandos' },
+];
+
 exports.setTelegramWebhook = onRequest(
   { region: REGION },
   async (req, res) => {
     if (req.method === 'POST' && req.body?.url) {
-      const result = await tgFetch('setWebhook', {
+      const webhookResult = await tgFetch('setWebhook', {
         url:             req.body.url,
         allowed_updates: ['message'],
       });
-      res.json({ registered: req.body.url, result });
+      // Registra comandos no BotFather junto com o webhook
+      const cmdsResult = await tgFetch('setMyCommands', { commands: BOT_COMMANDS });
+      res.json({ registered: req.body.url, webhook: webhookResult, commands: cmdsResult });
+    } else if (req.method === 'POST' && req.body?.registerCommands) {
+      // POST { registerCommands: true } — apenas atualiza os comandos
+      const cmdsResult = await tgFetch('setMyCommands', { commands: BOT_COMMANDS });
+      res.json({ commands: cmdsResult });
     } else {
-      // GET: retorna status atual
+      // GET: retorna status atual do webhook
       const info = await tgFetch('getWebhookInfo', {});
       res.json(info);
     }
