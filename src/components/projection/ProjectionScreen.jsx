@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Calendar } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Calendar, Pencil, Trash2 } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../utils/formatters';
 import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { SARDINHA_CATEGORIES } from '../../utils/categories';
@@ -30,7 +30,7 @@ function formatRangeLabel(from, to) {
   return `${String(df).padStart(2,'0')} ${MONTH_NAMES[mf-1]} – ${String(dt).padStart(2,'0')} ${MONTH_NAMES[mt-1]} ${yt}`;
 }
 
-export default function ProjectionScreen({ transactions }) {
+export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [expanded, setExpanded] = useState({});
   const [isSummaryMode, setIsSummaryMode] = useState(false);
@@ -325,6 +325,41 @@ export default function ProjectionScreen({ transactions }) {
                           <span style={{ fontSize: 13, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
                             {cfg.sign > 0 ? '+' : '-'}{formatBRL(item.valor)}
                           </span>
+                          {/* Ações: editar / excluir */}
+                          {(onEdit || onDelete) && (
+                            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                              {onEdit && (
+                                <button
+                                  type="button"
+                                  onClick={e => { e.stopPropagation(); onEdit(item.tx); }}
+                                  title="Editar"
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 28, height: 28, borderRadius: 7,
+                                    background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
+                                    color: 'var(--primary)', cursor: 'pointer',
+                                  }}
+                                >
+                                  <Pencil size={12} />
+                                </button>
+                              )}
+                              {onDelete && (
+                                <button
+                                  type="button"
+                                  onClick={e => { e.stopPropagation(); onDelete(item.tx.id); }}
+                                  title="Excluir"
+                                  style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    width: 28, height: 28, borderRadius: 7,
+                                    background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                                    color: 'var(--saida)', cursor: 'pointer',
+                                  }}
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
 
                         {/* Sub-itens da fatura do cartão */}

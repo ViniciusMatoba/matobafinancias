@@ -122,7 +122,11 @@ export default function App() {
         />
       )}
       {view === 'projection' && (
-        <ProjectionScreen transactions={transactions} />
+        <ProjectionScreen
+          transactions={transactions}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
       )}
       {view === 'settings' && (
         <SettingsScreen
