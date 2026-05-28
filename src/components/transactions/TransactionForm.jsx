@@ -24,9 +24,13 @@ const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', dataCompra: todayS
 export default function TransactionForm({ onSave, onCancel, initial, cards, transactions = [] }) {
   const [form, setForm] = useState(initial ? {
     ...EMPTY, ...initial,
-    valor: numberToBRLInput(initial.valor),
+    // diário: stored value is valor/30, so reconstitute the monthly amount for editing
+    valor: initial.tipo === 'diario'
+      ? numberToBRLInput(parseFloat((initial.valor * 30).toFixed(2)))
+      : numberToBRLInput(initial.valor),
     totalParcelas: initial.totalParcelas ? String(initial.totalParcelas) : '',
     parcelaAtual: initial.parcelaAtual ? String(initial.parcelaAtual) : '',
+    // dataFim already comes from ...initial spread above
   } : { ...EMPTY });
 
   // Itens da fatura (apenas para cartão)
@@ -45,7 +49,16 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
   const setTipo = (tipo) => {
     setErro('');
     const auto = getAutoCategory(tipo);
-    setForm(f => ({ ...f, tipo, categoria: auto || (TIPOS_COM_CATEGORIA.includes(tipo) ? f.categoria : '') }));
+    setForm(f => {
+      const next = { ...f, tipo, categoria: auto || (TIPOS_COM_CATEGORIA.includes(tipo) ? f.categoria : '') };
+      // Pré-preenche dataFim padrão (+29 dias) quando o tipo muda para diário
+      if (tipo === 'diario' && !f.dataFim) {
+        const [y, m, d] = f.dataInicio.split('-').map(Number);
+        const endD = new Date(y, m - 1, d + 29);
+        next.dataFim = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
+      }
+      return next;
+    });
   };
 
   // Derivadas do tipo (antes dos memos que as usam)
@@ -190,9 +203,13 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
 
     if (form.tipo === 'diario') {
       finalValor = parseFloat((valor / 30).toFixed(2));
-      const [y, m, d] = form.dataInicio.split('-').map(Number);
-      const endD = new Date(y, m - 1, d + 29); // +29 dias a partir do início
-      finalDataFim = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
+      if (form.dataFim) {
+        finalDataFim = form.dataFim;
+      } else {
+        const [y, m, d] = form.dataInicio.split('-').map(Number);
+        const endD = new Date(y, m - 1, d + 29); // +29 dias a partir do início
+        finalDataFim = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
+      }
     }
 
     const autocatVal = getAutoCategory(form.tipo);
@@ -283,7 +300,11 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
       {/* Valor principal */}
       <div>
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
-          {form.tipo === 'cartao' ? 'Valor Total da Fatura (R$)' : 'Valor (R$)'}
+          {form.tipo === 'cartao'
+            ? 'Valor Total da Fatura (R$)'
+            : form.tipo === 'diario'
+              ? 'Estimativa mensal (R$)'
+              : 'Valor (R$)'}
         </label>
         <input
           type="text" inputMode="decimal" placeholder="0,00"
@@ -291,20 +312,43 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
           onBlur={e => set('valor', normalizeBRLInput(e.target.value))}
           required style={{ fontSize: 22, fontWeight: 600, color: tipoConfig.color, letterSpacing: 0.5 }}
         />
+        {/* Hint em tempo real para o diário */}
+        {form.tipo === 'diario' && parseBRLInput(form.valor) > 0 && (
+          <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--diario, #f59e0b)', textAlign: 'center' }}>
+            = {formatBRL(parseBRLInput(form.valor) / 30)} <span style={{ color: 'var(--text-muted)' }}>por dia</span>
+          </p>
+        )}
       </div>
 
-      {/* Data */}
+      {/* Data de início */}
       <div>
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
-          {form.tipo === 'diario' ? 'Data do gasto' : form.frequencia === 'unico' ? 'Data' : 'Data de início'}
+          {form.tipo === 'diario' ? 'A partir de' : form.frequencia === 'unico' ? 'Data' : 'Data de início'}
         </label>
         <input type="date" value={form.dataInicio} onChange={e => set('dataInicio', e.target.value)}
           required style={{ colorScheme: 'dark' }} />
       </div>
 
+      {/* Campo dataFim exclusivo para o tipo diário */}
       {form.tipo === 'diario' && (
-        <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          💡 O valor informado será dividido por 30 e projetado diariamente ao longo de um mês para controlar suas despesas.
+        <div>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+            Vigente até <span style={{ color: 'var(--text-muted)' }}>(projetado diariamente até esta data)</span>
+          </label>
+          <input
+            type="date"
+            value={form.dataFim}
+            min={form.dataInicio}
+            onChange={e => set('dataFim', e.target.value)}
+            style={{ colorScheme: 'dark' }}
+          />
+        </div>
+      )}
+
+      {form.tipo === 'diario' && (
+        <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+          💡 O valor é dividido por 30 e aparece como previsão diária na projeção.
+          Cada dia à meia-noite o contador reinicia — os gastos reais do dia são registrados separadamente como <strong style={{ color: 'var(--text-primary)' }}>Saídas</strong>.
         </div>
       )}
 
