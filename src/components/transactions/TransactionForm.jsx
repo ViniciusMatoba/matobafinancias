@@ -9,7 +9,7 @@ const FREQS = Object.entries(FREQ_LABELS).map(([id, label]) => ({ id, label }));
 // ── Similaridade de descrição ──────────────────────────────────────────────
 function normalizeStr(s) {
   return (s || '').toLowerCase().trim()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, ' ');
 }
 function isSimilarDesc(a, b) {
@@ -24,6 +24,31 @@ function isSimilarDesc(a, b) {
   const setA = new Set(wa);
   const overlap = wb.filter(w => setA.has(w)).length;
   return overlap / Math.max(wa.length, wb.length) >= 0.6;
+}
+
+function sameMoney(a, b) {
+  return Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.01;
+}
+
+function hasSameDate(tx, tipo, dataInicio, itens) {
+  if (tx.dataInicio === dataInicio) return true;
+  if (tipo !== 'cartao') return false;
+  const itemDates = new Set(itens.map(item => item.dataCompra).filter(Boolean));
+  return tx.itens?.some(item => itemDates.has(item.dataCompra)) || false;
+}
+
+function hasSimilarItem(tx, itens) {
+  if (!tx.itens?.length || !itens.length) return false;
+  return itens.some(newItem => {
+    const newValue = parseBRLInput(newItem.valor);
+    return tx.itens.some(oldItem =>
+      oldItem.dataCompra === newItem.dataCompra &&
+      (
+        isSimilarDesc(oldItem.descricao, newItem.descricao) ||
+        sameMoney(oldItem.valor, newValue)
+      )
+    );
+  });
 }
 
 const EMPTY = {
@@ -66,21 +91,43 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   const [editItemIdx, setEditItemIdx] = useState(null);
 
   const [erro, setErro] = useState('');
-  const set = (key, value) => { setErro(''); setForm(f => ({ ...f, [key]: value })); };
-
-  // ── Detecção de duplicata ──────────────────────────────────────────────────
   const [dupChoice, setDupChoice] = useState(null);      // null | 'overwrite' | 'keep'
   const [overwriteTarget, setOverwriteTarget] = useState(null);
 
+  const clearDuplicateChoice = () => {
+    setDupChoice(null);
+    setOverwriteTarget(null);
+  };
+
+  const set = (key, value) => {
+    setErro('');
+    if (['tipo', 'descricao', 'valor', 'dataInicio', 'frequencia'].includes(key)) {
+      clearDuplicateChoice();
+    }
+    setForm(f => ({ ...f, [key]: value }));
+  };
+
   const dupMatch = useMemo(() => {
-    if (initial) return null; // modo edição: não verifica
+    if (initial) return null; // modo edicao: nao verifica
     const desc = form.descricao.trim();
-    if (desc.length < 2) return null;
-    return transactions.find(tx => isSimilarDesc(tx.descricao, desc)) || null;
-  }, [form.descricao, transactions, initial]);
+    const valor = parseBRLInput(form.valor);
+    const hasComparableItem = form.tipo === 'cartao' && itens.length > 0;
+
+    if (desc.length < 2 && !valor && !hasComparableItem) return null;
+
+    return transactions.find(tx => {
+      if (tx.tipo !== form.tipo) return false;
+      if (!hasSameDate(tx, form.tipo, form.dataInicio, itens)) return false;
+
+      if (hasComparableItem && hasSimilarItem(tx, itens)) return true;
+      if (desc.length >= 2 && isSimilarDesc(tx.descricao, desc)) return true;
+      return !!valor && sameMoney(tx.valor, valor);
+    }) || null;
+  }, [form.tipo, form.descricao, form.valor, form.dataInicio, itens, transactions, initial]);
 
   const setTipo = (tipo) => {
     setErro('');
+    clearDuplicateChoice();
     const auto = getAutoCategory(tipo);
     setForm(f => ({
       ...f, tipo,
@@ -168,6 +215,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   const addItem = () => {
     const v = parseBRLInput(novoItem.valor);
     if (!v || isNaN(v)) return;
+    clearDuplicateChoice();
     if (editItemIdx !== null) {
       setItens(prev => {
         const next = [...prev];
@@ -187,6 +235,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   };
 
   const removeItem = (idx) => {
+    clearDuplicateChoice();
     if (editItemIdx === idx) {
       setNovoItem({ ...EMPTY_ITEM });
       setEditItemIdx(null);
@@ -273,7 +322,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       data.metaId = form.metaId;
     }
 
-    // Subscrever (substituir) lançamento similar existente
+    // Substituir lançamento similar existente
     if (dupChoice === 'overwrite' && overwriteTarget?.id) {
       data._overwriteId = overwriteTarget.id;
     }
@@ -347,7 +396,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
             </p>
             <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--text-secondary)' }}>
               <strong style={{ color: 'var(--text-primary)' }}>"{dupMatch.descricao}"</strong>
-              {' — '}{formatBRL(dupMatch.valor)}
+              {' — '}{dupMatch.dataInicio?.split('-').reverse().join('/') || 'mesma data'}{' — '}{formatBRL(dupMatch.valor)}
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button"
@@ -357,7 +406,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
                   background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
                   color: 'var(--saida)', cursor: 'pointer',
                 }}>
-                Subscrever (substituir)
+                Substituir existente
               </button>
               <button type="button"
                 onClick={() => setDupChoice('keep')}
@@ -366,13 +415,13 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
                   background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
                   color: 'var(--primary)', cursor: 'pointer',
                 }}>
-                Criar separado
+                Manter ambos
               </button>
             </div>
           </div>
         )}
 
-        {/* Confirmação: Subscrever escolhido */}
+        {/* Confirmação: substituir escolhido */}
         {dupChoice === 'overwrite' && overwriteTarget && (
           <div style={{
             marginTop: 8, display: 'flex', alignItems: 'center', gap: 8,
