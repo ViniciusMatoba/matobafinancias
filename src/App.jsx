@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { isConfigured } from './firebase';
 import { useAuth } from './hooks/useAuth';
 import { useTransactions } from './hooks/useTransactions';
@@ -30,10 +30,10 @@ export default function App() {
   const [editing, setEditing] = useState(null);
   const [authConfirmed, setAuthConfirmed] = useState(false);
 
-  // Se o usuário acabou de voltar de um login do Google
-  if (justLoggedIn && !authConfirmed) {
-    setAuthConfirmed(true);
-  }
+  // Se o usuário acabou de voltar de um login Google via redirect
+  useEffect(() => {
+    if (justLoggedIn) setAuthConfirmed(true);
+  }, [justLoggedIn]);
 
   if (!isConfigured) return <SetupScreen />;
 

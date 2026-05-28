@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Calendar } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../utils/formatters';
 import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
+import { SARDINHA_CATEGORIES } from '../../utils/categories';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -289,34 +290,80 @@ export default function ProjectionScreen({ transactions }) {
                   {day.items.map((item, i) => {
                     const cfg = TYPE_CONFIG[item.tx.tipo];
                     const Icon = TIPO_ICONS[item.tx.tipo] || Zap;
+                    const hasSubItens = item.tx.tipo === 'cartao' && (item.tx.itens?.length ?? 0) > 0;
                     return (
                       <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
                         padding: '6px 0',
                         borderBottom: i < day.items.length - 1 ? '1px solid var(--border)' : 'none',
                       }}>
-                        <div style={{
-                          width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-                          background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <Icon size={13} color={cfg.color} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{
-                            margin: 0, fontSize: 12, fontWeight: 500, color: 'var(--text-primary)',
-                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        {/* Linha principal da transação */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{
+                            width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                            background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
-                            {item.tx.descricao || cfg.label}
-                          </p>
-                          <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>
-                            {cfg.label}
-                            {item.parcela ? ` · ${item.parcela}/${item.totalParcelas}x` : ''}
-                            {item.tx.frequencia !== 'unico' && item.tx.frequencia !== 'parcelado' ? ' · Recorrente' : ''}
-                          </p>
+                            <Icon size={13} color={cfg.color} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p style={{
+                              margin: 0, fontSize: 12, fontWeight: 500, color: 'var(--text-primary)',
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                            }}>
+                              {item.tx.descricao || cfg.label}
+                              {hasSubItens && (
+                                <span style={{ fontSize: 10, color: 'var(--text-muted)', marginLeft: 4 }}>
+                                  · {item.tx.itens.length} iten{item.tx.itens.length !== 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </p>
+                            <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>
+                              {cfg.label}
+                              {item.parcela ? ` · ${item.parcela}/${item.totalParcelas}x` : ''}
+                              {item.tx.frequencia !== 'unico' && item.tx.frequencia !== 'parcelado' ? ' · Recorrente' : ''}
+                            </p>
+                          </div>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
+                            {cfg.sign > 0 ? '+' : '-'}{formatBRL(item.valor)}
+                          </span>
                         </div>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
-                          {cfg.sign > 0 ? '+' : '-'}{formatBRL(item.valor)}
-                        </span>
+
+                        {/* Sub-itens da fatura do cartão */}
+                        {hasSubItens && (
+                          <div style={{ marginTop: 4, marginLeft: 36, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {item.tx.itens.map((subItem, j) => {
+                              const subCat = subItem.categoria ? SARDINHA_CATEGORIES[subItem.categoria] : null;
+                              return (
+                                <div key={j} style={{
+                                  display: 'flex', alignItems: 'center', gap: 6,
+                                  padding: '3px 8px', borderRadius: 6,
+                                  background: 'rgba(59,130,246,0.07)',
+                                }}>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                                      {subItem.dataCompra && (
+                                        <span style={{ color: 'var(--text-muted)', fontSize: 10, marginRight: 4 }}>
+                                          {subItem.dataCompra.slice(8, 10)}/{subItem.dataCompra.slice(5, 7)} ·
+                                        </span>
+                                      )}
+                                      {subItem.descricao || 'Item'}
+                                      {subItem.isParcelado && (
+                                        <span style={{ color: 'var(--text-muted)', fontSize: 10, marginLeft: 4 }}>
+                                          · {subItem.parcelaAtual}/{subItem.totalParcelas}x
+                                        </span>
+                                      )}
+                                    </span>
+                                    {subCat && (
+                                      <span style={{ fontSize: 10, color: subCat.color }}>{subCat.icon} {subCat.label}</span>
+                                    )}
+                                  </div>
+                                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--cartao)', flexShrink: 0 }}>
+                                    {formatBRL(Number(subItem.valor) || 0)}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
