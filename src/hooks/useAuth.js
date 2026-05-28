@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
   signOut,
@@ -31,7 +32,19 @@ export function useAuth() {
 
   const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
   const register = (email, password) => createUserWithEmailAndPassword(auth, email, password);
-  const loginWithGoogle = () => signInWithRedirect(auth, googleProvider);
+  const loginWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      return result;
+    } catch (error) {
+      if (error.code === 'auth/popup-blocked') {
+        // Fallback para mobile que bloqueia popups
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        throw error;
+      }
+    }
+  };
   const logout = () => signOut(auth);
 
   return { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError };

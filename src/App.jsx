@@ -60,7 +60,7 @@ export default function App() {
         redirectError={redirectError}
         onLogin={async (e, p) => { await login(e, p); setAuthConfirmed(true); }}
         onRegister={async (e, p) => { await register(e, p); setAuthConfirmed(true); }}
-        onLoginWithGoogle={async () => { await loginWithGoogle(); setAuthConfirmed(true); }}
+        onLoginWithGoogle={async () => { await loginWithGoogle(); }}
         onConfirm={() => setAuthConfirmed(true)}
         onLogout={async () => { await logout(); setAuthConfirmed(false); }}
       />
