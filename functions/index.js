@@ -256,6 +256,48 @@ function checkNotifications(cards, transactions, config, prefs) {
     msgs.push(`📊 *Resumo semanal*\n✅ Entradas: ${formatBRL(entradas)}\n❌ Saídas: ${formatBRL(saidas)}\n💰 Saldo da semana: *${formatBRL(entradas - saidas)}*`);
   }
 
+  // N8 — Resumo diário matinal (ativado no onboarding pelo usuário)
+  if (tipos.n8 === true) {
+    const saldoAtual = calcSaldoSimples(transactions, todayStr);
+    const lancHoje   = transactions.filter(tx =>
+      tx.dataInicio === todayStr && tx.frequencia === 'unico'
+    );
+
+    const [, , dd] = todayStr.split('-');
+    const nomeMesHoje = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+    let msg = `🌅 *Bom dia! Resumo de ${dd} de ${nomeMesHoje}*\n\n`;
+    msg += `💰 Saldo atual: *${formatBRL(saldoAtual)}*\n\n`;
+
+    if (lancHoje.length > 0) {
+      let entH = 0, saiH = 0;
+      msg += `📋 *Lançamentos de hoje:*\n`;
+      for (const tx of lancHoje) {
+        const v    = Number(tx.valor) || 0;
+        const icon = tx.tipo === 'entrada' ? '✅' : '❌';
+        const sign = tx.tipo === 'entrada' ? '+' : '-';
+        msg += `${icon} ${tx.descricao || tx.tipo}: *${sign}${formatBRL(v)}*\n`;
+        if (tx.tipo === 'entrada') entH += v; else saiH += v;
+      }
+      if (lancHoje.length > 1) msg += `_Saldo do dia: ${formatBRL(entH - saiH)}_\n\n`;
+      else msg += '\n';
+    } else {
+      msg += `_Nenhum lançamento avulso para hoje._\n\n`;
+    }
+
+    // Inclui faturas só se N1 não estiver ativo (evitar duplicata)
+    if (tipos.n1 !== true) {
+      const fatHoje = cards.filter(c => c.diaVencimento === day);
+      if (fatHoje.length > 0) {
+        msg += `💳 *Fatura vencendo hoje:*\n`;
+        for (const c of fatHoje) msg += `• ${c.nome}\n`;
+        msg += '\n';
+      }
+    }
+
+    msg += `_Bom dia e boas finanças! 🚀_`;
+    msgs.push(msg.trim());
+  }
+
   return msgs;
 }
 
@@ -286,12 +328,7 @@ async function handleVincular(chatId, code, fromUser) {
 
   await linkDoc.ref.delete();
 
-  return sendMessage(chatId,
-    `✅ *Conta vinculada com sucesso!*\n\n` +
-    `Olá, *${fromUser?.first_name || 'usuário'}*! 🎉\n` +
-    `Sua conta *${email}* está conectada ao Matoba Finanças.\n\n` +
-    `Use /ajuda para ver os comandos disponíveis.`
-  );
+  return startOnboarding(chatId, uid, email, fromUser);
 }
 
 async function handleSaldo(chatId, uid) {
@@ -678,6 +715,148 @@ async function handleAjuda(chatId) {
   );
 }
 
+// ─── Onboarding — configuração guiada no primeiro contato ────────────────────
+
+const ONBOARDING_STEPS = [
+  {
+    id:      'cartoes',
+    tipos:   ['n1', 'n2', 'n3'],
+    question:
+      `💳 *Alertas de cartão de crédito*\n\n` +
+      `Posso te avisar quando:\n` +
+      `• Uma fatura vencer hoje ou em 3 dias\n` +
+      `• Uma fatura estiver prestes a fechar (2 dias)\n\n` +
+      `Ativar alertas de cartão?`,
+  },
+  {
+    id:      'orcamento',
+    tipos:   ['n4', 'n5'],
+    question:
+      `💰 *Alertas de orçamento*\n\n` +
+      `Posso te avisar quando uma categoria do orçamento atingir 80% do limite ou ultrapassá-lo.\n\n` +
+      `Ativar alertas de orçamento?`,
+  },
+  {
+    id:      'saldo',
+    tipos:   ['n6'],
+    question:
+      `📉 *Alerta de saldo negativo*\n\n` +
+      `Posso te avisar quando a projeção indicar que seu saldo pode ficar negativo nos próximos 7 dias.\n\n` +
+      `Ativar esse alerta?`,
+  },
+  {
+    id:      'semanal',
+    tipos:   ['n7'],
+    question:
+      `📊 *Resumo semanal*\n\n` +
+      `Toda segunda-feira você receberia um resumo da semana com entradas, saídas e saldo.\n\n` +
+      `Ativar resumo semanal?`,
+  },
+  {
+    id:      'diario',
+    tipos:   ['n8'],
+    question:
+      `🌅 *Resumo diário matinal*\n\n` +
+      `Todo dia às 7h você receberia uma mensagem com seu saldo atual e os lançamentos previstos para o dia.\n\n` +
+      `Ativar resumo diário?`,
+  },
+];
+
+const SIM_NAO_KB = {
+  keyboard:         [[{ text: '✅ Sim' }, { text: '❌ Não' }]],
+  resize_keyboard:  true,
+  one_time_keyboard: true,
+};
+
+function isSimResponse(t) {
+  return /^(sim|s|yes|✅ sim|ok|quero|ativo|ativa|claro|pode|bora)$/i.test(t.trim());
+}
+function isNaoResponse(t) {
+  return /^(não|nao|n|no|❌ não|nop|não quero|não preciso|deixa|pula)$/i.test(t.trim());
+}
+
+async function sendOnboardingQuestion(chatId, stepIdx) {
+  const step  = ONBOARDING_STEPS[stepIdx];
+  const total = ONBOARDING_STEPS.length;
+  return sendMessage(
+    chatId,
+    `*Pergunta ${stepIdx + 1} de ${total}*\n\n${step.question}`,
+    { reply_markup: SIM_NAO_KB }
+  );
+}
+
+async function startOnboarding(chatId, uid, email, fromUser) {
+  await db.collection('users').doc(uid).set(
+    { telegramOnboarding: { active: true, step: 0, tipos: {} } },
+    { merge: true }
+  );
+
+  await sendMessage(chatId,
+    `✅ *Conta vinculada com sucesso!*\n\n` +
+    `Olá, *${fromUser?.first_name || 'usuário'}*! 🎉\n` +
+    `Sua conta *${email}* está conectada ao Matoba Finanças.\n\n` +
+    `Vou te fazer *${ONBOARDING_STEPS.length} perguntas rápidas* para configurar\n` +
+    `seus alertas do jeito que você prefere. Responda com *Sim* ou *Não*.\n\n` +
+    `_(Tudo pode ser ajustado depois em Configurações → Bot do Telegram no app)_`
+  );
+
+  return sendOnboardingQuestion(chatId, 0);
+}
+
+async function handleOnboardingStep(chatId, uid, onboarding, text) {
+  const stepIdx = onboarding.step || 0;
+  const tipos   = { ...(onboarding.tipos || {}) };
+  const isPular = /^\/(pular|skip)$/i.test(text.trim());
+  const isSim   = isSimResponse(text);
+  const isNao   = isNaoResponse(text);
+
+  // Resposta não reconhecida — pede de novo com o teclado
+  if (!isSim && !isNao && !isPular) {
+    return sendMessage(chatId,
+      `Por favor, responda com *Sim* ou *Não* 👇\n\n` +
+      `_(Digite /pular para pular esta pergunta)_`,
+      { reply_markup: SIM_NAO_KB }
+    );
+  }
+
+  // Registra resposta para todos os tipos do passo atual
+  const step  = ONBOARDING_STEPS[stepIdx];
+  const valor = isPular ? true : isSim; // /pular ativa por padrão
+  for (const t of step.tipos) tipos[t] = valor;
+
+  const nextStep = stepIdx + 1;
+
+  // Onboarding concluído
+  if (nextStep >= ONBOARDING_STEPS.length) {
+    await db.collection('users').doc(uid).update({
+      telegramOnboarding: admin.firestore.FieldValue.delete(),
+    });
+    await db.collection('config').doc(uid).set(
+      { notificacoes: { telegramEnabled: true, tipos } },
+      { merge: true }
+    );
+
+    const ativos = Object.values(tipos).filter(v => v === true).length;
+    const total  = Object.keys(tipos).length;
+
+    return sendMessage(chatId,
+      `🎉 *Tudo configurado!*\n\n` +
+      `${ativos} de ${total} tipos de alerta ativados.\n\n` +
+      `Agora você pode usar todos os comandos. Digite /ajuda para ver tudo disponível.\n\n` +
+      `Para ajustar as notificações: *Configurações → Bot do Telegram* no app.`,
+      { reply_markup: { remove_keyboard: true } }
+    );
+  }
+
+  // Avança para o próximo passo
+  await db.collection('users').doc(uid).set(
+    { telegramOnboarding: { active: true, step: nextStep, tipos } },
+    { merge: true }
+  );
+
+  return sendOnboardingQuestion(chatId, nextStep);
+}
+
 // ─── Processamento do update Telegram ────────────────────────────────────────
 async function processUpdate(update) {
   const msg = update.message || update.edited_message;
@@ -712,6 +891,15 @@ async function processUpdate(update) {
       `2. Vá em *Configurações → Bot do Telegram*\n` +
       '3. Gere um código e envie `/vincular CÓDIGO` aqui'
     );
+  }
+
+  // Se usuário tem onboarding ativo, intercepta TODAS as mensagens
+  {
+    const userData   = usersSnap.docs[0].data();
+    const onboarding = userData.telegramOnboarding;
+    if (onboarding?.active) {
+      return handleOnboardingStep(chatId, uid, onboarding, text);
+    }
   }
 
   // Comandos que tentam adicionar/editar → redireciona para o app
