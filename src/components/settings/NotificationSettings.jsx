@@ -1,5 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase';
 import { Bell, BellOff, CheckCircle, XCircle, Play, Loader } from 'lucide-react';
+import TelegramConnect from './TelegramConnect';
 import { formatBRL, todayStr } from '../../utils/formatters';
 import { SARDINHA_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { expandOccurrences, buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
@@ -89,7 +92,17 @@ export default function NotificationSettings({ user, cards, transactions, config
   const prefs = config?.notificacoes || { enabled: false, tipos: { ...DEFAULT_TIPOS } };
   const tipos = { ...DEFAULT_TIPOS, ...(prefs.tipos || {}) };
 
-  const [testingId, setTestingId] = useState(null);
+  const [testingId, setTestingId]         = useState(null);
+  const [telegramChatId, setTelegramChatId] = useState(null);
+
+  // Escuta telegramChatId do Firestore em tempo real
+  useEffect(() => {
+    if (!user?.uid || !db) return;
+    const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
+      setTelegramChatId(snap.exists() ? (snap.data().telegramChatId || null) : null);
+    });
+    return unsub;
+  }, [user?.uid]);
 
   // ── Salvar preferências ──────────────────────────────────────────────────────
   const savePrefs    = (patch) => onSavePrefs({ notificacoes: { ...prefs, ...patch } });
@@ -459,6 +472,44 @@ export default function NotificationSettings({ user, cards, transactions, config
           )}
         </div>
       )}
+
+      {/* ── Seção Telegram ────────────────────────────────────────────────────── */}
+      <div style={{ marginTop: 24 }}>
+        <p style={{
+          margin: '0 0 12px', fontSize: 11, fontWeight: 600,
+          color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.07em',
+        }}>
+          Telegram
+        </p>
+
+        <TelegramConnect
+          user={user}
+          telegramChatId={telegramChatId}
+          onDisconnect={() => savePrefs({ telegramEnabled: false })}
+        />
+
+        {/* Toggle "enviar notificações pelo Telegram" */}
+        {telegramChatId && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 14px', marginTop: 10,
+            background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 12,
+          }}>
+            <div>
+              <p style={{ margin: '0 0 2px', fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                Receber alertas pelo Telegram
+              </p>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                As notificações N1–N7 também serão enviadas via bot
+              </p>
+            </div>
+            <Toggle
+              value={prefs.telegramEnabled === true}
+              onChange={(val) => savePrefs({ telegramEnabled: val })}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
