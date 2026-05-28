@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DollarSign } from 'lucide-react';
 
 function GoogleIcon() {
@@ -30,6 +30,25 @@ export default function AuthScreen({ onLogin, onRegister, onLoginWithGoogle }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -189,6 +208,22 @@ export default function AuthScreen({ onLogin, onRegister, onLoginWithGoogle }) {
           </button>
         </form>
       </div>
+
+      {/* Botão de Instalação do PWA */}
+      {deferredPrompt && (
+        <button
+          onClick={handleInstallClick}
+          style={{
+            marginTop: 24, padding: '12px 24px', borderRadius: 12,
+            background: 'rgba(99,102,241,0.15)', border: '1px solid var(--primary)',
+            color: 'var(--primary)', fontSize: 14, fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(99,102,241,0.2)'
+          }}
+        >
+          ⬇️ Instalar Aplicativo (App Nativo)
+        </button>
+      )}
     </div>
   );
 }
