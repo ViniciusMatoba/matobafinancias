@@ -255,7 +255,8 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
       data.totalParcelas = parseInt(form.totalParcelas) || 1;
       if (form.parcelaAtual) data.parcelaAtual = parseInt(form.parcelaAtual);
     } else if (['diario', 'semanal', 'mensal'].includes(finalFreq)) {
-      if (finalDataFim) data.dataFim = finalDataFim;
+      // Sempre inclui dataFim (null = sem fim). Sem isso, updateDoc mantém o valor antigo.
+      data.dataFim = finalDataFim || null;
     }
 
     if (form.tipo === 'cartao' && form.cartaoId) {
