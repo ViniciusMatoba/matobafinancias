@@ -66,10 +66,9 @@ export function useNotifications(user) {
       setPermission(result);
       if (result !== 'granted') return { ok: false, reason: 'denied' };
 
-      // Registra o SW de FCM separado do SW do PWA
-      const swReg = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-        scope: '/',
-      });
+      // Registra o SW de FCM separado do SW do PWA.
+      // Usa caminho relativo ('./') para funcionar em qualquer base (GitHub Pages, subpath, etc.)
+      const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
 
       const token = await getToken(messaging, {
         vapidKey:                   VAPID_KEY,

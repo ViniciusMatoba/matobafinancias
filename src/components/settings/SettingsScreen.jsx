@@ -57,9 +57,14 @@ export default function SettingsScreen({ user, cards, transactions, config, onSa
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 18 }}>💰</span>
-              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
-                Orçamento / Método Sardinha
-              </span>
+              <div>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'block' }}>
+                  Divisão de Orçamento
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  Método Investidor Sardinha · Raul Sena
+                </span>
+              </div>
             </div>
             {budgetOpen ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
           </button>

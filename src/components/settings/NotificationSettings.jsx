@@ -90,6 +90,7 @@ export default function NotificationSettings({ user, cards, transactions, config
   const tipos = { ...DEFAULT_TIPOS, ...(prefs.tipos || {}) };
 
   const [testingId, setTestingId] = useState(null);
+  const [activateError, setActivateError] = useState('');
 
   // ── Salvar preferências ──────────────────────────────────────────────────────
   const savePrefs    = (patch) => onSavePrefs({ notificacoes: { ...prefs, ...patch } });
@@ -97,13 +98,16 @@ export default function NotificationSettings({ user, cards, transactions, config
 
   // ── Ativar notificações ──────────────────────────────────────────────────────
   const handleEnable = async () => {
+    setActivateError('');
     const result = await enableNotifications();
     if (result.ok) {
       savePrefs({ enabled: true });
     } else if (result.reason === 'no_vapid') {
-      alert('Chave VAPID não configurada. Consulte as instruções abaixo.');
+      setActivateError('Chave VAPID não configurada no servidor.');
     } else if (result.reason === 'denied') {
-      // O estado de permissão já foi atualizado pelo hook — a UI reflete automaticamente
+      // A UI já reflete o estado "bloqueado" automaticamente
+    } else if (result.reason === 'error') {
+      setActivateError(`Erro ao ativar: ${result.message || 'verifique o console do navegador.'}`);
     }
   };
 
@@ -386,6 +390,20 @@ export default function NotificationSettings({ user, cards, transactions, config
               }
             </button>
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+
+        {/* Erro ao ativar */}
+        {activateError && (
+          <div style={{
+            marginTop: 10, display: 'flex', alignItems: 'flex-start', gap: 8,
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+            borderRadius: 10, padding: '10px 12px',
+          }}>
+            <span style={{ fontSize: 14, flexShrink: 0 }}>⚠️</span>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--saida)', lineHeight: 1.5 }}>
+              {activateError}
+            </p>
           </div>
         )}
       </div>

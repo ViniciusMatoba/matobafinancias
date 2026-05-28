@@ -446,8 +446,9 @@ async function processUpdate(update) {
 }
 
 // ─── EXPORT 1: Webhook HTTPS ──────────────────────────────────────────────────
+// invoker: 'public' — permite chamadas não autenticadas (necessário para o Telegram)
 exports.telegramWebhook = onRequest(
-  { region: REGION, timeoutSeconds: 30 },
+  { region: REGION, timeoutSeconds: 30, invoker: 'public' },
   async (req, res) => {
     if (req.method !== 'POST') { res.sendStatus(405); return; }
     try {
