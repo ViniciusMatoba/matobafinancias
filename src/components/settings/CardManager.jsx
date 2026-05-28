@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CreditCard, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
-import { formatBRL, formatBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 
 const CARD_COLORS = ['#3b82f6','#6366f1','#a855f7','#ec4899','#10b981','#f59e0b','#ef4444','#14b8a6'];
 
@@ -26,7 +26,7 @@ function CardForm({ initial, onSave, onCancel }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div>
             <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Limite (R$)</label>
-            <input type="text" inputMode="decimal" placeholder="5.000,00" value={form.limite} onChange={e => set('limite', formatBRLInput(e.target.value))} />
+            <input type="text" inputMode="decimal" placeholder="5.000,00" value={form.limite} onChange={e => set('limite', formatBRLInput(e.target.value))} onBlur={e => set('limite', normalizeBRLInput(e.target.value))} />
           </div>
           <div>
             <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Dia do vencimento</label>

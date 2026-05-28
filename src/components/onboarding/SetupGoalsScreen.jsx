@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ChevronRight, RotateCcw, DollarSign, CheckCircle } from 'lucide-react';
-import { formatBRL, formatBRLInput, parseBRLInput } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput } from '../../utils/formatters';
 import { SARDINHA_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 
 const STEPS = ['renda', 'categorias', 'confirmar'];
@@ -87,6 +87,7 @@ export default function SetupGoalsScreen({ onSave }) {
                 placeholder="Ex: 5.000,00"
                 value={renda}
                 onChange={e => setRenda(formatBRLInput(e.target.value))}
+                onBlur={e => setRenda(normalizeBRLInput(e.target.value))}
                 autoFocus
                 style={{ fontSize: 28, fontWeight: 700, color: 'var(--entrada)', textAlign: 'center' }}
               />

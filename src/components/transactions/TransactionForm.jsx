@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
+import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 import { SARDINHA_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 
@@ -288,6 +288,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
         <input
           type="text" inputMode="decimal" placeholder="0,00"
           value={form.valor} onChange={e => set('valor', formatBRLInput(e.target.value))}
+          onBlur={e => set('valor', normalizeBRLInput(e.target.value))}
           required style={{ fontSize: 22, fontWeight: 600, color: tipoConfig.color, letterSpacing: 0.5 }}
         />
       </div>
@@ -483,6 +484,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
                 type="text" inputMode="decimal" placeholder="0,00"
                 value={novoItem.valor}
                 onChange={e => setNovoItem(i => ({ ...i, valor: formatBRLInput(e.target.value) }))}
+                onBlur={e => setNovoItem(i => ({ ...i, valor: normalizeBRLInput(e.target.value) }))}
                 style={{ flex: 1, fontSize: 16, fontWeight: 600, color: 'var(--cartao)' }}
               />
               <select

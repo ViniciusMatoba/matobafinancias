@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { RotateCcw, Check } from 'lucide-react';
-import { formatBRL, formatBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 import { SARDINHA_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 
 export default function BudgetSettings({ config, onSave }) {
@@ -49,6 +49,7 @@ export default function BudgetSettings({ config, onSave }) {
           placeholder="Ex: 5.000,00"
           value={renda}
           onChange={e => setRenda(formatBRLInput(e.target.value))}
+          onBlur={e => setRenda(normalizeBRLInput(e.target.value))}
           style={{ fontSize: 18, fontWeight: 600, color: 'var(--entrada)' }}
         />
       </div>

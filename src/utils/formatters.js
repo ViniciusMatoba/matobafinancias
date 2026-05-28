@@ -58,38 +58,60 @@ export const TYPE_CONFIG = {
 };
 
 /**
- * Formata valor BRL durante a digitação.
- * Dígitos constroem o lado dos REAIS (esquerda da vírgula), com pontos de milhar automáticos.
- * Vírgula + até 2 dígitos = centavos. Auto-adiciona ",00" quando sem vírgula.
+ * Formata valor BRL durante a digitação (onChange).
+ * Mantém pontos de milhar automáticos, MAS não auto-adiciona vírgula/centavos —
+ * isso evita que o cursor fique preso e impeça continuar digitando.
+ * A normalização completa (ex: "1.500" → "1.500,00") é feita no onBlur via normalizeBRLInput.
  *
- * Exemplos:
- *   "1"      → "1,00"
- *   "15"     → "15,00"
- *   "1500"   → "1.500,00"
- *   "151,12" → "151,12"
+ * Exemplos onChange:
+ *   "1"        → "1"
+ *   "15"       → "15"
+ *   "1500"     → "1.500"
+ *   "1500,"    → "1.500,"      (usuário acabou de digitar a vírgula)
+ *   "1500,5"   → "1.500,5"
+ *   "1500,50"  → "1.500,50"
+ *
+ * Exemplos onBlur (normalizeBRLInput):
+ *   "1.500"    → "1.500,00"
+ *   "1.500,5"  → "1.500,50"
  */
 export function formatBRLInput(raw) {
   if (!raw) return '';
-  // Remove pontos de milhar (só display), mantém vírgula e dígitos
+  // Remove pontos de milhar (são só display), mantém vírgula e dígitos
   const clean = String(raw).replace(/\./g, '');
   const commaIdx = clean.indexOf(',');
 
   if (commaIdx === -1) {
-    // Sem vírgula: formata inteiro e adiciona ",00"
+    // Sem vírgula ainda: apenas formata o inteiro com pontos de milhar
     const digits = clean.replace(/\D/g, '');
     if (!digits) return '';
     const n = parseInt(digits, 10);
     if (n === 0) return '';
-    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00';
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
-  // Com vírgula: formata parte inteira + centavos (máx 2 dígitos)
+  // Com vírgula: formata parte inteira + até 2 dígitos de centavos
   const intStr = clean.substring(0, commaIdx).replace(/\D/g, '');
   const decStr = clean.substring(commaIdx + 1).replace(/\D/g, '').slice(0, 2);
   const intFormatted = intStr
     ? parseInt(intStr, 10).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
     : '0';
   return `${intFormatted},${decStr}`;
+}
+
+/**
+ * Normaliza valor BRL ao sair do campo (onBlur).
+ * Completa centavos faltando e mantém formatação correta.
+ *   "1.500"   → "1.500,00"
+ *   "1.500,5" → "1.500,50"
+ *   "150,50"  → "150,50"
+ *   ""        → ""
+ */
+export function normalizeBRLInput(str) {
+  if (!str) return '';
+  const n = parseBRLInput(str);
+  if (!n) return '';
+  return numberToBRLInput(n);
 }
 
 /**
