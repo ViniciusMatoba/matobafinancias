@@ -3,6 +3,7 @@ import { isConfigured } from './firebase';
 import { useAuth } from './hooks/useAuth';
 import { useTransactions } from './hooks/useTransactions';
 import { useCards } from './hooks/useCards';
+import { useWallets } from './hooks/useWallets';
 import { useConfig } from './hooks/useConfig';
 import { useToast } from './components/shared/Toast';
 import AuthScreen from './components/auth/AuthScreen';
@@ -21,6 +22,7 @@ export default function App() {
   const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
   const { transactions, add, update, remove } = useTransactions(user?.uid);
   const { cards, add: addCard, update: updateCard, remove: removeCard } = useCards(user?.uid);
+  const { wallets, add: addWallet, update: updateWallet, remove: removeWallet } = useWallets(user?.uid);
   const { config, configLoading, saveConfig } = useConfig(user?.uid);
   const { showToast, ToastNode } = useToast();
 
@@ -166,6 +168,7 @@ export default function App() {
         <HomeScreen
           transactions={transactions}
           cards={cards}
+          wallets={wallets}
           config={config}
           metaMensal={config.metaMensalDiario}
           onSaveMeta={v => saveConfig({ metaMensalDiario: v })}
@@ -192,12 +195,16 @@ export default function App() {
         <SettingsScreen
           user={user}
           cards={cards}
+          wallets={wallets}
           transactions={transactions}
           config={config}
           onSaveConfig={saveConfig}
           onAddCard={addCard}
           onUpdateCard={updateCard}
           onRemoveCard={removeCard}
+          onAddWallet={addWallet}
+          onUpdateWallet={updateWallet}
+          onRemoveWallet={removeWallet}
           onLogout={logout}
         />
       )}
@@ -212,6 +219,7 @@ export default function App() {
         <TransactionForm
           initial={editing}
           cards={cards}
+          wallets={wallets}
           transactions={transactions}
           onSave={handleSave}
           onCancel={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}

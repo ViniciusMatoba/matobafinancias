@@ -23,7 +23,7 @@ function formatDayHeader(dateStr, isToday) {
 
 const FAR_PAST = '2020-01-01';
 
-export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta, config, onEdit, onDelete, onNavigate }) {
+export default function HomeScreen({ transactions, cards, wallets, metaMensal, onSaveMeta, config, onEdit, onDelete, onNavigate }) {
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
@@ -39,11 +39,22 @@ export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta
   const isFuture = dayOffset > 0;
   const currentMonth = selectedDate.slice(0, 7);
 
-  // Saldo acumulado até o dia selecionado
-  const saldoAcumulado = useMemo(() =>
-    calcSaldo(transactions, FAR_PAST, selectedDate),
-    [transactions, selectedDate]
-  );
+  // Saldo acumulado (transações + saldo inicial das carteiras)
+  const saldoAcumulado = useMemo(() => {
+    const globalTx = calcSaldo(transactions, FAR_PAST, selectedDate);
+    const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
+    return globalTx + wInitials;
+  }, [transactions, wallets, selectedDate]);
+
+  // Saldo individual das carteiras
+  const walletsStats = useMemo(() => {
+    if (!wallets?.length) return [];
+    return wallets.map(w => {
+      const wTx = transactions.filter(t => t.carteiraId === w.id);
+      const wSaldo = (w.saldoInicial || 0) + calcSaldo(wTx, FAR_PAST, selectedDate);
+      return { ...w, saldoAtual: wSaldo };
+    });
+  }, [wallets, transactions, selectedDate]);
 
   // Ocorrências apenas do dia selecionado
   const dayOccs = useMemo(() =>
@@ -128,10 +139,10 @@ export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta
           </button>
         </div>
 
-        {/* Saldo acumulado */}
-        <div style={{ textAlign: 'center', marginBottom: summaryCards.length > 0 ? 24 : 0 }}>
+        {/* Saldo acumulado Global */}
+        <div style={{ textAlign: 'center', marginBottom: walletsStats.length > 0 ? 16 : (summaryCards.length > 0 ? 24 : 0) }}>
           <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--text-secondary)' }}>
-            {isFuture ? 'Saldo projetado' : 'Saldo em conta'}
+            {isFuture ? 'Saldo projetado' : 'Saldo Global'}
           </p>
           <p style={{
             margin: 0, fontSize: 40, fontWeight: 700,
@@ -141,6 +152,28 @@ export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta
             {formatBRL(saldoAcumulado)}
           </p>
         </div>
+
+        {/* Contas/Carteiras em Scroll Horizontal */}
+        {walletsStats.length > 0 && (
+          <div style={{ 
+            display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 16, marginBottom: summaryCards.length > 0 ? 8 : 0,
+            scrollbarWidth: 'none' // Firefox
+          }}>
+            {walletsStats.map(w => (
+              <div key={w.id} style={{
+                minWidth: 140, background: 'var(--bg-card)', border: `1px solid ${w.cor}40`,
+                borderRadius: 14, padding: '12px 14px', flexShrink: 0,
+                position: 'relative', overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: w.cor }} />
+                <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{w.nome}</p>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: w.saldoAtual >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
+                  {formatBRL(w.saldoAtual)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Cards de atividade do dia (só se houver movimentação) */}
         {summaryCards.length > 0 && (
@@ -240,6 +273,7 @@ export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta
                   </p>
                   <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
                     {cfg.label}
+                    {occ.tx.carteiraId && wallets?.find(w => w.id === occ.tx.carteiraId) ? ` · ${wallets.find(w => w.id === occ.tx.carteiraId).nome}` : ''}
                     {occ.parcela ? ` · ${occ.parcela}/${occ.totalParcelas}x` : ''}
                     {occ.tx.frequencia !== 'unico' && occ.tx.frequencia !== 'parcelado' ? ' · Recorrente' : ''}
                     {hasItens ? ` · ${occ.tx.itens.length} iten${occ.tx.itens.length !== 1 ? 's' : ''}` : ''}
