@@ -21,6 +21,7 @@ const ERROR_MSGS = {
   'auth/wrong-password':        'Senha incorreta.',
   'auth/popup-closed-by-user':  'Login cancelado.',
   'auth/cancelled-popup-request': 'Login cancelado.',
+  'auth/unauthorized-domain':   'Domínio não autorizado. Adicione "viniciusmatoba.github.io" no painel do Firebase (Authentication > Configurações > Domínios autorizados).',
 };
 
 export default function AuthScreen({ onLogin, onRegister, onLoginWithGoogle }) {
@@ -58,7 +59,7 @@ export default function AuthScreen({ onLogin, onRegister, onLoginWithGoogle }) {
       if (mode === 'login') await onLogin(email, password);
       else await onRegister(email, password);
     } catch (err) {
-      setError(ERROR_MSGS[err.code] || 'Erro ao entrar. Tente novamente.');
+      setError(ERROR_MSGS[err.code] || `Erro: ${err.code} - ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ export default function AuthScreen({ onLogin, onRegister, onLoginWithGoogle }) {
       await onLoginWithGoogle();
     } catch (err) {
       if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-        setError(ERROR_MSGS[err.code] || 'Erro ao entrar com Google.');
+        setError(ERROR_MSGS[err.code] || `Erro Google: ${err.code}`);
       }
     } finally {
       setGoogleLoading(false);

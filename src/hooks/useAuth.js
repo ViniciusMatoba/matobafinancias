@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   onAuthStateChanged,
 } from 'firebase/auth';
@@ -18,7 +18,7 @@ export function useAuth() {
 
   const login = (email, password) => signInWithEmailAndPassword(auth, email, password);
   const register = (email, password) => createUserWithEmailAndPassword(auth, email, password);
-  const loginWithGoogle = () => signInWithPopup(auth, googleProvider);
+  const loginWithGoogle = () => signInWithRedirect(auth, googleProvider);
   const logout = () => signOut(auth);
 
   return { user, login, register, loginWithGoogle, logout };
