@@ -19,7 +19,7 @@ export default function ReloadPrompt() {
 
   return (
     <div style={{
-      position: 'fixed', bottom: 80, left: 16, right: 16, zIndex: 9999,
+      position: 'fixed', top: 16, left: 16, right: 16, zIndex: 9999,
       background: 'var(--bg-surface)', border: '1px solid var(--primary)',
       borderRadius: 12, padding: '16px',
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
@@ -42,7 +42,10 @@ export default function ReloadPrompt() {
       </div>
 
       <button
-        onClick={() => updateServiceWorker(true)}
+        onClick={async () => {
+          await updateServiceWorker(true);
+          window.location.reload();
+        }}
         style={{
           background: 'var(--primary)', color: '#fff', padding: '8px 16px',
           borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer'
