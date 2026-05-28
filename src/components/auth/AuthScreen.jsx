@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DollarSign } from 'lucide-react';
+import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 function GoogleIcon() {
   return (
@@ -31,25 +32,7 @@ export default function AuthScreen({ onLogin, onRegister, onLoginWithGoogle }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-    }
-  };
+  const { prompt: deferredPrompt, handleInstall: handleInstallClick } = useInstallPrompt();
 
   const handleSubmit = async (e) => {
     e.preventDefault();

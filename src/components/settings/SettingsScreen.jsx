@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { LogOut, User, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { LogOut, User, Shield, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import CardManager from './CardManager';
 import BudgetSettings from './BudgetSettings';
+import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 export default function SettingsScreen({ user, cards, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onLogout }) {
   const [budgetOpen, setBudgetOpen] = useState(true);
   const [cardsOpen, setCardsOpen] = useState(false);
+  const { prompt: deferredPrompt, handleInstall } = useInstallPrompt();
 
   return (
     <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
@@ -101,6 +103,23 @@ export default function SettingsScreen({ user, cards, config, onSaveConfig, onAd
             </div>
           )}
         </div>
+
+        {/* PWA Install Button */}
+        {deferredPrompt && (
+          <button
+            onClick={handleInstall}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              padding: '14px', marginBottom: 16, borderRadius: 14,
+              background: 'linear-gradient(135deg, #6366f1, #a855f7)', border: 'none',
+              color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(99,102,241,0.3)'
+            }}
+          >
+            <Download size={18} />
+            Instalar Aplicativo (App Nativo)
+          </button>
+        )}
 
         {/* Nota de segurança */}
         <div style={{
