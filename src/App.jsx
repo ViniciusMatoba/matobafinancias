@@ -15,6 +15,7 @@ import SettingsScreen from './components/settings/SettingsScreen';
 import BottomNav from './components/shared/BottomNav';
 import Modal from './components/shared/Modal';
 import TransactionForm from './components/transactions/TransactionForm';
+import ReloadPrompt from './components/shared/ReloadPrompt';
 import { DollarSign } from 'lucide-react';
 
 export default function App() {
@@ -133,6 +134,7 @@ export default function App() {
       </Modal>
 
       {ToastNode}
+      <ReloadPrompt />
     </>
   );
 }
