@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, User, Shield, ChevronDown, ChevronUp, Download, Wallet } from 'lucide-react';
+import { LogOut, User, Shield, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import CardManager from './CardManager';
 import WalletManager from './WalletManager';
 import BudgetSettings from './BudgetSettings';
@@ -8,7 +8,7 @@ import TelegramSettings from './TelegramSettings';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 export default function SettingsScreen({ user, cards, wallets, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout }) {
-  const [budgetOpen, setBudgetOpen] = useState(true);
+  const [budgetOpen, setBudgetOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [walletsOpen, setWalletsOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
@@ -85,12 +85,12 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
             onClick={() => setBudgetOpen(o => !o)}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '14px 16px', background: 'none',
+              padding: '14px 16px', background: 'none', textAlign: 'left',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 18 }}>💰</span>
-              <div>
+              <div style={{ textAlign: 'left' }}>
                 <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'block' }}>
                   Divisão de Orçamento
                 </span>
