@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --bg-primary: #0a0f1e;
-  --bg-surface: #111827;
-  --bg-card: #1a2235;
-  --bg-card-hover: #1e2a40;
-  --border: #2d3f5a;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #4b5e7a;
-  --entrada: #10b981;
-  --saida: #ef4444;
-  --diario: #f59e0b;
-  --cartao: #3b82f6;
-  --investimento: #a855f7;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
+  --bg-primary: #05050A;
+  --bg-surface: #0E0F1A;
+  --bg-card: #141526;
+  --bg-card-hover: #1A1C33;
+  --border: #2A2D4A;
+  --text-primary: #FFFFFF;
+  --text-secondary: #A1A5C1;
+  --text-muted: #62678D;
+  --entrada: #10B981;
+  --saida: #F43F5E;
+  --diario: #F59E0B;
+  --cartao: #3B82F6;
+  --investimento: #8B5CF6;
+  --primary: #6366F1;
+  --primary-hover: #4F46E5;
 }
 
 * {
@@ -29,7 +29,7 @@ html, body, #root {
   padding: 0;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overscroll-behavior: none;
 }
 
