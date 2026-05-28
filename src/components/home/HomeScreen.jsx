@@ -23,7 +23,7 @@ function formatDayHeader(dateStr, isToday) {
 
 const FAR_PAST = '2020-01-01';
 
-export default function HomeScreen({ transactions, cards, wallets, metaMensal, onSaveMeta, config, onEdit, onDelete, onNavigate }) {
+export default function HomeScreen({ transactions, cards, wallets, config, onEdit, onDelete, onNavigate }) {
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
@@ -195,6 +195,37 @@ export default function HomeScreen({ transactions, cards, wallets, metaMensal, o
             ))}
           </div>
         )}
+
+        <button
+          onClick={() => onNavigate('goals')}
+          style={{
+            width: '100%', marginTop: summaryCards.length > 0 ? 12 : 18,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 12, padding: '13px 14px',
+            background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.28)',
+            borderRadius: 14, color: 'var(--text-primary)', cursor: 'pointer',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <span style={{
+              width: 32, height: 32, borderRadius: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(168,85,247,0.18)', color: 'var(--investimento)',
+              flexShrink: 0,
+            }}>
+              <Target size={17} />
+            </span>
+            <span style={{ textAlign: 'left', minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Metas e Caixinhas
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)' }}>
+                Acompanhe objetivos e reservas
+              </span>
+            </span>
+          </span>
+          <ChevronRight size={17} color="var(--text-muted)" />
+        </button>
       </div>
 
       {/* Banner de Sobra Segura Inteligente */}
