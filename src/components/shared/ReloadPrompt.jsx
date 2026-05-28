@@ -42,9 +42,8 @@ export default function ReloadPrompt() {
       </div>
 
       <button
-        onClick={async () => {
-          await updateServiceWorker(true);
-          window.location.reload();
+        onClick={() => {
+          updateServiceWorker(true);
         }}
         style={{
           background: 'var(--primary)', color: '#fff', padding: '8px 16px',
