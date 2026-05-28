@@ -174,13 +174,16 @@ function checkNotifications(cards, transactions, config, prefs) {
     }
   }
 
-  // N2 — Fatura vence em X dias (configurável, padrão 3)
+  // N2 — Fatura vence em X dias (suporta múltiplos prazos configurados)
   if (tipos.n2 !== false) {
-    const diasAviso = prefs.diasAntecedenciaVencimento || 3;
-    const dX = new Date(hoje); dX.setDate(dX.getDate() + diasAviso);
-    for (const card of cards) {
-      if (card.diaVencimento === dX.getDate()) {
-        msgs.push(`📅 *Fatura em ${diasAviso} dia${diasAviso > 1 ? 's' : ''}*\n${card.nome} vence no dia *${card.diaVencimento}*.`);
+    const raw = prefs.diasAntecedenciaVencimento;
+    const diasArr = Array.isArray(raw) ? raw : [raw || 3];
+    for (const diasAviso of diasArr) {
+      const dX = new Date(hoje); dX.setDate(dX.getDate() + diasAviso);
+      for (const card of cards) {
+        if (card.diaVencimento === dX.getDate()) {
+          msgs.push(`📅 *Fatura em ${diasAviso} dia${diasAviso > 1 ? 's' : ''}*\n${card.nome} vence no dia *${card.diaVencimento}*.`);
+        }
       }
     }
   }
@@ -244,9 +247,10 @@ function checkNotifications(cards, transactions, config, prefs) {
     }
   }
 
-  // N7 — Resumo semanal (dia configurável, padrão: segunda-feira)
-  const diaResumoSemanal = prefs.diaSemanaResumo ?? 1;
-  if (tipos.n7 !== false && weekday === diaResumoSemanal) {
+  // N7 — Resumo semanal (suporta múltiplos dias configurados)
+  const rawDiaSem = prefs.diaSemanaResumo;
+  const diasSemArr = Array.isArray(rawDiaSem) ? rawDiaSem : [rawDiaSem ?? 1];
+  if (tipos.n7 !== false && diasSemArr.includes(weekday)) {
     const d7ago = new Date(hoje); d7ago.setDate(d7ago.getDate() - 7);
     const fromStr = dateStrFromDate(d7ago);
     let entradas = 0, saidas = 0;
@@ -792,21 +796,31 @@ const STEPS = {
   },
 
   cartoes_aviso: {
-    msg: () => `📅 *Com quantos dias de antecedência avisar sobre o vencimento da fatura?*`,
-    kb: {
-      keyboard: [
-        [{ text: '1 dia antes' }, { text: '3 dias antes' }],
-        [{ text: '5 dias antes' }, { text: '7 dias antes' }],
-      ],
-      resize_keyboard: true, one_time_keyboard: true,
+    multiselect: true,
+    defaultSelection: [3],
+    msg: (sel = []) => {
+      const lista = sel.length > 0
+        ? `\n\n_Selecionado: ${[...sel].sort((a,b)=>a-b).map(n=>`*${n} dia${n>1?'s':''}*`).join(', ')} antes_`
+        : `\n\n_Nenhum selecionado ainda._`;
+      return `📅 *Com quantos dias de antecedência avisar sobre o vencimento?*\n_Pode escolher mais de um — toque para marcar/desmarcar._${lista}`;
     },
-    parse(text) {
-      const n = parseInt(text);
-      return [1, 3, 5, 7].includes(n) ? n : INVALID;
+    buildKb(sel) {
+      const mark = (v, label) => ({ text: sel.includes(v) ? `✅ ${label}` : label });
+      return {
+        keyboard: [
+          [mark(1,'1 dia antes'),  mark(3,'3 dias antes')],
+          [mark(5,'5 dias antes'), mark(7,'7 dias antes')],
+          [{ text: '☑️ Confirmar seleção' }],
+        ],
+        resize_keyboard: true,
+      };
+    },
+    parseOption(text) {
+      const n = parseInt(text.replace(/^✅\s*/,'').trim());
+      return [1,3,5,7].includes(n) ? n : null;
     },
     apply(data, val) { data.diasAntecedenciaVencimento = val; },
     next: () => 'orcamento',
-    invalid: () => `Escolha o número de dias de antecedência 👇`,
   },
 
   orcamento: {
@@ -856,31 +870,42 @@ const STEPS = {
   },
 
   semanal_dia: {
-    msg: () => `📆 *Em qual dia da semana prefere receber o resumo semanal?*`,
-    kb: {
-      keyboard: [
-        [{ text: 'Segunda-feira' }, { text: 'Terça-feira'  }],
-        [{ text: 'Quarta-feira'  }, { text: 'Quinta-feira' }],
-        [{ text: 'Sexta-feira'   }, { text: 'Sábado' }, { text: 'Domingo' }],
-      ],
-      resize_keyboard: true, one_time_keyboard: true,
+    multiselect: true,
+    defaultSelection: [1],
+    _map: {
+      'segunda-feira':1,'segunda':1,'seg':1,
+      'terça-feira':2,'terca-feira':2,'terça':2,'terca':2,'ter':2,
+      'quarta-feira':3,'quarta':3,'qua':3,
+      'quinta-feira':4,'quinta':4,'qui':4,
+      'sexta-feira':5,'sexta':5,'sex':5,
+      'sábado':6,'sabado':6,'sáb':6,'sab':6,
+      'domingo':0,'dom':0,
     },
-    parse(text) {
-      const map = {
-        'segunda-feira': 1, 'segunda': 1, 'seg': 1,
-        'terça-feira':   2, 'terca-feira': 2, 'terça': 2, 'terca': 2, 'ter': 2,
-        'quarta-feira':  3, 'quarta': 3, 'qua': 3,
-        'quinta-feira':  4, 'quinta': 4, 'qui': 4,
-        'sexta-feira':   5, 'sexta':  5, 'sex': 5,
-        'sábado':        6, 'sabado': 6, 'sáb': 6, 'sab': 6,
-        'domingo':       0, 'dom': 0,
+    _nomes: ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],
+    msg(sel = []) {
+      const lista = sel.length > 0
+        ? `\n\n_Selecionado: ${[...sel].sort((a,b)=>a-b).map(v=>this._nomes[v]).join(', ')}_`
+        : `\n\n_Nenhum selecionado ainda._`;
+      return `📆 *Em quais dias da semana enviar o resumo semanal?*\n_Pode escolher mais de um._${lista}`;
+    },
+    buildKb(sel) {
+      const d = (v, label) => ({ text: sel.includes(v) ? `✅ ${label}` : label });
+      return {
+        keyboard: [
+          [d(1,'Segunda-feira'), d(2,'Terça-feira')],
+          [d(3,'Quarta-feira'),  d(4,'Quinta-feira')],
+          [d(5,'Sexta-feira'),   d(6,'Sábado'), d(0,'Domingo')],
+          [{ text: '☑️ Confirmar seleção' }],
+        ],
+        resize_keyboard: true,
       };
-      const key = text.trim().toLowerCase();
-      return key in map ? map[key] : INVALID;
+    },
+    parseOption(text) {
+      const key = text.replace(/^✅\s*/,'').trim().toLowerCase();
+      return key in this._map ? this._map[key] : null;
     },
     apply(data, val) { data.diaSemanaResumo = val; },
     next: () => 'diario',
-    invalid: () => `Escolha o dia da semana no teclado abaixo 👇`,
   },
 
   diario: {
@@ -921,9 +946,109 @@ const STEPS = {
   },
 };
 
-async function sendOnboardingQuestion(chatId, stepId) {
+// Envia a pergunta de uma etapa (suporta multi-select com seleção atual)
+async function sendOnboardingQuestion(chatId, stepId, data = {}) {
   const step = STEPS[stepId];
-  return sendMessage(chatId, step.msg(), { reply_markup: step.kb });
+  const sel  = step.multiselect ? (Array.isArray(data.tempSelections) ? data.tempSelections : []) : [];
+  const msg  = step.multiselect ? step.msg(sel) : step.msg();
+  const kb   = step.multiselect ? step.buildKb(sel) : step.kb;
+  return sendMessage(chatId, msg, { reply_markup: kb });
+}
+
+// Exibe resumo e salva ao concluir todas as etapas
+async function completeOnboarding(chatId, uid, data) {
+  await db.collection('users').doc(uid).update({
+    telegramOnboarding: admin.firestore.FieldValue.delete(),
+  });
+  await db.collection('config').doc(uid).set(
+    { notificacoes: { telegramEnabled: true, ...data } },
+    { merge: true }
+  );
+
+  const ativados   = Object.values(data.tipos || {}).filter(v => v === true).length;
+  const NOME_HORA  = { 7: '7h (manhã)', 12: '12h (tarde)', 19: '19h (noite)' };
+  const NOME_DIAS  = { todos: 'todo dia', uteis: 'dias úteis (Seg–Sex)', fds: 'fim de semana' };
+  const NOMES_SEM  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  const fmtAnt = (v) => {
+    const arr = Array.isArray(v) ? v : [v || 3];
+    return arr.sort((a,b)=>a-b).map(n=>`${n}d`).join(', ') + ' antes';
+  };
+  const fmtSem = (v) => {
+    const arr = Array.isArray(v) ? v : [v ?? 1];
+    return arr.sort((a,b)=>a-b).map(x=>NOMES_SEM[x]).join(', ');
+  };
+
+  let resumo = `🎉 *Tudo configurado!*\n\n`;
+  resumo += `🕐 Horário: *${NOME_HORA[data.horaAlerta] || '7h (manhã)'}*\n`;
+  if (data.tipos?.n1) resumo += `💳 Alertas de cartão: ativados *(${fmtAnt(data.diasAntecedenciaVencimento)})*\n`;
+  if (data.tipos?.n4) resumo += `💰 Alertas de orçamento: *ativados*\n`;
+  if (data.tipos?.n6) resumo += `📉 Alerta de saldo negativo: *ativado*\n`;
+  if (data.tipos?.n7) resumo += `📊 Resumo semanal: *${fmtSem(data.diaSemanaResumo)}*\n`;
+  if (data.tipos?.n8) resumo += `🌅 Resumo diário: *${NOME_DIAS[data.diasResumoDiario] || 'todo dia'}*\n`;
+  resumo += `\n✅ *${ativados} tipo(s) de alerta ativado(s)*\n\n`;
+  resumo += `Use /ajuda para ver todos os comandos.\n`;
+  resumo += `Para ajustar: *Configurações → Bot do Telegram* no app.`;
+
+  return sendMessage(chatId, resumo, { reply_markup: { remove_keyboard: true } });
+}
+
+// Avança para o próximo passo (ou conclui)
+async function advanceOnboarding(chatId, uid, nextId, data) {
+  if (nextId === null) return completeOnboarding(chatId, uid, data);
+  await db.collection('users').doc(uid).set(
+    { telegramOnboarding: { active: true, stepId: nextId, data } },
+    { merge: true }
+  );
+  return sendOnboardingQuestion(chatId, nextId, data);
+}
+
+// Fluxo de multi-select: toggle de opções + confirmação
+async function handleMultiSelectStep(chatId, uid, stepId, step, data, text) {
+  const current  = Array.isArray(data.tempSelections) ? [...data.tempSelections] : [];
+  const isPular  = /^\/(pular|skip)$/i.test(text.trim());
+  const isConfirm = /confirmar|☑️/i.test(text);
+
+  // /pular → usa seleção padrão definida no step
+  if (isPular) {
+    const defaultSel = step.defaultSelection || [1];
+    const { tempSelections: _, ...cleanData } = data;
+    step.apply(cleanData, defaultSel);
+    return advanceOnboarding(chatId, uid, step.next(cleanData, defaultSel), cleanData);
+  }
+
+  // Confirmar seleção
+  if (isConfirm) {
+    if (current.length === 0) {
+      return sendMessage(chatId,
+        `Selecione pelo menos uma opção antes de confirmar 👇`,
+        { reply_markup: step.buildKb(current) }
+      );
+    }
+    const { tempSelections: _, ...cleanData } = data;
+    step.apply(cleanData, current);
+    return advanceOnboarding(chatId, uid, step.next(cleanData, current), cleanData);
+  }
+
+  // Toggle de opção
+  const optVal = step.parseOption(text);
+  if (optVal === null) {
+    return sendMessage(chatId,
+      `Toque nas opções para marcar/desmarcar, depois confirme 👇`,
+      { reply_markup: step.buildKb(current) }
+    );
+  }
+
+  const newSel = current.includes(optVal)
+    ? current.filter(v => v !== optVal)
+    : [...current, optVal];
+
+  await db.collection('users').doc(uid).set(
+    { telegramOnboarding: { active: true, stepId, data: { ...data, tempSelections: newSel } } },
+    { merge: true }
+  );
+
+  return sendMessage(chatId, step.msg(newSel), { reply_markup: step.buildKb(newSel) });
 }
 
 async function startOnboarding(chatId, uid, email, fromUser) {
@@ -931,7 +1056,6 @@ async function startOnboarding(chatId, uid, email, fromUser) {
     { telegramOnboarding: { active: true, stepId: 'horario', data: {} } },
     { merge: true }
   );
-
   await sendMessage(chatId,
     `✅ *Conta vinculada com sucesso!*\n\n` +
     `Olá, *${fromUser?.first_name || 'usuário'}*! 🎉\n` +
@@ -939,8 +1063,7 @@ async function startOnboarding(chatId, uid, email, fromUser) {
     `Vou te fazer *6 perguntas* para configurar seus alertas do jeito que você prefere.\n\n` +
     `_(Tudo pode ser ajustado a qualquer momento em Configurações → Bot do Telegram no app)_`
   );
-
-  return sendOnboardingQuestion(chatId, 'horario');
+  return sendOnboardingQuestion(chatId, 'horario', {});
 }
 
 async function handleOnboardingStep(chatId, uid, onboarding, text) {
@@ -948,10 +1071,14 @@ async function handleOnboardingStep(chatId, uid, onboarding, text) {
   const step   = STEPS[stepId];
   const data   = { ...(onboarding.data || {}) };
 
-  // Estado corrompido — reinicia
   if (!step) return startOnboarding(chatId, uid, '', {});
 
-  // /pular usa o primeiro valor do teclado como padrão
+  // Rota multi-select para handler especializado
+  if (step.multiselect) {
+    return handleMultiSelectStep(chatId, uid, stepId, step, data, text);
+  }
+
+  // Passos single-value (Sim/Não, hora, dias…)
   const isPular = /^\/(pular|skip)$/i.test(text.trim());
   let val;
   if (isPular) {
@@ -961,61 +1088,17 @@ async function handleOnboardingStep(chatId, uid, onboarding, text) {
     val = step.parse(text);
   }
 
-  // Resposta não reconhecida
   if (val === INVALID) {
     const hint = step.invalid?.() || `Resposta não reconhecida. Tente novamente 👇`;
     return sendMessage(chatId,
-      `${hint}\n\n_(Digite /pular para pular esta etapa com o valor padrão)_`,
+      `${hint}\n\n_(Digite /pular para pular com o valor padrão)_`,
       { reply_markup: step.kb }
     );
   }
 
   step.apply(data, val);
   const nextId = step.next ? step.next(data, val) : null;
-
-  // ── Onboarding concluído ──────────────────────────────────────────────────
-  if (nextId === null) {
-    await db.collection('users').doc(uid).update({
-      telegramOnboarding: admin.firestore.FieldValue.delete(),
-    });
-    await db.collection('config').doc(uid).set(
-      { notificacoes: { telegramEnabled: true, ...data } },
-      { merge: true }
-    );
-
-    const ativados = Object.values(data.tipos || {}).filter(v => v === true).length;
-    const NOME_HORA = { 7: '7h (manhã)', 12: '12h (tarde)', 19: '19h (noite)' };
-    const NOME_DIAS = { todos: 'todo dia', uteis: 'dias úteis (Seg–Sex)', fds: 'fim de semana' };
-    const NOME_DIA_SEM = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-
-    let resumo = `🎉 *Tudo configurado!*\n\n`;
-    resumo += `🕐 Horário dos alertas: *${NOME_HORA[data.horaAlerta] || '7h (manhã)'}*\n`;
-    if (data.tipos?.n1) {
-      const ant = data.diasAntecedenciaVencimento || 3;
-      resumo += `💳 Alertas de cartão: ativados *(${ant} dia${ant > 1 ? 's' : ''} antes)*\n`;
-    }
-    if (data.tipos?.n7) {
-      const dia = NOME_DIA_SEM[data.diaSemanaResumo ?? 1];
-      resumo += `📊 Resumo semanal: *${dia}*\n`;
-    }
-    if (data.tipos?.n8) {
-      const dias = NOME_DIAS[data.diasResumoDiario] || 'todo dia';
-      resumo += `🌅 Resumo diário: *${dias}*\n`;
-    }
-    resumo += `\n✅ *${ativados} tipo(s) de alerta ativado(s)*\n\n`;
-    resumo += `Use /ajuda para ver todos os comandos.\n`;
-    resumo += `Para ajustar: *Configurações → Bot do Telegram* no app.`;
-
-    return sendMessage(chatId, resumo, { reply_markup: { remove_keyboard: true } });
-  }
-
-  // ── Avança para o próximo passo ────────────────────────────────────────────
-  await db.collection('users').doc(uid).set(
-    { telegramOnboarding: { active: true, stepId: nextId, data } },
-    { merge: true }
-  );
-
-  return sendOnboardingQuestion(chatId, nextId);
+  return advanceOnboarding(chatId, uid, nextId, data);
 }
 
 // ─── Processamento do update Telegram ────────────────────────────────────────
