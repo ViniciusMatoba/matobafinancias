@@ -25,7 +25,7 @@ const ERROR_MSGS = {
   'auth/unauthorized-domain':   'Domínio não autorizado. Adicione "viniciusmatoba.github.io" no painel do Firebase (Authentication > Configurações > Domínios autorizados).',
 };
 
-export default function AuthScreen({ onLogin, onRegister, onLoginWithGoogle }) {
+export default function AuthScreen({ user, onLogin, onRegister, onLoginWithGoogle, onConfirm, onLogout }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -96,101 +96,136 @@ export default function AuthScreen({ onLogin, onRegister, onLoginWithGoogle }) {
         borderRadius: 20,
         padding: '28px 24px',
       }}>
-        {/* Google */}
-        <button
-          onClick={handleGoogle}
-          disabled={googleLoading}
-          style={{
-            width: '100%', padding: '13px', borderRadius: 12,
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            fontSize: 15, fontWeight: 500, color: 'var(--text-primary)',
-            marginBottom: 20, cursor: googleLoading ? 'default' : 'pointer',
-            opacity: googleLoading ? 0.6 : 1,
-            transition: 'border-color 0.2s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-          onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
-        >
-          <GoogleIcon />
-          {googleLoading ? 'Aguarde...' : 'Continuar com Google'}
-        </button>
-
-        {/* Divisor */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>ou</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-        </div>
-
-        {/* Tab toggle */}
-        <div style={{
-          display: 'flex', background: 'var(--bg-primary)',
-          borderRadius: 10, padding: 4, marginBottom: 20,
-        }}>
-          {['login', 'register'].map(m => (
+        {user ? (
+          <div style={{ textAlign: 'center' }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 8 }}>Olá novamente!</h2>
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 28 }}>
+              Você está conectado como<br />
+              <strong style={{ color: 'var(--text-primary)' }}>{user.email}</strong>
+            </p>
+            
             <button
-              key={m}
-              onClick={() => { setMode(m); setError(''); }}
+              onClick={onConfirm}
               style={{
-                flex: 1, padding: '8px', borderRadius: 8, fontSize: 14, fontWeight: 500,
-                background: mode === m ? 'var(--primary)' : 'transparent',
-                color: mode === m ? '#fff' : 'var(--text-secondary)',
-                transition: 'all 0.2s',
+                width: '100%', padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600,
+                background: 'linear-gradient(135deg, #6366f1, #a855f7)', color: '#fff',
+                border: 'none', cursor: 'pointer', marginBottom: 16,
+                boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
               }}
             >
-              {m === 'login' ? 'Entrar' : 'Cadastrar'}
+              Entrar no aplicativo
             </button>
-          ))}
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Email</label>
-            <input
-              type="email"
-              placeholder="seu@email.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
+            
+            <button
+              onClick={onLogout}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 500,
+                background: 'transparent', color: 'var(--text-muted)',
+                border: '1px solid var(--border)', cursor: 'pointer',
+              }}
+            >
+              Entrar com outra conta
+            </button>
           </div>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Senha</label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            />
-          </div>
+        ) : (
+          <>
+            {/* Google */}
+            <button
+              onClick={handleGoogle}
+              disabled={googleLoading}
+              style={{
+                width: '100%', padding: '13px', borderRadius: 12,
+                background: 'var(--bg-card)', border: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                fontSize: 15, fontWeight: 500, color: 'var(--text-primary)',
+                marginBottom: 20, cursor: googleLoading ? 'default' : 'pointer',
+                opacity: googleLoading ? 0.6 : 1,
+                transition: 'border-color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+            >
+              <GoogleIcon />
+              {googleLoading ? 'Aguarde...' : 'Continuar com Google'}
+            </button>
 
-          {error && (
-            <p style={{
-              margin: 0, padding: '10px 12px',
-              background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-              borderRadius: 8, fontSize: 13, color: '#ef4444',
+            {/* Divisor */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>ou</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            </div>
+
+            {/* Tab toggle */}
+            <div style={{
+              display: 'flex', background: 'var(--bg-primary)',
+              borderRadius: 10, padding: 4, marginBottom: 20,
             }}>
-              {error}
-            </p>
-          )}
+              {['login', 'register'].map(m => (
+                <button
+                  key={m}
+                  onClick={() => { setMode(m); setError(''); }}
+                  style={{
+                    flex: 1, padding: '8px', borderRadius: 8, fontSize: 14, fontWeight: 500,
+                    background: mode === m ? 'var(--primary)' : 'transparent',
+                    color: mode === m ? '#fff' : 'var(--text-secondary)',
+                    transition: 'all 0.2s', border: 'none', cursor: 'pointer'
+                  }}
+                >
+                  {m === 'login' ? 'Entrar' : 'Cadastrar'}
+                </button>
+              ))}
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              marginTop: 4, padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600,
-              background: loading ? 'var(--border)' : 'linear-gradient(135deg, #6366f1, #a855f7)',
-              color: '#fff', cursor: loading ? 'default' : 'pointer',
-              boxShadow: loading ? 'none' : '0 4px 20px rgba(99,102,241,0.4)',
-            }}
-          >
-            {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
-          </button>
-        </form>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Email</label>
+                <input
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Senha</label>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                />
+              </div>
+
+              {error && (
+                <p style={{
+                  margin: 0, padding: '10px 12px',
+                  background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: 8, fontSize: 13, color: '#ef4444',
+                }}>
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  marginTop: 4, padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600,
+                  background: loading ? 'var(--border)' : 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  color: '#fff', cursor: loading ? 'default' : 'pointer', border: 'none',
+                  boxShadow: loading ? 'none' : '0 4px 20px rgba(99,102,241,0.4)',
+                }}
+              >
+                {loading ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}
+              </button>
+            </form>
+          </>
+        )}
       </div>
 
       {/* Botão de Instalação do PWA */}

@@ -28,10 +28,11 @@ export default function App() {
   const [view, setView] = useState('home');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [authConfirmed, setAuthConfirmed] = useState(false);
 
   if (!isConfigured) return <SetupScreen />;
 
-  if (user === undefined || (user && configLoading)) {
+  if (user === undefined || (user && configLoading && authConfirmed)) {
     return (
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
         <div style={{
@@ -47,7 +48,18 @@ export default function App() {
     );
   }
 
-  if (!user) return <AuthScreen onLogin={login} onRegister={register} onLoginWithGoogle={loginWithGoogle} />;
+  if (!user || !authConfirmed) {
+    return (
+      <AuthScreen 
+        user={user}
+        onLogin={async (e, p) => { await login(e, p); setAuthConfirmed(true); }}
+        onRegister={async (e, p) => { await register(e, p); setAuthConfirmed(true); }}
+        onLoginWithGoogle={async () => { await loginWithGoogle(); setAuthConfirmed(true); }}
+        onConfirm={() => setAuthConfirmed(true)}
+        onLogout={async () => { await logout(); setAuthConfirmed(false); }}
+      />
+    );
+  }
 
   // Onboarding: usuário logado mas sem renda configurada
   if (!config.onboardingDone) {
