@@ -3,8 +3,6 @@ import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, Trending
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo } from '../../utils/projectionCalc';
 import { SARDINHA_CATEGORIES } from '../../utils/categories';
-import DailyBudgetCard from './DailyBudgetCard';
-import SetMetaModal from './SetMetaModal';
 import BudgetSummaryCard from './BudgetSummaryCard';
 
 const TIPO_ICONS = {
@@ -27,7 +25,6 @@ const FAR_PAST = '2020-01-01';
 
 export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta, config, onEdit, onDelete, onNavigate }) {
   const [dayOffset, setDayOffset] = useState(0);
-  const [metaModalOpen, setMetaModalOpen] = useState(false);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
   const toggleExpand = (id) => setExpandedIds(prev => {
@@ -198,15 +195,7 @@ export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta
         />
       </div>
 
-      {/* Meta de gastos diários */}
-      <div style={{ padding: '0 20px 0' }}>
-        <DailyBudgetCard
-          transactions={transactions}
-          meta={metaMensal}
-          currentMonth={currentMonth}
-          onSetMeta={() => setMetaModalOpen(true)}
-        />
-      </div>
+
 
       {/* Lançamentos do dia */}
       <div style={{ padding: '0 20px 16px' }}>
@@ -309,12 +298,6 @@ export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta
         })}
       </div>
 
-      <SetMetaModal
-        open={metaModalOpen}
-        onClose={() => setMetaModalOpen(false)}
-        currentMeta={metaMensal}
-        onSave={onSaveMeta}
-      />
     </div>
   );
 }
