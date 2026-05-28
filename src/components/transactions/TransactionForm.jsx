@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL } from '../../utils/formatters';
+import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 import { SARDINHA_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 
@@ -24,7 +24,7 @@ const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', dataCompra: todayS
 export default function TransactionForm({ onSave, onCancel, initial, cards, transactions = [] }) {
   const [form, setForm] = useState(initial ? {
     ...EMPTY, ...initial,
-    valor: initial.valor ? String(initial.valor).replace('.', ',') : '',
+    valor: numberToBRLInput(initial.valor),
     totalParcelas: initial.totalParcelas ? String(initial.totalParcelas) : '',
     parcelaAtual: initial.parcelaAtual ? String(initial.parcelaAtual) : '',
   } : { ...EMPTY });
@@ -33,7 +33,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
   const [itens, setItens] = useState(
     initial?.itens?.map(item => ({
       ...item,
-      valor: item.valor ? String(item.valor).replace('.', ',') : '',
+      valor: numberToBRLInput(item.valor),
     })) || []
   );
   const [novoItem, setNovoItem] = useState({ ...EMPTY_ITEM });
@@ -58,7 +58,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
 
   // Modo com itens: cartão com pelo menos 1 item adicionado
   const useItens = form.tipo === 'cartao' && itens.length > 0;
-  const totalItens = itens.reduce((s, item) => s + (parseFloat(String(item.valor).replace(',', '.')) || 0), 0);
+  const totalItens = itens.reduce((s, item) => s + parseBRLInput(item.valor), 0);
 
   // ── Histórico ──────────────────────────────────────────────────────────────
   const sortedHistory = useMemo(() =>
@@ -126,7 +126,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
   // ── fim Histórico ──────────────────────────────────────────────────────────
 
   const addItem = () => {
-    const v = parseFloat(String(novoItem.valor).replace(',', '.'));
+    const v = parseBRLInput(novoItem.valor);
     if (!v || isNaN(v)) return;
     if (editItemIdx !== null) {
       setItens(prev => {
@@ -162,13 +162,13 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
     let valor;
     let itensToSave = null;
 
-    valor = parseFloat(String(form.valor).replace(',', '.'));
+    valor = parseBRLInput(form.valor);
     if (!valor || isNaN(valor)) { setErro('Informe o valor principal válido.'); return; }
 
     if (useItens) {
       itensToSave = itens.map(item => ({
         descricao: item.descricao.trim() || 'Item',
-        valor: parseFloat(String(item.valor).replace(',', '.')),
+        valor: parseBRLInput(item.valor),
         categoria: item.categoria || null,
         dataCompra: item.dataCompra,
         ...(item.isParcelado ? {
@@ -287,7 +287,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
         </label>
         <input
           type="text" inputMode="decimal" placeholder="0,00"
-          value={form.valor} onChange={e => set('valor', e.target.value.replace(/[^0-9,]/g, ''))}
+          value={form.valor} onChange={e => set('valor', formatBRLInput(e.target.value))}
           required style={{ fontSize: 22, fontWeight: 600, color: tipoConfig.color, letterSpacing: 0.5 }}
         />
       </div>
@@ -361,26 +361,33 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
                 Itens da fatura
               </label>
               <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--cartao)' }}>
-                {formatBRL(totalItens)} / {formatBRL(parseFloat(String(form.valor).replace(',', '.')) || 0)}
+                {formatBRL(totalItens)} / {formatBRL(parseBRLInput(form.valor))}
               </span>
             </div>
             {/* Barra de progresso visual */}
-            <div style={{ height: 6, background: 'var(--bg-surface)', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: `${Math.min(((totalItens) / (parseFloat(String(form.valor).replace(',', '.')) || 1)) * 100, 100)}%`,
-                background: (totalItens > (parseFloat(String(form.valor).replace(',', '.')) || 0)) ? 'var(--saida)' : 'var(--cartao)',
-                transition: 'width 0.3s'
-              }} />
-            </div>
-            {(parseFloat(String(form.valor).replace(',', '.')) || 0) > 0 && (
-              <p style={{ margin: 0, fontSize: 11, textAlign: 'right', color: totalItens > (parseFloat(String(form.valor).replace(',', '.')) || 0) ? 'var(--saida)' : 'var(--text-muted)' }}>
-                {totalItens > (parseFloat(String(form.valor).replace(',', '.')) || 0)
-                  ? `Excedeu R$ ${formatBRL(totalItens - (parseFloat(String(form.valor).replace(',', '.')) || 0))}`
-                  : `Falta R$ ${formatBRL((parseFloat(String(form.valor).replace(',', '.')) || 0) - totalItens)}`
-                }
-              </p>
-            )}
+            {(() => {
+              const faturaValor = parseBRLInput(form.valor);
+              const excedeu = totalItens > faturaValor;
+              return (
+                <>
+                  <div style={{ height: 6, background: 'var(--bg-surface)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${Math.min((totalItens / (faturaValor || 1)) * 100, 100)}%`,
+                      background: excedeu ? 'var(--saida)' : 'var(--cartao)',
+                      transition: 'width 0.3s',
+                    }} />
+                  </div>
+                  {faturaValor > 0 && (
+                    <p style={{ margin: 0, fontSize: 11, textAlign: 'right', color: excedeu ? 'var(--saida)' : 'var(--text-muted)' }}>
+                      {excedeu
+                        ? `Excedeu ${formatBRL(totalItens - faturaValor)}`
+                        : `Falta ${formatBRL(faturaValor - totalItens)}`}
+                    </p>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Lista de itens adicionados */}
@@ -405,7 +412,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
                   )}
                 </div>
                 <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--cartao)', flexShrink: 0 }}>
-                  {formatBRL(parseFloat(String(item.valor).replace(',', '.')) || 0)}
+                  {formatBRL(parseBRLInput(item.valor))}
                 </span>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                   <button type="button" onClick={() => editItem(idx)}
@@ -475,7 +482,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
               <input
                 type="text" inputMode="decimal" placeholder="0,00"
                 value={novoItem.valor}
-                onChange={e => setNovoItem(i => ({ ...i, valor: e.target.value.replace(/[^0-9,]/g, '') }))}
+                onChange={e => setNovoItem(i => ({ ...i, valor: formatBRLInput(e.target.value) }))}
                 style={{ flex: 1, fontSize: 16, fontWeight: 600, color: 'var(--cartao)' }}
               />
               <select

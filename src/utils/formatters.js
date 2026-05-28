@@ -57,6 +57,41 @@ export const TYPE_CONFIG = {
   investimento: { label: 'Investimento',  color: '#a855f7', bg: 'rgba(168,85,247,0.15)',  sign: -1 },
 };
 
+/**
+ * Formata dígitos como valor BRL durante a digitação (estilo calculadora).
+ * Os últimos 2 dígitos são sempre os centavos.
+ * Ex: ao digitar "150050" exibe "1.500,50"
+ */
+export function formatBRLInput(raw) {
+  const digits = String(raw ?? '').replace(/\D/g, '');
+  if (!digits) return '';
+  const n = parseInt(digits, 10);
+  if (n === 0) return '';
+  const reais = Math.floor(n / 100);
+  const cents = n % 100;
+  const reaisStr = reais === 0 ? '0' : reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${reaisStr},${String(cents).padStart(2, '0')}`;
+}
+
+/**
+ * Converte string formatada de input BRL para número.
+ * Ex: "1.500,50" → 1500.50
+ */
+export function parseBRLInput(formatted) {
+  if (!formatted) return 0;
+  return parseFloat(String(formatted).replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+/**
+ * Converte número para string de input BRL já formatada.
+ * Ex: 1500.5 → "1.500,50"
+ */
+export function numberToBRLInput(num) {
+  if (!num) return '';
+  const cents = Math.round(Number(num) * 100);
+  return formatBRLInput(String(cents));
+}
+
 export const FREQ_LABELS = {
   unico:    'Único',
   diario:   'Diário',

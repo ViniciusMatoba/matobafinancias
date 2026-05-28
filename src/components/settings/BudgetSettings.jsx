@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { RotateCcw, Check } from 'lucide-react';
-import { formatBRL } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 import { SARDINHA_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 
 export default function BudgetSettings({ config, onSave }) {
   const [renda, setRenda] = useState(
-    config.rendaMensal > 0 ? String(config.rendaMensal).replace('.', ',') : ''
+    config.rendaMensal > 0 ? numberToBRLInput(config.rendaMensal) : ''
   );
   const [pcts, setPcts] = useState({ ...DEFAULT_BUDGET_PCTS, ...config.budgetPcts });
   const [saved, setSaved] = useState(false);
 
-  const rendaNum = parseFloat(String(renda).replace(',', '.')) || 0;
+  const rendaNum = parseBRLInput(renda);
   const totalPct = Object.values(pcts).reduce((s, v) => s + Number(v), 0);
   const excede = totalPct > 100;
 
@@ -48,7 +48,7 @@ export default function BudgetSettings({ config, onSave }) {
           inputMode="decimal"
           placeholder="Ex: 5.000,00"
           value={renda}
-          onChange={e => setRenda(e.target.value.replace(/[^0-9,]/g, ''))}
+          onChange={e => setRenda(formatBRLInput(e.target.value))}
           style={{ fontSize: 18, fontWeight: 600, color: 'var(--entrada)' }}
         />
       </div>

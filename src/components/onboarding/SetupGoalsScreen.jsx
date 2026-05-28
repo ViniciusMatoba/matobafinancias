@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ChevronRight, RotateCcw, DollarSign, CheckCircle } from 'lucide-react';
-import { formatBRL } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, parseBRLInput } from '../../utils/formatters';
 import { SARDINHA_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 
 const STEPS = ['renda', 'categorias', 'confirmar'];
@@ -10,7 +10,7 @@ export default function SetupGoalsScreen({ onSave }) {
   const [renda, setRenda] = useState('');
   const [pcts, setPcts] = useState({ ...DEFAULT_BUDGET_PCTS });
 
-  const rendaNum = parseFloat(String(renda).replace(',', '.')) || 0;
+  const rendaNum = parseBRLInput(renda);
   const totalPct = Object.values(pcts).reduce((s, v) => s + Number(v), 0);
   const excede = totalPct > 100;
 
@@ -86,7 +86,7 @@ export default function SetupGoalsScreen({ onSave }) {
                 inputMode="decimal"
                 placeholder="Ex: 5.000,00"
                 value={renda}
-                onChange={e => setRenda(e.target.value.replace(/[^0-9,]/g, ''))}
+                onChange={e => setRenda(formatBRLInput(e.target.value))}
                 autoFocus
                 style={{ fontSize: 28, fontWeight: 700, color: 'var(--entrada)', textAlign: 'center' }}
               />

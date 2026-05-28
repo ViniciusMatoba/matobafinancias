@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { CreditCard, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
-import { formatBRL } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 
 const CARD_COLORS = ['#3b82f6','#6366f1','#a855f7','#ec4899','#10b981','#f59e0b','#ef4444','#14b8a6'];
 
 const EMPTY = { nome: '', limite: '', diaVencimento: '', diaFechamento: '', cor: CARD_COLORS[0] };
 
 function CardForm({ initial, onSave, onCancel }) {
-  const [form, setForm] = useState(initial ? { ...initial, limite: initial.limite ? String(initial.limite).replace('.', ',') : '' } : { ...EMPTY });
+  const [form, setForm] = useState(initial ? { ...initial, limite: numberToBRLInput(initial.limite) } : { ...EMPTY });
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const handleSave = () => {
     if (!form.nome.trim()) return;
-    const limite = parseFloat(String(form.limite).replace(',', '.')) || 0;
+    const limite = parseBRLInput(form.limite);
     onSave({ ...form, limite, diaVencimento: parseInt(form.diaVencimento) || 1, diaFechamento: parseInt(form.diaFechamento) || 1 });
   };
 
@@ -26,7 +26,7 @@ function CardForm({ initial, onSave, onCancel }) {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div>
             <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Limite (R$)</label>
-            <input type="text" inputMode="decimal" placeholder="5.000,00" value={form.limite} onChange={e => set('limite', e.target.value.replace(/[^0-9,]/g, ''))} />
+            <input type="text" inputMode="decimal" placeholder="5.000,00" value={form.limite} onChange={e => set('limite', formatBRLInput(e.target.value))} />
           </div>
           <div>
             <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Dia do vencimento</label>
