@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Calendar, Pencil, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Calendar, Pencil, Trash2, BarChart2 } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../utils/formatters';
 import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { SARDINHA_CATEGORIES } from '../../utils/categories';
+import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -34,6 +35,7 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [expanded, setExpanded] = useState({});
   const [isSummaryMode, setIsSummaryMode] = useState(false);
+  const [isChartMode, setIsChartMode] = useState(false);
   
   const today = todayStr();
   const [customFrom, setCustomFrom] = useState(today);
@@ -167,7 +169,27 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
           </div>
         </div>
 
-        {/* Legenda */}
+        <button
+          onClick={() => setIsChartMode(!isChartMode)}
+          style={{
+            width: '100%', padding: '12px', borderRadius: 12, marginBottom: 16,
+            background: isChartMode ? 'var(--primary)' : 'var(--bg-card)',
+            color: isChartMode ? '#fff' : 'var(--primary)',
+            border: `1px solid var(--primary)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            fontSize: 14, fontWeight: 600, cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          {isChartMode ? <ListFilter size={16} /> : <BarChart2 size={16} />}
+          {isChartMode ? 'Voltar para Lista' : 'Verificar Gráficos'}
+        </button>
+
+        {isChartMode ? (
+          <ProjectionCharts days={days} saldoInicial={saldoInicial} />
+        ) : (
+          <>
+            {/* Legenda */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 6, padding: '0 4px' }}>
           <span style={{ flex: 1, fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
             Dia / Movimentações
@@ -407,6 +429,7 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
             </div>
           );
         })}
+        </>}
 
         <div style={{ height: 8 }} />
       </div>
