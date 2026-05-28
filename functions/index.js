@@ -174,12 +174,13 @@ function checkNotifications(cards, transactions, config, prefs) {
     }
   }
 
-  // N2 — Fatura vence em 3 dias
+  // N2 — Fatura vence em X dias (configurável, padrão 3)
   if (tipos.n2 !== false) {
-    const d3 = new Date(hoje); d3.setDate(d3.getDate() + 3);
+    const diasAviso = prefs.diasAntecedenciaVencimento || 3;
+    const dX = new Date(hoje); dX.setDate(dX.getDate() + diasAviso);
     for (const card of cards) {
-      if (card.diaVencimento === d3.getDate()) {
-        msgs.push(`📅 *Fatura em 3 dias*\n${card.nome} vence no dia *${card.diaVencimento}*.`);
+      if (card.diaVencimento === dX.getDate()) {
+        msgs.push(`📅 *Fatura em ${diasAviso} dia${diasAviso > 1 ? 's' : ''}*\n${card.nome} vence no dia *${card.diaVencimento}*.`);
       }
     }
   }
@@ -243,8 +244,9 @@ function checkNotifications(cards, transactions, config, prefs) {
     }
   }
 
-  // N7 — Resumo semanal (toda segunda-feira)
-  if (tipos.n7 !== false && weekday === 1) {
+  // N7 — Resumo semanal (dia configurável, padrão: segunda-feira)
+  const diaResumoSemanal = prefs.diaSemanaResumo ?? 1;
+  if (tipos.n7 !== false && weekday === diaResumoSemanal) {
     const d7ago = new Date(hoje); d7ago.setDate(d7ago.getDate() - 7);
     const fromStr = dateStrFromDate(d7ago);
     let entradas = 0, saidas = 0;
@@ -256,8 +258,15 @@ function checkNotifications(cards, transactions, config, prefs) {
     msgs.push(`📊 *Resumo semanal*\n✅ Entradas: ${formatBRL(entradas)}\n❌ Saídas: ${formatBRL(saidas)}\n💰 Saldo da semana: *${formatBRL(entradas - saidas)}*`);
   }
 
-  // N8 — Resumo diário matinal (ativado no onboarding pelo usuário)
+  // N8 — Resumo diário matinal (dias configuráveis: todos / uteis / fds)
   if (tipos.n8 === true) {
+    const diasDiario = prefs.diasResumoDiario || 'todos';
+    const enviarN8 =
+      diasDiario === 'todos' ||
+      (diasDiario === 'uteis' && weekday >= 1 && weekday <= 5) ||
+      (diasDiario === 'fds'   && (weekday === 0 || weekday === 6));
+
+    if (enviarN8) {
     const saldoAtual = calcSaldoSimples(transactions, todayStr);
     const lancHoje   = transactions.filter(tx =>
       tx.dataInicio === todayStr && tx.frequencia === 'unico'
@@ -296,6 +305,7 @@ function checkNotifications(cards, transactions, config, prefs) {
 
     msg += `_Bom dia e boas finanças! 🚀_`;
     msgs.push(msg.trim());
+    } // fim if (enviarN8)
   }
 
   return msgs;
@@ -715,79 +725,210 @@ async function handleAjuda(chatId) {
   );
 }
 
-// ─── Onboarding — configuração guiada no primeiro contato ────────────────────
+// ─── Onboarding v2 — máquina de estados com personalização completa ──────────
 
-const ONBOARDING_STEPS = [
-  {
-    id:      'cartoes',
-    tipos:   ['n1', 'n2', 'n3'],
-    question:
-      `💳 *Alertas de cartão de crédito*\n\n` +
-      `Posso te avisar quando:\n` +
-      `• Uma fatura vencer hoje ou em 3 dias\n` +
-      `• Uma fatura estiver prestes a fechar (2 dias)\n\n` +
-      `Ativar alertas de cartão?`,
-  },
-  {
-    id:      'orcamento',
-    tipos:   ['n4', 'n5'],
-    question:
-      `💰 *Alertas de orçamento*\n\n` +
-      `Posso te avisar quando uma categoria do orçamento atingir 80% do limite ou ultrapassá-lo.\n\n` +
-      `Ativar alertas de orçamento?`,
-  },
-  {
-    id:      'saldo',
-    tipos:   ['n6'],
-    question:
-      `📉 *Alerta de saldo negativo*\n\n` +
-      `Posso te avisar quando a projeção indicar que seu saldo pode ficar negativo nos próximos 7 dias.\n\n` +
-      `Ativar esse alerta?`,
-  },
-  {
-    id:      'semanal',
-    tipos:   ['n7'],
-    question:
-      `📊 *Resumo semanal*\n\n` +
-      `Toda segunda-feira você receberia um resumo da semana com entradas, saídas e saldo.\n\n` +
-      `Ativar resumo semanal?`,
-  },
-  {
-    id:      'diario',
-    tipos:   ['n8'],
-    question:
-      `🌅 *Resumo diário matinal*\n\n` +
-      `Todo dia às 7h você receberia uma mensagem com seu saldo atual e os lançamentos previstos para o dia.\n\n` +
-      `Ativar resumo diário?`,
-  },
-];
+// Sentinela para resposta inválida (distingue de `false` que é resposta válida)
+const INVALID = Symbol('invalid');
 
 const SIM_NAO_KB = {
-  keyboard:         [[{ text: '✅ Sim' }, { text: '❌ Não' }]],
-  resize_keyboard:  true,
+  keyboard:          [[{ text: '✅ Sim' }, { text: '❌ Não' }]],
+  resize_keyboard:   true,
   one_time_keyboard: true,
 };
 
-function isSimResponse(t) {
-  return /^(sim|s|yes|✅ sim|ok|quero|ativo|ativa|claro|pode|bora)$/i.test(t.trim());
-}
-function isNaoResponse(t) {
-  return /^(não|nao|n|no|❌ não|nop|não quero|não preciso|deixa|pula)$/i.test(t.trim());
+function parseSN(text) {
+  const t = text.trim().toLowerCase();
+  if (/^(sim|s|yes|✅ sim|ok|quero|ativo|ativa|claro|pode|bora)$/.test(t)) return true;
+  if (/^(não|nao|n|no|❌ não|nop|não quero|não preciso|deixa|pula)$/.test(t)) return false;
+  return INVALID;
 }
 
-async function sendOnboardingQuestion(chatId, stepIdx) {
-  const step  = ONBOARDING_STEPS[stepIdx];
-  const total = ONBOARDING_STEPS.length;
-  return sendMessage(
-    chatId,
-    `*Pergunta ${stepIdx + 1} de ${total}*\n\n${step.question}`,
-    { reply_markup: SIM_NAO_KB }
-  );
+// Cada passo: msg(), kb, parse(text)→valor|INVALID, apply(data,val), next(data,val)→stepId|null
+// Passos com mainStep são os "principais" (têm número de etapa exibido)
+const STEPS = {
+
+  horario: {
+    mainStep: 1,
+    msg: () =>
+      `📍 *Etapa 1 de 6 — Horário dos alertas*\n\n` +
+      `A que horas você prefere receber notificações e resumos diários?\n\n` +
+      `_(Pode alterar depois em Configurações → Bot do Telegram no app)_`,
+    kb: {
+      keyboard: [
+        [{ text: '🌅 7h — Manhã'  }],
+        [{ text: '☀️ 12h — Tarde' }],
+        [{ text: '🌙 19h — Noite' }],
+      ],
+      resize_keyboard: true, one_time_keyboard: true,
+    },
+    parse(text) {
+      if (/7h|manhã|7\b/i.test(text))   return 7;
+      if (/12h|tarde|12\b/i.test(text)) return 12;
+      if (/19h|noite|19\b/i.test(text)) return 19;
+      return INVALID;
+    },
+    apply(data, val) { data.horaAlerta = val; },
+    next: () => 'cartoes',
+    invalid: () => `Por favor, escolha um dos horários acima 👇`,
+  },
+
+  cartoes: {
+    mainStep: 2,
+    msg: () =>
+      `📍 *Etapa 2 de 6 — Alertas de cartão de crédito*\n\n` +
+      `Posso te avisar quando:\n` +
+      `• Uma fatura estiver próxima do vencimento\n` +
+      `• A fatura estiver prestes a fechar (2 dias antes)\n\n` +
+      `Ativar alertas de cartão?`,
+    kb: SIM_NAO_KB,
+    parse: parseSN,
+    apply(data, val) {
+      data.tipos        = data.tipos || {};
+      data.tipos.n1     = val;
+      data.tipos.n2     = val;
+      data.tipos.n3     = val;
+    },
+    next: (data, val) => val ? 'cartoes_aviso' : 'orcamento',
+  },
+
+  cartoes_aviso: {
+    msg: () => `📅 *Com quantos dias de antecedência avisar sobre o vencimento da fatura?*`,
+    kb: {
+      keyboard: [
+        [{ text: '1 dia antes' }, { text: '3 dias antes' }],
+        [{ text: '5 dias antes' }, { text: '7 dias antes' }],
+      ],
+      resize_keyboard: true, one_time_keyboard: true,
+    },
+    parse(text) {
+      const n = parseInt(text);
+      return [1, 3, 5, 7].includes(n) ? n : INVALID;
+    },
+    apply(data, val) { data.diasAntecedenciaVencimento = val; },
+    next: () => 'orcamento',
+    invalid: () => `Escolha o número de dias de antecedência 👇`,
+  },
+
+  orcamento: {
+    mainStep: 3,
+    msg: () =>
+      `📍 *Etapa 3 de 6 — Alertas de orçamento*\n\n` +
+      `Posso te avisar quando uma categoria (Método Sardinha) atingir 80% do limite ou ultrapassá-lo.\n\n` +
+      `Ativar alertas de orçamento?`,
+    kb: SIM_NAO_KB,
+    parse: parseSN,
+    apply(data, val) {
+      data.tipos        = data.tipos || {};
+      data.tipos.n4     = val;
+      data.tipos.n5     = val;
+    },
+    next: () => 'saldo_neg',
+  },
+
+  saldo_neg: {
+    mainStep: 4,
+    msg: () =>
+      `📍 *Etapa 4 de 6 — Alerta de saldo negativo*\n\n` +
+      `Posso te avisar quando a projeção indicar que seu saldo pode ficar negativo nos próximos 7 dias.\n\n` +
+      `Ativar esse alerta?`,
+    kb: SIM_NAO_KB,
+    parse: parseSN,
+    apply(data, val) {
+      data.tipos        = data.tipos || {};
+      data.tipos.n6     = val;
+    },
+    next: () => 'semanal',
+  },
+
+  semanal: {
+    mainStep: 5,
+    msg: () =>
+      `📍 *Etapa 5 de 6 — Resumo semanal*\n\n` +
+      `Posso enviar um resumo semanal com entradas, saídas e saldo da semana.\n\n` +
+      `Ativar resumo semanal?`,
+    kb: SIM_NAO_KB,
+    parse: parseSN,
+    apply(data, val) {
+      data.tipos        = data.tipos || {};
+      data.tipos.n7     = val;
+    },
+    next: (data, val) => val ? 'semanal_dia' : 'diario',
+  },
+
+  semanal_dia: {
+    msg: () => `📆 *Em qual dia da semana prefere receber o resumo semanal?*`,
+    kb: {
+      keyboard: [
+        [{ text: 'Segunda-feira' }, { text: 'Terça-feira'  }],
+        [{ text: 'Quarta-feira'  }, { text: 'Quinta-feira' }],
+        [{ text: 'Sexta-feira'   }, { text: 'Sábado' }, { text: 'Domingo' }],
+      ],
+      resize_keyboard: true, one_time_keyboard: true,
+    },
+    parse(text) {
+      const map = {
+        'segunda-feira': 1, 'segunda': 1, 'seg': 1,
+        'terça-feira':   2, 'terca-feira': 2, 'terça': 2, 'terca': 2, 'ter': 2,
+        'quarta-feira':  3, 'quarta': 3, 'qua': 3,
+        'quinta-feira':  4, 'quinta': 4, 'qui': 4,
+        'sexta-feira':   5, 'sexta':  5, 'sex': 5,
+        'sábado':        6, 'sabado': 6, 'sáb': 6, 'sab': 6,
+        'domingo':       0, 'dom': 0,
+      };
+      const key = text.trim().toLowerCase();
+      return key in map ? map[key] : INVALID;
+    },
+    apply(data, val) { data.diaSemanaResumo = val; },
+    next: () => 'diario',
+    invalid: () => `Escolha o dia da semana no teclado abaixo 👇`,
+  },
+
+  diario: {
+    mainStep: 6,
+    msg: () =>
+      `📍 *Etapa 6 de 6 — Resumo diário*\n\n` +
+      `Posso enviar um resumo diário no horário que você escolheu com seu saldo atual e os lançamentos do dia.\n\n` +
+      `Ativar resumo diário?`,
+    kb: SIM_NAO_KB,
+    parse: parseSN,
+    apply(data, val) {
+      data.tipos        = data.tipos || {};
+      data.tipos.n8     = val;
+    },
+    next: (data, val) => val ? 'diario_dias' : null,
+  },
+
+  diario_dias: {
+    msg: () => `🗓 *Quais dias você quer receber o resumo diário?*`,
+    kb: {
+      keyboard: [
+        [{ text: '🗓 Todo dia'                    }],
+        [{ text: '💼 Dias úteis (Seg–Sex)'        }],
+        [{ text: '😎 Final de semana (Sáb e Dom)' }],
+      ],
+      resize_keyboard: true, one_time_keyboard: true,
+    },
+    parse(text) {
+      const t = text.toLowerCase();
+      if (/todo dia|todos/i.test(t))                           return 'todos';
+      if (/úteis|uteis|seg|sex|dias úteis|dias uteis/i.test(t)) return 'uteis';
+      if (/final|fim|sáb|sab|dom|semana/i.test(t))             return 'fds';
+      return INVALID;
+    },
+    apply(data, val) { data.diasResumoDiario = val; },
+    next: () => null, // concluído
+    invalid: () => `Escolha uma das opções abaixo 👇`,
+  },
+};
+
+async function sendOnboardingQuestion(chatId, stepId) {
+  const step = STEPS[stepId];
+  return sendMessage(chatId, step.msg(), { reply_markup: step.kb });
 }
 
 async function startOnboarding(chatId, uid, email, fromUser) {
   await db.collection('users').doc(uid).set(
-    { telegramOnboarding: { active: true, step: 0, tipos: {} } },
+    { telegramOnboarding: { active: true, stepId: 'horario', data: {} } },
     { merge: true }
   );
 
@@ -795,66 +936,86 @@ async function startOnboarding(chatId, uid, email, fromUser) {
     `✅ *Conta vinculada com sucesso!*\n\n` +
     `Olá, *${fromUser?.first_name || 'usuário'}*! 🎉\n` +
     `Sua conta *${email}* está conectada ao Matoba Finanças.\n\n` +
-    `Vou te fazer *${ONBOARDING_STEPS.length} perguntas rápidas* para configurar\n` +
-    `seus alertas do jeito que você prefere. Responda com *Sim* ou *Não*.\n\n` +
-    `_(Tudo pode ser ajustado depois em Configurações → Bot do Telegram no app)_`
+    `Vou te fazer *6 perguntas* para configurar seus alertas do jeito que você prefere.\n\n` +
+    `_(Tudo pode ser ajustado a qualquer momento em Configurações → Bot do Telegram no app)_`
   );
 
-  return sendOnboardingQuestion(chatId, 0);
+  return sendOnboardingQuestion(chatId, 'horario');
 }
 
 async function handleOnboardingStep(chatId, uid, onboarding, text) {
-  const stepIdx = onboarding.step || 0;
-  const tipos   = { ...(onboarding.tipos || {}) };
-  const isPular = /^\/(pular|skip)$/i.test(text.trim());
-  const isSim   = isSimResponse(text);
-  const isNao   = isNaoResponse(text);
+  const stepId = onboarding.stepId;
+  const step   = STEPS[stepId];
+  const data   = { ...(onboarding.data || {}) };
 
-  // Resposta não reconhecida — pede de novo com o teclado
-  if (!isSim && !isNao && !isPular) {
+  // Estado corrompido — reinicia
+  if (!step) return startOnboarding(chatId, uid, '', {});
+
+  // /pular usa o primeiro valor do teclado como padrão
+  const isPular = /^\/(pular|skip)$/i.test(text.trim());
+  let val;
+  if (isPular) {
+    val = step.parse(step.kb.keyboard[0][0].text);
+    if (val === INVALID) val = true;
+  } else {
+    val = step.parse(text);
+  }
+
+  // Resposta não reconhecida
+  if (val === INVALID) {
+    const hint = step.invalid?.() || `Resposta não reconhecida. Tente novamente 👇`;
     return sendMessage(chatId,
-      `Por favor, responda com *Sim* ou *Não* 👇\n\n` +
-      `_(Digite /pular para pular esta pergunta)_`,
-      { reply_markup: SIM_NAO_KB }
+      `${hint}\n\n_(Digite /pular para pular esta etapa com o valor padrão)_`,
+      { reply_markup: step.kb }
     );
   }
 
-  // Registra resposta para todos os tipos do passo atual
-  const step  = ONBOARDING_STEPS[stepIdx];
-  const valor = isPular ? true : isSim; // /pular ativa por padrão
-  for (const t of step.tipos) tipos[t] = valor;
+  step.apply(data, val);
+  const nextId = step.next ? step.next(data, val) : null;
 
-  const nextStep = stepIdx + 1;
-
-  // Onboarding concluído
-  if (nextStep >= ONBOARDING_STEPS.length) {
+  // ── Onboarding concluído ──────────────────────────────────────────────────
+  if (nextId === null) {
     await db.collection('users').doc(uid).update({
       telegramOnboarding: admin.firestore.FieldValue.delete(),
     });
     await db.collection('config').doc(uid).set(
-      { notificacoes: { telegramEnabled: true, tipos } },
+      { notificacoes: { telegramEnabled: true, ...data } },
       { merge: true }
     );
 
-    const ativos = Object.values(tipos).filter(v => v === true).length;
-    const total  = Object.keys(tipos).length;
+    const ativados = Object.values(data.tipos || {}).filter(v => v === true).length;
+    const NOME_HORA = { 7: '7h (manhã)', 12: '12h (tarde)', 19: '19h (noite)' };
+    const NOME_DIAS = { todos: 'todo dia', uteis: 'dias úteis (Seg–Sex)', fds: 'fim de semana' };
+    const NOME_DIA_SEM = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
-    return sendMessage(chatId,
-      `🎉 *Tudo configurado!*\n\n` +
-      `${ativos} de ${total} tipos de alerta ativados.\n\n` +
-      `Agora você pode usar todos os comandos. Digite /ajuda para ver tudo disponível.\n\n` +
-      `Para ajustar as notificações: *Configurações → Bot do Telegram* no app.`,
-      { reply_markup: { remove_keyboard: true } }
-    );
+    let resumo = `🎉 *Tudo configurado!*\n\n`;
+    resumo += `🕐 Horário dos alertas: *${NOME_HORA[data.horaAlerta] || '7h (manhã)'}*\n`;
+    if (data.tipos?.n1) {
+      const ant = data.diasAntecedenciaVencimento || 3;
+      resumo += `💳 Alertas de cartão: ativados *(${ant} dia${ant > 1 ? 's' : ''} antes)*\n`;
+    }
+    if (data.tipos?.n7) {
+      const dia = NOME_DIA_SEM[data.diaSemanaResumo ?? 1];
+      resumo += `📊 Resumo semanal: *${dia}*\n`;
+    }
+    if (data.tipos?.n8) {
+      const dias = NOME_DIAS[data.diasResumoDiario] || 'todo dia';
+      resumo += `🌅 Resumo diário: *${dias}*\n`;
+    }
+    resumo += `\n✅ *${ativados} tipo(s) de alerta ativado(s)*\n\n`;
+    resumo += `Use /ajuda para ver todos os comandos.\n`;
+    resumo += `Para ajustar: *Configurações → Bot do Telegram* no app.`;
+
+    return sendMessage(chatId, resumo, { reply_markup: { remove_keyboard: true } });
   }
 
-  // Avança para o próximo passo
+  // ── Avança para o próximo passo ────────────────────────────────────────────
   await db.collection('users').doc(uid).set(
-    { telegramOnboarding: { active: true, step: nextStep, tipos } },
+    { telegramOnboarding: { active: true, stepId: nextId, data } },
     { merge: true }
   );
 
-  return sendOnboardingQuestion(chatId, nextStep);
+  return sendOnboardingQuestion(chatId, nextId);
 }
 
 // ─── Processamento do update Telegram ────────────────────────────────────────
@@ -943,11 +1104,12 @@ exports.telegramWebhook = onRequest(
   }
 );
 
-// ─── EXPORT 2: Notificações diárias às 07:00 Brasília (10:00 UTC) ─────────────
+// ─── EXPORT 2: Notificações — 07h, 12h e 19h Brasília (10h, 15h, 22h UTC) ─────
 exports.dailyNotifications = onSchedule(
-  { schedule: '0 10 * * *', timeZone: 'UTC', region: REGION },
+  { schedule: '0 10,15,22 * * *', timeZone: 'UTC', region: REGION },
   async () => {
-    logger.info('[NOTIF] Iniciando verificações diárias...');
+    const horaAtual = getNowBrasilia().getHours(); // 7, 12 ou 19
+    logger.info(`[NOTIF] Rodando para hora Brasília: ${horaAtual}h`);
 
     // Busca todos os usuários com Telegram vinculado
     const usersSnap = await db.collection('users')
@@ -972,6 +1134,10 @@ exports.dailyNotifications = onSchedule(
 
         // Verifica se notificações estão habilitadas para Telegram
         if (!prefs.telegramEnabled) continue;
+
+        // Verifica se o horário configurado pelo usuário bate com o horário atual
+        const horaUsuario = prefs.horaAlerta ?? 7;
+        if (horaUsuario !== horaAtual) continue;
 
         // Lê cartões
         const cardsSnap = await db.collection('cards').doc(uid).collection('list').get();
