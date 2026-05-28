@@ -58,24 +58,43 @@ export const TYPE_CONFIG = {
 };
 
 /**
- * Formata dígitos como valor BRL durante a digitação (estilo calculadora).
- * Os últimos 2 dígitos são sempre os centavos.
- * Ex: ao digitar "150050" exibe "1.500,50"
+ * Formata valor BRL durante a digitação.
+ * Dígitos constroem o lado dos REAIS (esquerda da vírgula), com pontos de milhar automáticos.
+ * Vírgula + até 2 dígitos = centavos. Auto-adiciona ",00" quando sem vírgula.
+ *
+ * Exemplos:
+ *   "1"      → "1,00"
+ *   "15"     → "15,00"
+ *   "1500"   → "1.500,00"
+ *   "151,12" → "151,12"
  */
 export function formatBRLInput(raw) {
-  const digits = String(raw ?? '').replace(/\D/g, '');
-  if (!digits) return '';
-  const n = parseInt(digits, 10);
-  if (n === 0) return '';
-  const reais = Math.floor(n / 100);
-  const cents = n % 100;
-  const reaisStr = reais === 0 ? '0' : reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${reaisStr},${String(cents).padStart(2, '0')}`;
+  if (!raw) return '';
+  // Remove pontos de milhar (só display), mantém vírgula e dígitos
+  const clean = String(raw).replace(/\./g, '');
+  const commaIdx = clean.indexOf(',');
+
+  if (commaIdx === -1) {
+    // Sem vírgula: formata inteiro e adiciona ",00"
+    const digits = clean.replace(/\D/g, '');
+    if (!digits) return '';
+    const n = parseInt(digits, 10);
+    if (n === 0) return '';
+    return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',00';
+  }
+
+  // Com vírgula: formata parte inteira + centavos (máx 2 dígitos)
+  const intStr = clean.substring(0, commaIdx).replace(/\D/g, '');
+  const decStr = clean.substring(commaIdx + 1).replace(/\D/g, '').slice(0, 2);
+  const intFormatted = intStr
+    ? parseInt(intStr, 10).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+    : '0';
+  return `${intFormatted},${decStr}`;
 }
 
 /**
  * Converte string formatada de input BRL para número.
- * Ex: "1.500,50" → 1500.50
+ * Ex: "1.500,50" → 1500.50  |  "1" → 1  |  "151,12" → 151.12
  */
 export function parseBRLInput(formatted) {
   if (!formatted) return 0;
@@ -83,13 +102,16 @@ export function parseBRLInput(formatted) {
 }
 
 /**
- * Converte número para string de input BRL já formatada.
- * Ex: 1500.5 → "1.500,50"
+ * Converte número para string de input BRL formatada (para carregar valores existentes).
+ * Ex: 1500.5 → "1.500,50"  |  1 → "1,00"
  */
 export function numberToBRLInput(num) {
   if (!num) return '';
-  const cents = Math.round(Number(num) * 100);
-  return formatBRLInput(String(cents));
+  const n = Number(num);
+  if (!n) return '';
+  const reais = Math.floor(n);
+  const cents = Math.round((n - reais) * 100);
+  return reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + String(cents).padStart(2, '0');
 }
 
 export const FREQ_LABELS = {
