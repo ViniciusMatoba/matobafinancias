@@ -126,6 +126,7 @@ export default function App() {
         <SettingsScreen
           user={user}
           cards={cards}
+          transactions={transactions}
           config={config}
           onSaveConfig={saveConfig}
           onAddCard={addCard}

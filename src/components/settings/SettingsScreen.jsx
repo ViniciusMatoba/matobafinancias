@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { LogOut, User, Shield, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import CardManager from './CardManager';
 import BudgetSettings from './BudgetSettings';
+import NotificationSettings from './NotificationSettings';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
-export default function SettingsScreen({ user, cards, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onLogout }) {
+export default function SettingsScreen({ user, cards, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onLogout }) {
   const [budgetOpen, setBudgetOpen] = useState(true);
   const [cardsOpen, setCardsOpen] = useState(false);
+  const [notifsOpen, setNotifsOpen] = useState(false);
   const { prompt: deferredPrompt, handleInstall } = useInstallPrompt();
 
   return (
@@ -99,6 +101,41 @@ export default function SettingsScreen({ user, cards, config, onSaveConfig, onAd
             <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
               <div style={{ paddingTop: 14 }}>
                 <CardManager cards={cards} onAdd={onAddCard} onUpdate={onUpdateCard} onRemove={onRemoveCard} />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Notificações — expansível */}
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 14, marginBottom: 16, overflow: 'hidden',
+        }}>
+          <button
+            onClick={() => setNotifsOpen(o => !o)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px', background: 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🔔</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                Notificações Push
+              </span>
+            </div>
+            {notifsOpen ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
+          </button>
+          {notifsOpen && (
+            <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
+              <div style={{ paddingTop: 14 }}>
+                <NotificationSettings
+                  user={user}
+                  cards={cards}
+                  transactions={transactions}
+                  config={config}
+                  onSavePrefs={onSaveConfig}
+                />
               </div>
             </div>
           )}
