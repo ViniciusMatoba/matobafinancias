@@ -25,11 +25,11 @@ const ERROR_MSGS = {
   'auth/unauthorized-domain':   'Domínio não autorizado. Adicione "viniciusmatoba.github.io" no painel do Firebase (Authentication > Configurações > Domínios autorizados).',
 };
 
-export default function AuthScreen({ user, onLogin, onRegister, onLoginWithGoogle, onConfirm, onLogout }) {
+export default function AuthScreen({ user, redirectError, onLogin, onRegister, onLoginWithGoogle, onConfirm, onLogout }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [error, setError] = useState(redirectError ? ERROR_MSGS[redirectError.code] || `Erro: ${redirectError.message}` : '');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { prompt: deferredPrompt, handleInstall: handleInstallClick } = useInstallPrompt();

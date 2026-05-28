@@ -19,7 +19,7 @@ import ReloadPrompt from './components/shared/ReloadPrompt';
 import { DollarSign } from 'lucide-react';
 
 export default function App() {
-  const { user, login, register, loginWithGoogle, logout } = useAuth();
+  const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
   const { transactions, add, update, remove } = useTransactions(user?.uid);
   const { cards, add: addCard, update: updateCard, remove: removeCard } = useCards(user?.uid);
   const { config, configLoading, saveConfig } = useConfig(user?.uid);
@@ -29,6 +29,11 @@ export default function App() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [authConfirmed, setAuthConfirmed] = useState(false);
+
+  // Se o usuário acabou de voltar de um login do Google
+  if (justLoggedIn && !authConfirmed) {
+    setAuthConfirmed(true);
+  }
 
   if (!isConfigured) return <SetupScreen />;
 
@@ -52,6 +57,7 @@ export default function App() {
     return (
       <AuthScreen 
         user={user}
+        redirectError={redirectError}
         onLogin={async (e, p) => { await login(e, p); setAuthConfirmed(true); }}
         onRegister={async (e, p) => { await register(e, p); setAuthConfirmed(true); }}
         onLoginWithGoogle={async () => { await loginWithGoogle(); setAuthConfirmed(true); }}
