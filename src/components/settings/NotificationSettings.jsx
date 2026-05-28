@@ -5,8 +5,6 @@ import { SARDINHA_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { expandOccurrences, buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { useNotifications } from '../../hooks/useNotifications';
 
-const VAPID_CONFIGURED = !!import.meta.env.VITE_FIREBASE_VAPID_KEY;
-
 // Preferências padrão (todas ativas)
 const DEFAULT_TIPOS = { n1: true, n2: true, n3: true, n4: true, n5: true, n6: true, n7: true };
 
@@ -132,8 +130,6 @@ export default function NotificationSettings({ user, cards, transactions, config
     const result = await enableNotifications();
     if (result.ok) {
       savePrefs({ enabled: true });
-    } else if (result.reason === 'no_vapid') {
-      setActivateError('Chave VAPID não configurada no servidor.');
     } else if (result.reason === 'denied') {
       // A UI já reflete o estado "bloqueado" automaticamente
     } else if (result.reason === 'error') {
@@ -392,33 +388,15 @@ export default function NotificationSettings({ user, cards, transactions, config
         {/* Botão de ativação */}
         {permission !== 'denied' && !isEnabled && (
           <div>
-            {/* Instrução VAPID se não configurado */}
-            {!VAPID_CONFIGURED && (
-              <div style={{
-                display: 'flex', alignItems: 'flex-start', gap: 8,
-                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
-                borderRadius: 10, padding: '10px 12px', marginBottom: 10,
-              }}>
-                <span style={{ fontSize: 15, flexShrink: 0 }}>⚙️</span>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                  <strong style={{ color: 'var(--text-primary)' }}>Configuração necessária:</strong> adicione a chave VAPID no arquivo <code style={{ color: 'var(--primary)' }}>.env.local</code>:
-                  <br />
-                  <code style={{ color: 'var(--text-primary)', fontSize: 11 }}>VITE_FIREBASE_VAPID_KEY=sua_chave_aqui</code>
-                  <br />
-                  Obtenha em: <strong>Firebase Console → Project Settings → Cloud Messaging → Web Push certificates</strong>.
-                </div>
-              </div>
-            )}
-
             <button
               onClick={handleEnable}
-              disabled={registering || !VAPID_CONFIGURED}
+              disabled={registering}
               style={{
                 width: '100%', padding: '12px', borderRadius: 12, border: 'none',
-                background: VAPID_CONFIGURED ? 'linear-gradient(135deg, #6366f1, #a855f7)' : 'var(--border)',
+                background: 'linear-gradient(135deg, #6366f1, #a855f7)',
                 color: '#fff', fontSize: 14, fontWeight: 600,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                cursor: registering || !VAPID_CONFIGURED ? 'default' : 'pointer',
+                cursor: registering ? 'default' : 'pointer',
                 opacity: registering ? 0.7 : 1,
               }}
             >
@@ -474,7 +452,7 @@ export default function NotificationSettings({ user, cards, transactions, config
             </div>
 
             <DiagnosticItem label="Permissão do navegador" ok={permission === 'granted'} value={permission === 'granted' ? 'Permitida' : permission} />
-            <DiagnosticItem label="Chave VAPID" ok={diagnostics.vapidConfigured} value={diagnostics.vapidConfigured ? 'Configurada' : 'Ausente'} />
+            <DiagnosticItem label="Chave VAPID" ok value={diagnostics.vapidConfigured ? 'Configurada' : 'Padrão FCM'} />
             <DiagnosticItem label="Service worker" ok={diagnostics.serviceWorkerReady} value={diagnostics.serviceWorkerReady ? 'Registrado' : 'Pendente'} />
             <DiagnosticItem label="Token FCM salvo" ok={diagnostics.tokenSaved} value={diagnostics.tokenSaved ? 'Salvo' : 'Ausente'} />
             <DiagnosticItem label="Token sincronizado" ok={diagnostics.tokenMatchesSaved} value={diagnostics.tokenMatchesSaved ? 'Atual' : 'Verificar'} />

@@ -56,15 +56,17 @@ export function useNotifications(user) {
   }, [canUsePush]);
 
   const syncToken = useCallback(async ({ save = false } = {}) => {
-    if (!canUsePush() || !VAPID_KEY || getNotificationPermission() !== 'granted') {
+    if (!canUsePush() || getNotificationPermission() !== 'granted') {
       return null;
     }
 
     const swReg = await registerMessagingSw();
-    const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
+    const tokenOptions = {
       serviceWorkerRegistration: swReg,
-    });
+    };
+    if (VAPID_KEY) tokenOptions.vapidKey = VAPID_KEY;
+
+    const token = await getToken(messaging, tokenOptions);
 
     if (token) {
       setFcmToken(token);
@@ -92,7 +94,7 @@ export function useNotifications(user) {
         serviceWorkerReady = !!reg;
       }
 
-      if (pushSupported && currentPermission === 'granted' && VAPID_KEY) {
+      if (pushSupported && currentPermission === 'granted') {
         token = await syncToken({ save: true });
         serviceWorkerReady = true;
       }
@@ -155,7 +157,6 @@ export function useNotifications(user) {
     if (!supported) return { ok: false, reason: 'not_supported' };
     if (!user) return { ok: false, reason: 'not_logged_in' };
     if (!db) return { ok: false, reason: 'no_db' };
-    if (!VAPID_KEY) return { ok: false, reason: 'no_vapid' };
 
     setRegistering(true);
     try {
