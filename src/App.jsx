@@ -80,11 +80,13 @@ export default function App() {
   const handleEdit = (tx) => { setEditing(tx); setFormOpen(true); };
 
   const handleSave = async (data) => {
-    if (editing) {
-      await update(editing.id, data);
-      showToast('Lançamento atualizado!');
+    const { _overwriteId, ...cleanData } = data;
+    if (editing || _overwriteId) {
+      const id = editing?.id || _overwriteId;
+      await update(id, cleanData);
+      showToast(_overwriteId && !editing ? 'Lançamento substituído!' : 'Lançamento atualizado!');
     } else {
-      await add(data);
+      await add(cleanData);
       showToast('Lançamento adicionado com sucesso!');
     }
     setFormOpen(false);

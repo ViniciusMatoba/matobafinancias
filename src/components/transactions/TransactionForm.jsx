@@ -6,6 +6,26 @@ import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 const TIPOS = Object.entries(TYPE_CONFIG).map(([id, cfg]) => ({ id, ...cfg }));
 const FREQS = Object.entries(FREQ_LABELS).map(([id, label]) => ({ id, label }));
 
+// ── Similaridade de descrição ──────────────────────────────────────────────
+function normalizeStr(s) {
+  return (s || '').toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ');
+}
+function isSimilarDesc(a, b) {
+  const na = normalizeStr(a);
+  const nb = normalizeStr(b);
+  if (!na || !nb || na.length < 2 || nb.length < 2) return false;
+  if (na === nb) return true;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  const wa = na.split(' ').filter(w => w.length > 2);
+  const wb = nb.split(' ').filter(w => w.length > 2);
+  if (!wa.length || !wb.length) return false;
+  const setA = new Set(wa);
+  const overlap = wb.filter(w => setA.has(w)).length;
+  return overlap / Math.max(wa.length, wb.length) >= 0.6;
+}
+
 const EMPTY = {
   tipo: 'saida',
   descricao: '',
@@ -46,19 +66,24 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
   const [erro, setErro] = useState('');
   const set = (key, value) => { setErro(''); setForm(f => ({ ...f, [key]: value })); };
 
+  // ── Detecção de duplicata ──────────────────────────────────────────────────
+  const [dupChoice, setDupChoice] = useState(null);      // null | 'overwrite' | 'keep'
+  const [overwriteTarget, setOverwriteTarget] = useState(null);
+
+  const dupMatch = useMemo(() => {
+    if (initial) return null; // modo edição: não verifica
+    const desc = form.descricao.trim();
+    if (desc.length < 2) return null;
+    return transactions.find(tx => isSimilarDesc(tx.descricao, desc)) || null;
+  }, [form.descricao, transactions, initial]);
+
   const setTipo = (tipo) => {
     setErro('');
     const auto = getAutoCategory(tipo);
-    setForm(f => {
-      const next = { ...f, tipo, categoria: auto || (TIPOS_COM_CATEGORIA.includes(tipo) ? f.categoria : '') };
-      // Pré-preenche dataFim padrão (+29 dias) quando o tipo muda para diário
-      if (tipo === 'diario' && !f.dataFim) {
-        const [y, m, d] = f.dataInicio.split('-').map(Number);
-        const endD = new Date(y, m - 1, d + 29);
-        next.dataFim = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
-      }
-      return next;
-    });
+    setForm(f => ({
+      ...f, tipo,
+      categoria: auto || (TIPOS_COM_CATEGORIA.includes(tipo) ? f.categoria : ''),
+    }));
   };
 
   // Derivadas do tipo (antes dos memos que as usam)
@@ -172,6 +197,12 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    // Bloquear se duplicata não resolvida
+    if (dupMatch && dupChoice === null) {
+      setErro('Escolha o que fazer com o lançamento similar antes de continuar.');
+      return;
+    }
+
     let valor;
     let itensToSave = null;
 
@@ -203,13 +234,8 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
 
     if (form.tipo === 'diario') {
       finalValor = parseFloat((valor / 30).toFixed(2));
-      if (form.dataFim) {
-        finalDataFim = form.dataFim;
-      } else {
-        const [y, m, d] = form.dataInicio.split('-').map(Number);
-        const endD = new Date(y, m - 1, d + 29); // +29 dias a partir do início
-        finalDataFim = `${endD.getFullYear()}-${String(endD.getMonth() + 1).padStart(2, '0')}-${String(endD.getDate()).padStart(2, '0')}`;
-      }
+      // Se vazio → sem data de fim (para sempre); se preenchido → usa o valor
+      finalDataFim = form.dataFim || null;
     }
 
     const autocatVal = getAutoCategory(form.tipo);
@@ -234,6 +260,11 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
 
     if (form.tipo === 'cartao' && form.cartaoId) {
       data.cartaoId = form.cartaoId;
+    }
+
+    // Subscrever (substituir) lançamento similar existente
+    if (dupChoice === 'overwrite' && overwriteTarget?.id) {
+      data._overwriteId = overwriteTarget.id;
     }
 
     onSave(data);
@@ -268,7 +299,12 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
         </label>
         <input
           type="text" list="tx-desc-history" placeholder={tipoConfig.label}
-          value={form.descricao} onChange={e => set('descricao', e.target.value)}
+          value={form.descricao}
+          onChange={e => {
+            set('descricao', e.target.value);
+            // Reset escolha de duplicata ao alterar descrição
+            if (dupChoice !== null) { setDupChoice(null); setOverwriteTarget(null); }
+          }}
           maxLength={60} autoComplete="off"
         />
         {pastDescriptions.length > 0 && (
@@ -276,6 +312,63 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
             {pastDescriptions.map(desc => <option key={desc} value={desc} />)}
           </datalist>
         )}
+
+        {/* ── Banner de duplicata ────────────────────────────────────────── */}
+        {dupMatch && dupChoice === null && (
+          <div style={{
+            marginTop: 8, padding: '10px 12px', borderRadius: 10,
+            background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.35)',
+          }}>
+            <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: '#d97706' }}>
+              ⚠️ Lançamento similar já existe
+            </p>
+            <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--text-secondary)' }}>
+              <strong style={{ color: 'var(--text-primary)' }}>"{dupMatch.descricao}"</strong>
+              {' — '}{formatBRL(dupMatch.valor)}
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button"
+                onClick={() => { setDupChoice('overwrite'); setOverwriteTarget(dupMatch); }}
+                style={{
+                  flex: 1, padding: '8px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                  color: 'var(--saida)', cursor: 'pointer',
+                }}>
+                Subscrever (substituir)
+              </button>
+              <button type="button"
+                onClick={() => setDupChoice('keep')}
+                style={{
+                  flex: 1, padding: '8px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+                  color: 'var(--primary)', cursor: 'pointer',
+                }}>
+                Criar separado
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmação: Subscrever escolhido */}
+        {dupChoice === 'overwrite' && overwriteTarget && (
+          <div style={{
+            marginTop: 8, display: 'flex', alignItems: 'center', gap: 8,
+            padding: '8px 12px', borderRadius: 10,
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+          }}>
+            <span style={{ fontSize: 13 }}>⚠️</span>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--saida)', flex: 1 }}>
+              Irá substituir: <strong>"{overwriteTarget.descricao}"</strong>
+            </p>
+            <button type="button"
+              onClick={() => { setDupChoice(null); setOverwriteTarget(null); }}
+              style={{ fontSize: 11, color: 'var(--text-muted)', background: 'none', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 6, cursor: 'pointer' }}>
+              Cancelar
+            </button>
+          </div>
+        )}
+        {/* ── fim Banner ────────────────────────────────────────────────── */}
+
         {suggestedCat && SARDINHA_CATEGORIES[suggestedCat] && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
@@ -333,15 +426,34 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, tran
       {form.tipo === 'diario' && (
         <div>
           <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
-            Vigente até <span style={{ color: 'var(--text-muted)' }}>(projetado diariamente até esta data)</span>
+            Vigente até{' '}
+            <span style={{ color: 'var(--text-muted)' }}>
+              {form.dataFim ? '(projetado até esta data)' : '(vazio = sem data de fim)'}
+            </span>
           </label>
-          <input
-            type="date"
-            value={form.dataFim}
-            min={form.dataInicio}
-            onChange={e => set('dataFim', e.target.value)}
-            style={{ colorScheme: 'dark' }}
-          />
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <input
+              type="date"
+              value={form.dataFim}
+              min={form.dataInicio}
+              onChange={e => set('dataFim', e.target.value)}
+              style={{ colorScheme: 'dark', flex: 1 }}
+            />
+            {form.dataFim && (
+              <button
+                type="button"
+                onClick={() => set('dataFim', '')}
+                title="Remover data de fim (para sempre)"
+                style={{
+                  padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                  color: 'var(--saida)', cursor: 'pointer', whiteSpace: 'nowrap',
+                }}
+              >
+                ✕ Sem fim
+              </button>
+            )}
+          </div>
         </div>
       )}
 
