@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatBRL, formatDateShort, TYPE_CONFIG, todayStr } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
@@ -43,17 +43,25 @@ export default function TransactionsScreen({ transactions, onEdit, onDelete }) {
         if (search && !o.tx.descricao?.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
       })
-      .sort((a, b) => b.date.localeCompare(a.date));
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [transactions, from, to, filterTipo, search]);
 
   const grouped = useMemo(() => {
     const g = {};
     allOccs.forEach(o => { if (!g[o.date]) g[o.date] = []; g[o.date].push(o); });
-    return Object.entries(g).sort(([a], [b]) => b.localeCompare(a));
+    return Object.entries(g).sort(([a], [b]) => a.localeCompare(b));
   }, [allOccs]);
 
+  // Rola para o final automaticamente para que o mais recente fique visível
+  const listRef = useRef(null);
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [grouped]);
+
   return (
-    <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
+    <div ref={listRef} style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
       {/* Header */}
       <div style={{ padding: '20px 20px 0', background: 'var(--bg-primary)', position: 'sticky', top: 0, zIndex: 10, borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
