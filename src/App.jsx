@@ -27,7 +27,9 @@ export default function App() {
   const [view, setView] = useState('home');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [editingOccDate, setEditingOccDate] = useState(null);
   const [authConfirmed, setAuthConfirmed] = useState(false);
+  const [recurrenceAction, setRecurrenceAction] = useState(null);
 
   // Se o usuário acabou de voltar de um login Google via redirect
   useEffect(() => {
@@ -76,10 +78,19 @@ export default function App() {
     setView(dest);
   };
 
-  const handleEdit = (tx) => { setEditing(tx); setFormOpen(true); };
+  const handleEdit = (tx, occDate) => { setEditing(tx); setEditingOccDate(occDate); setFormOpen(true); };
 
   const handleSave = async (data) => {
     const { _overwriteId, ...cleanData } = data;
+    
+    if (editing && ['diario','semanal','mensal'].includes(editing.frequencia) && editingOccDate) {
+      setRecurrenceAction({ tx: editing, occDate: editingOccDate, newData: cleanData, action: 'edit' });
+      setFormOpen(false);
+      setEditing(null);
+      setEditingOccDate(null);
+      return;
+    }
+
     if (editing || _overwriteId) {
       const id = editing?.id || _overwriteId;
       await update(id, cleanData);
@@ -90,12 +101,62 @@ export default function App() {
     }
     setFormOpen(false);
     setEditing(null);
+    setEditingOccDate(null);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, occDate) => {
+    const tx = transactions.find(t => t.id === id);
+    if (!tx) return;
+    
+    if (['diario','semanal','mensal'].includes(tx.frequencia) && occDate) {
+      setRecurrenceAction({ tx, occDate, action: 'delete' });
+      return;
+    }
+
     if (window.confirm('Remover este lançamento?')) {
       await remove(id);
       showToast('Lançamento removido.', 'error');
+    }
+  };
+
+  const confirmRecurrenceAction = async (scope) => {
+    const { tx, occDate, newData, action } = recurrenceAction;
+    setRecurrenceAction(null);
+
+    if (action === 'delete') {
+      if (scope === 'single') {
+        const exclusoes = tx.exclusoes || [];
+        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+        await update(tx.id, { exclusoes });
+        showToast('Ocorrência removida.');
+      } else if (scope === 'future') {
+        const d = new Date(`${occDate}T12:00:00`);
+        d.setDate(d.getDate() - 1);
+        const dataFim = d.toISOString().slice(0, 10);
+        await update(tx.id, { dataFim });
+        showToast('Ocorrências futuras removidas.');
+      } else {
+        await remove(tx.id);
+        showToast('Série completa removida.', 'error');
+      }
+    } else if (action === 'edit') {
+      if (scope === 'single') {
+        const exclusoes = tx.exclusoes || [];
+        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+        await update(tx.id, { exclusoes });
+        await add({ ...newData, frequencia: 'unico', dataInicio: occDate, dataFim: null });
+        showToast('Ocorrência editada separadamente!');
+      } else if (scope === 'future') {
+        const d = new Date(`${occDate}T12:00:00`);
+        d.setDate(d.getDate() - 1);
+        const dataFim = d.toISOString().slice(0, 10);
+        await update(tx.id, { dataFim });
+        await add({ ...newData, dataInicio: occDate });
+        showToast('Ocorrências futuras alteradas!');
+      } else {
+        await update(tx.id, newData);
+        showToast('Série completa atualizada!');
+      }
     }
   };
 
@@ -153,8 +214,45 @@ export default function App() {
           cards={cards}
           transactions={transactions}
           onSave={handleSave}
-          onCancel={() => { setFormOpen(false); setEditing(null); }}
+          onCancel={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
         />
+      </Modal>
+
+      {/* Modal de Exceção Recorrente */}
+      <Modal
+        open={!!recurrenceAction}
+        onClose={() => setRecurrenceAction(null)}
+        title={recurrenceAction?.action === 'edit' ? 'Editar lançamento recorrente' : 'Remover lançamento recorrente'}
+      >
+        <div style={{ padding: '0 4px', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
+          <p style={{ marginBottom: 20 }}>
+            Este é um lançamento que se repete ({recurrenceAction?.tx?.frequencia}).<br />
+            Você deseja aplicar essa alteração apenas nesta ocorrência, ou nas futuras também?
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <button
+              onClick={() => confirmRecurrenceAction('single')}
+              style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
+            >
+              Apenas nesta ocorrência
+              <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>As outras ocorrências não serão afetadas.</span>
+            </button>
+            <button
+              onClick={() => confirmRecurrenceAction('future')}
+              style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
+            >
+              Nesta e nas futuras
+              <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>Ocorrências passadas continuarão com o valor antigo.</span>
+            </button>
+            <button
+              onClick={() => confirmRecurrenceAction('all')}
+              style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
+            >
+              Em todas as ocorrências
+              <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--saida)', marginTop: 2 }}>Cuidado: isso vai alterar seu histórico passado também.</span>
+            </button>
+          </div>
+        </div>
       </Modal>
 
       {ToastNode}

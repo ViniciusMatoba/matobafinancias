@@ -353,7 +353,7 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
                               {onEdit && (
                                 <button
                                   type="button"
-                                  onClick={e => { e.stopPropagation(); onEdit(item.tx); }}
+                                  onClick={e => { e.stopPropagation(); onEdit(item.tx, item.date); }}
                                   title="Editar"
                                   style={{
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -368,7 +368,7 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
                               {onDelete && (
                                 <button
                                   type="button"
-                                  onClick={e => { e.stopPropagation(); onDelete(item.tx.id); }}
+                                  onClick={e => { e.stopPropagation(); onDelete(item.tx.id, item.date); }}
                                   title="Excluir"
                                   style={{
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',

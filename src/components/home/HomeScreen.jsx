@@ -257,10 +257,10 @@ export default function HomeScreen({ transactions, cards, metaMensal, onSaveMeta
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 6 }}>
-                    <button onClick={() => onEdit(occ.tx)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2 }}>
+                    <button onClick={() => onEdit(occ.tx, occ.date)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2 }}>
                       <Pencil size={12} />
                     </button>
-                    <button onClick={() => onDelete(occ.tx.id)} style={{ background: 'none', color: 'var(--saida)', display: 'flex', padding: 2 }}>
+                    <button onClick={() => onDelete(occ.tx.id, occ.date)} style={{ background: 'none', color: 'var(--saida)', display: 'flex', padding: 2 }}>
                       <Trash2 size={12} />
                     </button>
                   </div>

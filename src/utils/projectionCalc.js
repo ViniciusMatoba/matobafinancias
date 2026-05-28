@@ -13,7 +13,9 @@ export function expandOccurrences(tx, from, to) {
   if (tx.frequencia === 'unico') {
     if (tx.dataInicio >= from && tx.dataInicio <= to) {
       if (!(tx.tipo === 'diario' && tx.dataInicio < today)) {
-        occurrences.push({ date: tx.dataInicio, valor: tx.valor, sinal: sign, tx });
+        if (!tx.exclusoes?.includes(tx.dataInicio)) {
+          occurrences.push({ date: tx.dataInicio, valor: tx.valor, sinal: sign, tx });
+        }
       }
     }
 
@@ -60,7 +62,9 @@ export function expandOccurrences(tx, from, to) {
       const date = addMonths(tx.dataInicio, i);
       if (date > to) break;
       if (date >= from) {
-        occurrences.push({ date, valor: tx.valor, sinal: sign, tx, parcela: startParcela + i, totalParcelas: tx.totalParcelas });
+        if (!tx.exclusoes?.includes(date)) {
+          occurrences.push({ date, valor: tx.valor, sinal: sign, tx, parcela: startParcela + i, totalParcelas: tx.totalParcelas });
+        }
       }
     }
     return occurrences;
@@ -72,7 +76,9 @@ export function expandOccurrences(tx, from, to) {
   while (current <= to && current <= limit) {
     if (current >= from) {
       if (!(tx.tipo === 'diario' && current < today)) {
-        occurrences.push({ date: current, valor: tx.valor, sinal: sign, tx });
+        if (!tx.exclusoes?.includes(current)) {
+          occurrences.push({ date: current, valor: tx.valor, sinal: sign, tx });
+        }
       }
     }
     if (tx.frequencia === 'diario')   current = addDays(current, 1);
