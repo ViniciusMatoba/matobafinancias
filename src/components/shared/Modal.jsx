@@ -12,12 +12,12 @@ export default function Modal({ open, onClose, title, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        style={{ background: 'var(--bg-surface)', borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 480, maxHeight: '90dvh', overflowY: 'auto' }}
+        style={{ background: 'var(--bg-surface)', borderRadius: '20px', width: '100%', maxWidth: 480, maxHeight: '90dvh', overflowY: 'auto' }}
         className="safe-bottom"
       >
         <div style={{ padding: '16px 20px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: 'var(--bg-surface)', zIndex: 1 }}>
