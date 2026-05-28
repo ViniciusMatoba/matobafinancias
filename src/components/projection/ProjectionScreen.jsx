@@ -429,7 +429,8 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
             </div>
           );
         })}
-        </>}
+        </>
+        )}
 
         <div style={{ height: 8 }} />
       </div>
