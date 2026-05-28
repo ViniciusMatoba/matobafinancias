@@ -15,27 +15,45 @@ export default function BudgetSummaryCard({ transactions, rendaMensal, budgetPct
   const spent = useMemo(() => {
     const totals = Object.fromEntries(CATEGORY_ORDER.map(id => [id, 0]));
     transactions.forEach(tx => {
-      const occs = expandOccurrences(tx, from, to);
-      if (!occs.length) return;
-      if (tx.itens?.length > 0) {
-        const totalItens = tx.itens.reduce((s, it) => s + (Number(it.valor) || 0), 0);
-        if (totalItens <= 0) return;
-        occs.forEach(o => {
-          tx.itens.forEach(item => {
-            const cat = item.categoria;
-            if (cat && totals[cat] !== undefined) {
-              totals[cat] += o.valor * (Number(item.valor) / totalItens);
+      // REGIME DE COMPETÊNCIA PARA CARTÃO DE CRÉDITO
+      if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+        tx.itens.forEach(item => {
+          const cat = item.categoria;
+          if (!cat || totals[cat] === undefined) return;
+          
+          if (item.isParcelado) {
+            const startParc = item.parcelaAtual || 1;
+            const remaining = (item.totalParcelas || 1) - startParc + 1;
+            
+            for (let i = 0; i < remaining; i++) {
+              const [y, m] = item.dataCompra.split('-').map(Number);
+              const parcelDate = new Date(y, m - 1 + i, 1);
+              const parcelMonthStr = `${parcelDate.getFullYear()}-${String(parcelDate.getMonth() + 1).padStart(2, '0')}`;
+              
+              if (parcelMonthStr === currentMonth) {
+                totals[cat] += Number(item.valor) || 0;
+              }
             }
-          });
+          } else {
+            if (item.dataCompra?.startsWith(currentMonth)) {
+              totals[cat] += Number(item.valor) || 0;
+            }
+          }
         });
-      } else {
+      } 
+      // REGIME DE CAIXA PARA AS DEMAIS TRANSAÇÕES
+      else {
+        const occs = expandOccurrences(tx, from, to);
+        if (!occs.length) return;
+        
         const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
         if (!cat) return;
+        
         occs.forEach(o => { totals[cat] = (totals[cat] || 0) + o.valor; });
       }
     });
     return totals;
-  }, [transactions, from, to]);
+  }, [transactions, from, to, currentMonth]);
 
   const totalBudget = rendaMensal;
   const totalGasto = Object.values(spent).reduce((s, v) => s + v, 0);
