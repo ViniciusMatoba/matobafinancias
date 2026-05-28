@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, BellOff, CheckCircle, XCircle, Play, Loader } from 'lucide-react';
+import { Bell, BellOff, CheckCircle, XCircle, Play, Loader, RefreshCw, Send } from 'lucide-react';
 import { formatBRL, todayStr } from '../../utils/formatters';
 import { SARDINHA_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { expandOccurrences, buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
@@ -82,9 +82,39 @@ function Toggle({ value, onChange }) {
   );
 }
 
+function DiagnosticItem({ label, ok, value }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)',
+    }}>
+      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{label}</span>
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 5,
+        fontSize: 11, fontWeight: 600,
+        color: ok ? 'var(--entrada)' : 'var(--text-muted)',
+      }}>
+        {ok ? <CheckCircle size={12} /> : <XCircle size={12} />}
+        {value || (ok ? 'OK' : 'Pendente')}
+      </span>
+    </div>
+  );
+}
+
 // ─── Componente principal ──────────────────────────────────────────────────────
 export default function NotificationSettings({ user, cards, transactions, config, onSavePrefs }) {
-  const { permission, supported, registering, enableNotifications } = useNotifications(user);
+  const {
+    permission,
+    supported,
+    registering,
+    diagnostics,
+    diagnosticsLoading,
+    testSending,
+    testResult,
+    enableNotifications,
+    refreshDiagnostics,
+    sendTestPush,
+  } = useNotifications(user);
 
   const prefs = config?.notificacoes || { enabled: false, tipos: { ...DEFAULT_TIPOS } };
   const tipos = { ...DEFAULT_TIPOS, ...(prefs.tipos || {}) };
@@ -108,6 +138,14 @@ export default function NotificationSettings({ user, cards, transactions, config
       // A UI já reflete o estado "bloqueado" automaticamente
     } else if (result.reason === 'error') {
       setActivateError(`Erro ao ativar: ${result.message || 'verifique o console do navegador.'}`);
+    }
+  };
+
+  const handleSendTestPush = async () => {
+    setActivateError('');
+    const result = await sendTestPush();
+    if (!result.ok) {
+      setActivateError(result.message || 'Erro ao enviar push de teste.');
     }
   };
 
@@ -404,6 +442,79 @@ export default function NotificationSettings({ user, cards, transactions, config
             <p style={{ margin: 0, fontSize: 12, color: 'var(--saida)', lineHeight: 1.5 }}>
               {activateError}
             </p>
+          </div>
+        )}
+
+        {(isEnabled || permission === 'granted') && (
+          <div style={{
+            marginTop: 12,
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            borderRadius: 12,
+            padding: '12px 14px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <Bell size={15} color="var(--primary)" />
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', flex: 1 }}>
+                Diagnóstico do push
+              </p>
+              <button
+                onClick={refreshDiagnostics}
+                disabled={diagnosticsLoading}
+                title="Atualizar diagnóstico"
+                style={{
+                  width: 28, height: 28, borderRadius: 8,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'transparent', border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)', cursor: diagnosticsLoading ? 'default' : 'pointer',
+                }}
+              >
+                <RefreshCw size={13} style={{ animation: diagnosticsLoading ? 'spin 1s linear infinite' : 'none' }} />
+              </button>
+            </div>
+
+            <DiagnosticItem label="Permissão do navegador" ok={permission === 'granted'} value={permission === 'granted' ? 'Permitida' : permission} />
+            <DiagnosticItem label="Chave VAPID" ok={diagnostics.vapidConfigured} value={diagnostics.vapidConfigured ? 'Configurada' : 'Ausente'} />
+            <DiagnosticItem label="Service worker" ok={diagnostics.serviceWorkerReady} value={diagnostics.serviceWorkerReady ? 'Registrado' : 'Pendente'} />
+            <DiagnosticItem label="Token FCM salvo" ok={diagnostics.tokenSaved} value={diagnostics.tokenSaved ? 'Salvo' : 'Ausente'} />
+            <DiagnosticItem label="Token sincronizado" ok={diagnostics.tokenMatchesSaved} value={diagnostics.tokenMatchesSaved ? 'Atual' : 'Verificar'} />
+
+            {diagnostics.tokenUpdatedAt && (
+              <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                Última atualização: {new Date(diagnostics.tokenUpdatedAt).toLocaleString('pt-BR')}
+              </p>
+            )}
+
+            {diagnostics.lastError && (
+              <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--saida)', lineHeight: 1.4 }}>
+                {diagnostics.lastError}
+              </p>
+            )}
+
+            <button
+              onClick={handleSendTestPush}
+              disabled={testSending || !diagnostics.tokenSaved}
+              style={{
+                width: '100%', marginTop: 12, padding: '10px 12px', borderRadius: 10,
+                border: '1px solid rgba(99,102,241,0.25)',
+                background: diagnostics.tokenSaved ? 'rgba(99,102,241,0.12)' : 'var(--border)',
+                color: diagnostics.tokenSaved ? 'var(--primary)' : 'var(--text-muted)',
+                fontSize: 13, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                cursor: testSending || !diagnostics.tokenSaved ? 'default' : 'pointer',
+              }}
+            >
+              {testSending
+                ? <><Loader size={15} style={{ animation: 'spin 1s linear infinite' }} /> Enviando push real...</>
+                : <><Send size={15} /> Enviar push de teste</>
+              }
+            </button>
+
+            {testResult?.ok && (
+              <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--entrada)', lineHeight: 1.4 }}>
+                Push de teste enviado pelo Firebase.
+              </p>
+            )}
           </div>
         )}
       </div>

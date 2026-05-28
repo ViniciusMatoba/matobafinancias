@@ -1,64 +1,161 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getToken, onMessage } from 'firebase/messaging';
-import { doc, setDoc } from 'firebase/firestore';
-import { messaging, db } from '../firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
+import { messaging, db, functions } from '../firebase';
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
-/**
- * Gerencia permissão, token FCM e mensagens em foreground.
- *
- * Uso:
- *   const { permission, supported, registering, enableNotifications } = useNotifications(user);
- */
+function getNotificationPermission() {
+  return typeof Notification !== 'undefined' ? Notification.permission : 'default';
+}
+
+function getMessagingSwUrl() {
+  if (typeof window === 'undefined') return './firebase-messaging-sw.js';
+  return new URL('firebase-messaging-sw.js', window.location.href).toString();
+}
+
 export function useNotifications(user) {
-  const [permission, setPermission] = useState(
-    typeof Notification !== 'undefined' ? Notification.permission : 'default'
-  );
-  const [fcmToken, setFcmToken]     = useState(null);
-  const [supported, setSupported]   = useState(false);
+  const [permission, setPermission] = useState(getNotificationPermission);
+  const [fcmToken, setFcmToken] = useState(null);
+  const [supported, setSupported] = useState(false);
   const [registering, setRegistering] = useState(false);
+  const [diagnosticsLoading, setDiagnosticsLoading] = useState(false);
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [diagnostics, setDiagnostics] = useState({
+    vapidConfigured: !!VAPID_KEY,
+    permission: getNotificationPermission(),
+    serviceWorkerReady: false,
+    tokenInMemory: false,
+    tokenSaved: false,
+    tokenMatchesSaved: false,
+    tokenUpdatedAt: null,
+    lastError: '',
+  });
 
-  // Detecta suporte após mount (evita SSR crash)
+  const canUsePush = useCallback(() => (
+    typeof Notification !== 'undefined' &&
+    typeof navigator !== 'undefined' &&
+    'serviceWorker' in navigator &&
+    !!messaging
+  ), []);
+
+  const saveToken = useCallback(async (token) => {
+    if (!db || !user || !token) return;
+    await setDoc(doc(db, 'users', user.uid), {
+      fcmToken: token,
+      fcmUpdatedAt: new Date().toISOString(),
+      email: user.email || '',
+    }, { merge: true });
+  }, [user]);
+
+  const registerMessagingSw = useCallback(async () => {
+    if (!canUsePush()) return null;
+    return navigator.serviceWorker.register(getMessagingSwUrl());
+  }, [canUsePush]);
+
+  const syncToken = useCallback(async ({ save = false } = {}) => {
+    if (!canUsePush() || !VAPID_KEY || getNotificationPermission() !== 'granted') {
+      return null;
+    }
+
+    const swReg = await registerMessagingSw();
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swReg,
+    });
+
+    if (token) {
+      setFcmToken(token);
+      if (save) await saveToken(token);
+    }
+
+    return token;
+  }, [canUsePush, registerMessagingSw, saveToken]);
+
+  const refreshDiagnostics = useCallback(async () => {
+    const currentPermission = getNotificationPermission();
+    setPermission(currentPermission);
+    const pushSupported = canUsePush();
+    setSupported(pushSupported);
+    setDiagnosticsLoading(true);
+
+    try {
+      let token = fcmToken;
+      let savedToken = null;
+      let tokenUpdatedAt = null;
+      let serviceWorkerReady = false;
+
+      if (pushSupported) {
+        const reg = await navigator.serviceWorker.getRegistration(getMessagingSwUrl());
+        serviceWorkerReady = !!reg;
+      }
+
+      if (pushSupported && currentPermission === 'granted' && VAPID_KEY) {
+        token = await syncToken({ save: true });
+        serviceWorkerReady = true;
+      }
+
+      if (db && user) {
+        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        savedToken = userSnap.data()?.fcmToken || null;
+        tokenUpdatedAt = userSnap.data()?.fcmUpdatedAt || null;
+      }
+
+      setDiagnostics({
+        vapidConfigured: !!VAPID_KEY,
+        permission: currentPermission,
+        serviceWorkerReady,
+        tokenInMemory: !!token,
+        tokenSaved: !!savedToken,
+        tokenMatchesSaved: !!token && !!savedToken && token === savedToken,
+        tokenUpdatedAt,
+        lastError: '',
+      });
+    } catch (err) {
+      setDiagnostics((prev) => ({
+        ...prev,
+        permission: currentPermission,
+        lastError: err.message || 'Falha ao atualizar diagnostico.',
+      }));
+    } finally {
+      setDiagnosticsLoading(false);
+    }
+  }, [canUsePush, fcmToken, syncToken, user]);
+
   useEffect(() => {
-    setSupported(
-      typeof Notification !== 'undefined' &&
-      'serviceWorker' in navigator &&
-      !!messaging
-    );
-  }, []);
+    setSupported(canUsePush());
+  }, [canUsePush]);
 
-  // Atualiza permissão se o usuário mudar no navegador
   useEffect(() => {
-    if (!supported) return;
-    setPermission(Notification.permission);
-  }, [supported]);
+    if (!user) return;
+    refreshDiagnostics();
+  }, [refreshDiagnostics, user]);
 
-  // Escuta mensagens enquanto o app está em FOREGROUND
   useEffect(() => {
     if (!messaging || !user) return;
     const unsub = onMessage(messaging, (payload) => {
       const n = payload.notification || {};
-      if (Notification.permission === 'granted') {
-        new Notification(n.title || 'Matoba Finanças', {
-          body:  n.body || '',
-          icon:  '/icons/icon-192.png',
+      const d = payload.data || {};
+      if (getNotificationPermission() === 'granted') {
+        new Notification(n.title || d.title || 'Matoba Financas', {
+          body: n.body || d.body || '',
+          icon: '/icons/icon-192.png',
           badge: '/icons/icon-192.png',
+          tag: d.tag || 'matoba-financas',
+          data: { url: d.url || '/' },
         });
       }
     });
     return unsub;
   }, [user]);
 
-  /**
-   * Solicita permissão, registra o SW de FCM, obtém o token e salva no Firestore.
-   * Retorna { ok: boolean, reason?: string }
-   */
   const enableNotifications = useCallback(async () => {
-    if (!supported)  return { ok: false, reason: 'not_supported' };
-    if (!user)       return { ok: false, reason: 'not_logged_in' };
-    if (!db)         return { ok: false, reason: 'no_db' };
-    if (!VAPID_KEY)  return { ok: false, reason: 'no_vapid' };
+    if (!supported) return { ok: false, reason: 'not_supported' };
+    if (!user) return { ok: false, reason: 'not_logged_in' };
+    if (!db) return { ok: false, reason: 'no_db' };
+    if (!VAPID_KEY) return { ok: false, reason: 'no_vapid' };
 
     setRegistering(true);
     try {
@@ -66,33 +163,58 @@ export function useNotifications(user) {
       setPermission(result);
       if (result !== 'granted') return { ok: false, reason: 'denied' };
 
-      // Registra o SW de FCM separado do SW do PWA.
-      // Usa caminho relativo ('./') para funcionar em qualquer base (GitHub Pages, subpath, etc.)
-      const swReg = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+      const token = await syncToken({ save: true });
+      await refreshDiagnostics();
 
-      const token = await getToken(messaging, {
-        vapidKey:                   VAPID_KEY,
-        serviceWorkerRegistration:  swReg,
-      });
-
-      if (token) {
-        setFcmToken(token);
-        // Salva o token no Firestore para que as Cloud Functions possam enviá-lo
-        await setDoc(doc(db, 'users', user.uid), {
-          fcmToken:      token,
-          fcmUpdatedAt:  new Date().toISOString(),
-          email:         user.email || '',
-        }, { merge: true });
-      }
-
-      return { ok: true };
+      return token ? { ok: true } : { ok: false, reason: 'no_token' };
     } catch (err) {
       console.error('[FCM] enableNotifications:', err);
+      setDiagnostics((prev) => ({ ...prev, lastError: err.message || 'Erro ao ativar push.' }));
       return { ok: false, reason: 'error', message: err.message };
     } finally {
       setRegistering(false);
     }
-  }, [supported, user]);
+  }, [refreshDiagnostics, supported, syncToken, user]);
 
-  return { permission, fcmToken, supported, registering, enableNotifications };
+  const sendTestPush = useCallback(async () => {
+    if (!functions) return { ok: false, reason: 'no_functions' };
+    if (!user) return { ok: false, reason: 'not_logged_in' };
+
+    setTestSending(true);
+    setTestResult(null);
+    try {
+      await syncToken({ save: true });
+      const callSendTestPush = httpsCallable(functions, 'sendTestPush');
+      const response = await callSendTestPush();
+      const result = { ok: true, ...response.data };
+      setTestResult(result);
+      await refreshDiagnostics();
+      return result;
+    } catch (err) {
+      const result = {
+        ok: false,
+        reason: err.code || 'error',
+        message: err.message || 'Erro ao enviar push de teste.',
+      };
+      setTestResult(result);
+      await refreshDiagnostics();
+      return result;
+    } finally {
+      setTestSending(false);
+    }
+  }, [refreshDiagnostics, syncToken, user]);
+
+  return {
+    permission,
+    fcmToken,
+    supported,
+    registering,
+    diagnostics,
+    diagnosticsLoading,
+    testSending,
+    testResult,
+    enableNotifications,
+    refreshDiagnostics,
+    sendTestPush,
+  };
 }

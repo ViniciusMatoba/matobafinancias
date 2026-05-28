@@ -15,7 +15,7 @@
 
 'use strict';
 
-const { onRequest }  = require('firebase-functions/v2/https');
+const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { logger }     = require('firebase-functions');
 const admin          = require('firebase-admin');
@@ -45,6 +45,33 @@ async function sendMessage(chatId, text, extra = {}) {
     text,
     parse_mode: 'Markdown',
     ...extra,
+  });
+}
+
+function notificationParts(markdownText) {
+  const clean = String(markdownText || '')
+    .replace(/\*/g, '')
+    .replace(/_/g, '')
+    .trim();
+  const [firstLine = 'Matoba Finanças', ...rest] = clean.split('\n');
+  const title = firstLine.slice(0, 80) || 'Matoba Finanças';
+  const body = rest.join(' ').replace(/\s+/g, ' ').trim().slice(0, 220);
+  return { title, body };
+}
+
+async function sendPushNotification(token, markdownText) {
+  const { title, body } = notificationParts(markdownText);
+  return admin.messaging().send({
+    token,
+    data: {
+      title,
+      body,
+      url: APP_URL,
+      tag: 'matoba-financas',
+    },
+    webpush: {
+      fcmOptions: { link: APP_URL },
+    },
   });
 }
 
@@ -1194,20 +1221,20 @@ exports.dailyNotifications = onSchedule(
     const horaAtual = getNowBrasilia().getHours(); // 7, 12 ou 19
     logger.info(`[NOTIF] Rodando para hora Brasília: ${horaAtual}h`);
 
-    // Busca todos os usuários com Telegram vinculado
-    const usersSnap = await db.collection('users')
-      .where('telegramChatId', '!=', null)
-      .get();
+    // Busca usuários com Telegram ou token FCM registrado.
+    // As preferências finais continuam vindo de config/{uid}.
+    const usersSnap = await db.collection('users').get();
 
     if (usersSnap.empty) {
-      logger.info('[NOTIF] Nenhum usuário com Telegram vinculado.');
+      logger.info('[NOTIF] Nenhum usuário cadastrado para notificações.');
       return;
     }
 
     for (const userDoc of usersSnap.docs) {
       const uid      = userDoc.id;
-      const chatId   = userDoc.data().telegramChatId;
-      if (!chatId) continue;
+      const userData = userDoc.data();
+      const chatId   = userData.telegramChatId;
+      const fcmToken = userData.fcmToken;
 
       try {
         // Lê configurações do usuário
@@ -1215,8 +1242,9 @@ exports.dailyNotifications = onSchedule(
         const config    = configDoc.exists ? configDoc.data() : {};
         const prefs     = config.notificacoes || {};
 
-        // Verifica se notificações estão habilitadas para Telegram
-        if (!prefs.telegramEnabled) continue;
+        const pushEnabled     = prefs.enabled === true && !!fcmToken;
+        const telegramEnabled = prefs.telegramEnabled === true && !!chatId;
+        if (!pushEnabled && !telegramEnabled) continue;
 
         // Verifica se o horário configurado pelo usuário bate com o horário atual
         const horaUsuario = prefs.horaAlerta ?? 7;
@@ -1233,15 +1261,37 @@ exports.dailyNotifications = onSchedule(
         // Verifica alertas
         const msgs = checkNotifications(cards, transactions, config, prefs);
 
-        // Envia mensagens
+        // Envia mensagens pelos canais habilitados
         for (const msg of msgs) {
-          await sendMessage(chatId, msg);
-          // Pausa pequena para não estourar rate limit do Telegram
-          await new Promise(r => setTimeout(r, 100));
+          if (telegramEnabled) {
+            await sendMessage(chatId, msg);
+            // Pausa pequena para não estourar rate limit do Telegram
+            await new Promise(r => setTimeout(r, 100));
+          }
+
+          if (pushEnabled) {
+            try {
+              await sendPushNotification(fcmToken, msg);
+            } catch (pushErr) {
+              logger.error(`[NOTIF] Erro FCM uid=${uid}:`, pushErr);
+              const code = pushErr?.errorInfo?.code || pushErr?.code;
+              if (code === 'messaging/registration-token-not-registered' ||
+                  code === 'messaging/invalid-registration-token') {
+                await userDoc.ref.set({
+                  fcmToken: admin.firestore.FieldValue.delete(),
+                  fcmUpdatedAt: admin.firestore.FieldValue.delete(),
+                }, { merge: true });
+              }
+            }
+          }
         }
 
         if (msgs.length > 0) {
-          logger.info(`[NOTIF] uid=${uid}: ${msgs.length} alerta(s) enviado(s)`);
+          const canais = [
+            telegramEnabled ? 'telegram' : null,
+            pushEnabled ? 'push' : null,
+          ].filter(Boolean).join('+');
+          logger.info(`[NOTIF] uid=${uid}: ${msgs.length} alerta(s) enviado(s) via ${canais}`);
         }
       } catch (err) {
         logger.error(`[NOTIF] Erro ao processar uid=${uid}:`, err);
@@ -1249,6 +1299,49 @@ exports.dailyNotifications = onSchedule(
     }
 
     logger.info('[NOTIF] Concluído.');
+  }
+);
+
+exports.sendTestPush = onCall(
+  { region: REGION },
+  async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) {
+      throw new HttpsError('unauthenticated', 'Faça login para testar o push.');
+    }
+
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+    const fcmToken = userDoc.data()?.fcmToken;
+
+    if (!fcmToken) {
+      throw new HttpsError('failed-precondition', 'Nenhum token FCM salvo para este usuário.');
+    }
+
+    try {
+      const messageId = await sendPushNotification(
+        fcmToken,
+        '🔔 *Teste de push real*\nSe esta notificação chegou, o Firebase Cloud Messaging está funcionando.'
+      );
+
+      return {
+        ok: true,
+        messageId,
+        sentAt: new Date().toISOString(),
+      };
+    } catch (err) {
+      logger.error(`[TEST PUSH] Erro FCM uid=${uid}:`, err);
+      const code = err?.errorInfo?.code || err?.code;
+      if (code === 'messaging/registration-token-not-registered' ||
+          code === 'messaging/invalid-registration-token') {
+        await userRef.set({
+          fcmToken: admin.firestore.FieldValue.delete(),
+          fcmUpdatedAt: admin.firestore.FieldValue.delete(),
+        }, { merge: true });
+        throw new HttpsError('failed-precondition', 'Token FCM inválido. Ative o push novamente.');
+      }
+      throw new HttpsError('internal', err.message || 'Erro ao enviar push de teste.');
+    }
   }
 );
 

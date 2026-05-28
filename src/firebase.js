@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
+import { getFunctions } from 'firebase/functions';
 import { getMessaging } from 'firebase/messaging';
 
 const firebaseConfig = {
@@ -26,9 +27,10 @@ export const db = isConfigured
     })
   : null;
 export const googleProvider = isConfigured ? new GoogleAuthProvider() : null;
+export const functions = isConfigured ? getFunctions(app, 'us-central1') : null;
 
 // Firebase Cloud Messaging — null em contextos que não suportam (SSR, browsers antigos)
 export let messaging = null;
 if (isConfigured) {
-  try { messaging = getMessaging(app); } catch (_) { /* browser não suporta */ }
+  try { messaging = getMessaging(app); } catch { /* browser não suporta */ }
 }
