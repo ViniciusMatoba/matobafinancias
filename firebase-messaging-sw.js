@@ -21,8 +21,8 @@ messaging.onBackgroundMessage((payload) => {
   const n   = payload.notification || {};
   const d   = payload.data        || {};
 
-  self.registration.showNotification(n.title || 'Matoba Finanças', {
-    body:  n.body  || '',
+  self.registration.showNotification(n.title || d.title || 'Matoba Finanças', {
+    body:  n.body  || d.body || '',
     icon:  '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag:   d.tag   || 'matoba-financas',
