@@ -15,6 +15,26 @@ function getMessagingSwUrl() {
   return new URL('firebase-messaging-sw.js', window.location.href).toString();
 }
 
+async function showForegroundNotification(payload) {
+  const n = payload.notification || {};
+  const d = payload.data || {};
+  const title = n.title || d.title || 'Matoba Financas';
+  const options = {
+    body: n.body || d.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-192.png',
+    tag: d.tag || 'matoba-financas',
+    data: { url: d.url || '/' },
+  };
+
+  if (navigator.serviceWorker?.ready) {
+    const registration = await navigator.serviceWorker.ready;
+    return registration.showNotification(title, options);
+  }
+
+  return new Notification(title, options);
+}
+
 export function useNotifications(user) {
   const [permission, setPermission] = useState(getNotificationPermission);
   const [fcmToken, setFcmToken] = useState(null);
@@ -138,15 +158,9 @@ export function useNotifications(user) {
   useEffect(() => {
     if (!messaging || !user) return;
     const unsub = onMessage(messaging, (payload) => {
-      const n = payload.notification || {};
-      const d = payload.data || {};
       if (getNotificationPermission() === 'granted') {
-        new Notification(n.title || d.title || 'Matoba Financas', {
-          body: n.body || d.body || '',
-          icon: '/icons/icon-192.png',
-          badge: '/icons/icon-192.png',
-          tag: d.tag || 'matoba-financas',
-          data: { url: d.url || '/' },
+        showForegroundNotification(payload).catch((err) => {
+          console.error('[FCM] foreground notification:', err);
         });
       }
     });
