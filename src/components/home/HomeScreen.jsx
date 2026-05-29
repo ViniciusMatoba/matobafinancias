@@ -56,6 +56,42 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     });
   }, [wallets, transactions, selectedDate]);
 
+  // Estatísticas de limite e saldo dos cartões
+  const cardsStats = useMemo(() => {
+    if (!cards?.length) return [];
+    return cards.map(card => {
+      const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+      let faturaAtual = 0;
+      let comprometidoFuturo = 0;
+
+      cardTxs.forEach(tx => {
+        if (tx.itens && tx.itens.length > 0) {
+          tx.itens.forEach(item => {
+            const val = Number(item.valor) || 0;
+            faturaAtual += val;
+            if (item.isParcelado) {
+              const remaining = Math.max(0, item.totalParcelas - (item.parcelaAtual || 1));
+              comprometidoFuturo += remaining * val;
+            }
+          });
+        } else {
+          faturaAtual += Number(tx.valor) || 0;
+        }
+      });
+
+      const totalComprometido = faturaAtual + comprometidoFuturo;
+      const limiteDisponivel = Math.max(0, (card.limite || 0) - totalComprometido);
+
+      return {
+        ...card,
+        faturaAtual,
+        comprometidoFuturo,
+        totalComprometido,
+        limiteDisponivel
+      };
+    });
+  }, [cards, transactions]);
+
   // Ocorrências apenas do dia selecionado
   const dayOccs = useMemo(() =>
     transactions.flatMap(tx =>
@@ -88,6 +124,26 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     if (!isToday) return null;
     return calcularSobraSegura(transactions, wallets, 45); // Verifica os próximos 45 dias
   }, [transactions, wallets, isToday]);
+
+  // Ocorrências previstas para os próximos 15 dias (a partir de hoje)
+  const próximasContas = useMemo(() => {
+    const toDate = addDays(today, 15);
+    const occs = transactions.flatMap(tx =>
+      expandOccurrences(tx, today, toDate).map(o => ({ ...o, tx }))
+    );
+    // Filtrar apenas despesas e investimentos (tudo menos tipo: 'entrada')
+    const contas = occs.filter(o => o.tx.tipo !== 'entrada');
+    contas.sort((a, b) => a.date.localeCompare(b.date));
+    return contas.slice(0, 5); // Mostra no máximo as 5 próximas contas
+  }, [transactions, today]);
+
+  const formatContasHeader = (dateStr) => {
+    if (dateStr === today) return 'Hoje';
+    if (dateStr === addDays(today, 1)) return 'Amanhã';
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    return `${DAY_NAMES[dt.getDay()]}, ${d}/${m}`;
+  };
 
   const reserveGoal = useMemo(() => {
     if (!goals) return null;
@@ -240,7 +296,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         {/* Contas/Carteiras em Scroll Horizontal */}
         {walletsStats.length > 0 && (
           <div style={{ 
-            display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 16, marginBottom: summaryCards.length > 0 ? 8 : 0,
+            display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 16, marginBottom: cardsStats.length > 0 ? 8 : (summaryCards.length > 0 ? 8 : 0),
             scrollbarWidth: 'none' // Firefox
           }}>
             {walletsStats.map(w => (
@@ -254,6 +310,35 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                 <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: w.saldoAtual >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
                   {formatBRL(w.saldoAtual)}
                 </p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Cartões de Crédito em Scroll Horizontal (Limite Comprometido) */}
+        {cardsStats.length > 0 && (
+          <div style={{ 
+            display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 16, marginBottom: summaryCards.length > 0 ? 8 : 0,
+            scrollbarWidth: 'none' // Firefox
+          }}>
+            {cardsStats.map(c => (
+              <div key={c.id} style={{
+                minWidth: 160, background: 'var(--bg-card)', border: `1px solid ${c.cor}40`,
+                borderRadius: 14, padding: '12px 14px', flexShrink: 0,
+                position: 'relative', overflow: 'hidden'
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: c.cor }} />
+                <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                  💳 {c.nome}
+                </p>
+                <p style={{ margin: '0 0 2px', fontSize: 9, color: 'var(--text-muted)' }}>Disponível:</p>
+                <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: 'var(--entrada)' }}>
+                  {formatBRL(c.limiteDisponivel)}
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+                  <span>Fatura: {formatBRL(c.faturaAtual)}</span>
+                  <span style={{ color: 'var(--text-muted)' }}>Fração: {Math.round((c.totalComprometido / (c.limite || 1)) * 100)}%</span>
+                </div>
               </div>
             ))}
           </div>
@@ -381,6 +466,75 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           onNavigateSettings={() => onNavigate('settings')}
         />
       </div>
+
+      {/* Próximas Contas (Próximos 15 dias) */}
+      {próximasContas.length > 0 && (
+        <div style={{ padding: '16px 20px 0' }}>
+          <div style={{
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: 16, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>📅</span> Próximas Contas (15 dias)
+              </h3>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '2px 7px', borderRadius: 6 }}>
+                {próximasContas.length} pendente{próximasContas.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {próximasContas.map((occ, idx) => {
+                const cfg = TYPE_CONFIG[occ.tx.tipo] || {};
+                const Icon = TIPO_ICONS[occ.tx.tipo] || Zap;
+                return (
+                  <div key={`${occ.tx.id}-${idx}`} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    padding: '10px 12px', background: 'var(--bg-surface)',
+                    borderRadius: 12, border: '1px solid var(--border)'
+                  }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8,
+                      background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexShrink: 0
+                    }}>
+                      <Icon size={16} color={cfg.color} />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {occ.tx.descricao || cfg.label}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 10, color: 'var(--text-secondary)' }}>
+                        {formatContasHeader(occ.date)} {occ.parcela ? ` · ${occ.parcela}/${occ.totalParcelas}x` : ''}
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--saida)' }}>
+                        {formatBRL(occ.valor)}
+                      </span>
+                      {onPay && (
+                        <button
+                          onClick={() => onPay(occ, occ.date)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 3,
+                            height: 24, padding: '0 6px', borderRadius: 6,
+                            background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
+                            color: '#10b981', fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                          }}
+                        >
+                          💸 Pagar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
 
 

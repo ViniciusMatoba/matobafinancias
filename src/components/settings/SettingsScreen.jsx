@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { LogOut, User, Shield, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { doc, collection, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { db } from '../../firebase';
 import CardManager from './CardManager';
 import WalletManager from './WalletManager';
 import BudgetSettings from './BudgetSettings';
@@ -50,7 +52,145 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importMessage, setImportMessage] = useState('');
   const { prompt: deferredPrompt, handleInstall } = useInstallPrompt();
+
+  const restoreTimestamp = (val) => {
+    if (!val) return val;
+    if (typeof val === 'object' && val.seconds !== undefined) {
+      return new Timestamp(val.seconds, val.nanoseconds || 0);
+    }
+    if (typeof val === 'string') {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        return Timestamp.fromDate(d);
+      }
+    }
+    return val;
+  };
+
+  const handleExportJSON = () => {
+    const data = {
+      exportedAt: new Date().toISOString(),
+      version: '1.0',
+      transactions: transactions || [],
+      cards: cards || [],
+      wallets: wallets || [],
+      goals: goals || [],
+      config: config || {},
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `matoba_backup_${new Date().toISOString().slice(0,10)}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleImportJSON = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const fileText = await file.text();
+      const data = JSON.parse(fileText);
+
+      if (!data.transactions || !Array.isArray(data.transactions) ||
+          !data.cards || !Array.isArray(data.cards) ||
+          !data.wallets || !Array.isArray(data.wallets) ||
+          !data.goals || !Array.isArray(data.goals) ||
+          !data.config || typeof data.config !== 'object') {
+        alert('Arquivo de backup inválido. Chaves obrigatórias ausentes.');
+        return;
+      }
+
+      const confirm = window.confirm(
+        'Aviso Importante:\n\n' +
+        'Todos os seus dados atuais (transações, cartões, carteiras, metas e configurações) serão ' +
+        'substituídos pelos dados deste arquivo de backup.\n\n' +
+        'Deseja prosseguir?'
+      );
+      if (!confirm) return;
+
+      setImporting(true);
+      setImportMessage('Limpando dados antigos...');
+
+      const deletePromises = [];
+      transactions.forEach(t => {
+        deletePromises.push(deleteDoc(doc(db, `transactions/${user.uid}/entries`, t.id)));
+      });
+      cards.forEach(c => {
+        deletePromises.push(deleteDoc(doc(db, `cards/${user.uid}/list`, c.id)));
+      });
+      wallets.forEach(w => {
+        deletePromises.push(deleteDoc(doc(db, 'wallets', w.id)));
+      });
+      goals.forEach(g => {
+        deletePromises.push(deleteDoc(doc(db, 'goals', g.id)));
+      });
+
+      await Promise.all(deletePromises);
+
+      setImportMessage('Importando novos registros...');
+      const writePromises = [];
+
+      data.transactions.forEach(t => {
+        const { id, criadoEm, ...txData } = t;
+        const ref = id ? doc(db, `transactions/${user.uid}/entries`, id) : doc(collection(db, `transactions/${user.uid}/entries`));
+        writePromises.push(setDoc(ref, { 
+          ...txData, 
+          uid: user.uid,
+          criadoEm: criadoEm ? restoreTimestamp(criadoEm) : null
+        }));
+      });
+
+      data.cards.forEach(c => {
+        const { id, criadoEm, ...cardData } = c;
+        const ref = id ? doc(db, `cards/${user.uid}/list`, id) : doc(collection(db, `cards/${user.uid}/list`));
+        writePromises.push(setDoc(ref, { 
+          ...cardData, 
+          uid: user.uid,
+          criadoEm: criadoEm ? restoreTimestamp(criadoEm) : null
+        }));
+      });
+
+      data.wallets.forEach(w => {
+        const { id, criadoEm, ...walletData } = w;
+        const ref = id ? doc(db, 'wallets', id) : doc(collection(db, 'wallets'));
+        writePromises.push(setDoc(ref, { 
+          ...walletData, 
+          userId: user.uid,
+          criadoEm: criadoEm ? restoreTimestamp(criadoEm) : null
+        }));
+      });
+
+      data.goals.forEach(g => {
+        const { id, criadoEm, ...goalData } = g;
+        const ref = id ? doc(db, 'goals', id) : doc(collection(db, 'goals'));
+        writePromises.push(setDoc(ref, { 
+          ...goalData, 
+          userId: user.uid,
+          criadoEm: criadoEm ? restoreTimestamp(criadoEm) : null
+        }));
+      });
+
+      const configRef = doc(db, `config/${user.uid}`);
+      writePromises.push(setDoc(configRef, { ...data.config, userId: user.uid }));
+
+      await Promise.all(writePromises);
+
+      setImporting(false);
+      alert('Backup restaurado com sucesso!');
+    } catch (err) {
+      console.error('Erro na importação de backup:', err);
+      setImporting(false);
+      alert('Ocorreu um erro ao restaurar o backup: ' + err.message);
+    }
+  };
 
   const handleExportCSV = () => {
     let csv = 'Data,Tipo,Categoria,Descricao,Valor,Frequencia,Parcela,CartaoCredito\n';
@@ -177,7 +317,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
           {cardsOpen && (
             <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
               <div style={{ paddingTop: 14 }}>
-                <CardManager cards={cards} onAdd={onAddCard} onUpdate={onUpdateCard} onRemove={onRemoveCard} />
+                <CardManager cards={cards} transactions={transactions} onAdd={onAddCard} onUpdate={onUpdateCard} onRemove={onRemoveCard} />
               </div>
             </div>
           )}
@@ -354,19 +494,89 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
           </button>
         )}
 
-        {/* Exportar Excel */}
-        <button
-          onClick={handleExportCSV}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            padding: '14px', marginBottom: 16, borderRadius: 14,
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            color: 'var(--text-primary)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
-          }}
-        >
-          <Download size={18} />
-          Exportar Dados (Excel CSV)
-        </button>
+        {/* Backup e Exportação — card expansível */}
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 14, marginBottom: 16, overflow: 'hidden',
+        }}>
+          <button
+            type="button"
+            onClick={() => setBackupOpen(o => !o)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>💾</span>
+              <div style={{ textAlign: 'left' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'block' }}>
+                  Backup e Exportação
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  JSON Portátil & CSV Planilha
+                </span>
+              </div>
+            </div>
+            {backupOpen ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
+          </button>
+          {backupOpen && (
+            <div style={{ padding: '16px', borderTop: '1px solid var(--border)', background: 'var(--bg-surface)', fontSize: 12, lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Exporte ou importe todos os dados do seu aplicativo (transações, cartões, contas e configurações) em formato JSON seguro, ou exporte suas transações brutas em formato CSV para o Excel.
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Exportar JSON */}
+                <button
+                  type="button"
+                  onClick={handleExportJSON}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '12px', borderRadius: 10,
+                    background: 'var(--bg-card)', border: '1px solid var(--border)',
+                    color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  <Download size={16} /> Exportar Backup (JSON)
+                </button>
+
+                {/* Importar JSON */}
+                <label
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '12px', borderRadius: 10,
+                    background: 'var(--bg-card)', border: '1px solid var(--border)',
+                    color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                    textAlign: 'center'
+                  }}
+                >
+                  <Download size={16} style={{ transform: 'rotate(180deg)' }} /> Importar Backup (JSON)
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportJSON}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+
+                {/* Exportar CSV */}
+                <button
+                  type="button"
+                  onClick={handleExportCSV}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: '12px', borderRadius: 10,
+                    background: 'var(--bg-card)', border: '1px solid var(--border)',
+                    color: 'var(--text-primary)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  <Download size={16} /> Exportar Planilha (CSV)
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Nota de segurança */}
         <div style={{
@@ -380,6 +590,48 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
           </p>
         </div>
       </div>
+
+      {/* Overlay de Importação */}
+      {importing && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 99999,
+          background: 'rgba(10, 15, 30, 0.9)', backdropFilter: 'blur(8px)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 24,
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: 18,
+            background: 'linear-gradient(135deg, var(--primary), var(--investimento))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)',
+          }}>
+            <span style={{ fontSize: 32 }}>💾</span>
+          </div>
+          <div style={{ position: 'relative', width: 44, height: 44 }}>
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              border: '3px solid rgba(99,102,241,0.12)',
+            }} />
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              border: '3px solid transparent',
+              borderTopColor: 'var(--primary)',
+              animation: 'mf-spin-backup 0.75s linear infinite',
+            }} />
+          </div>
+          <div style={{ textAlign: 'center', padding: '0 40px' }}>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+              Restaurando Backup
+            </p>
+            <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
+              {importMessage}
+            </p>
+          </div>
+          <style>{`
+            @keyframes mf-spin-backup { to { transform: rotate(360deg); } }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }

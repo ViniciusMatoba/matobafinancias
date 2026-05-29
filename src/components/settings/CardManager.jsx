@@ -63,7 +63,7 @@ function CardForm({ initial, onSave, onCancel }) {
   );
 }
 
-export default function CardManager({ cards, onAdd, onUpdate, onRemove }) {
+export default function CardManager({ cards, transactions = [], onAdd, onUpdate, onRemove }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -86,39 +86,93 @@ export default function CardManager({ cards, onAdd, onUpdate, onRemove }) {
         <CardForm onSave={data => { onAdd(data); setAdding(false); }} onCancel={() => setAdding(false)} />
       )}
 
-      {cards.map(card => editing === card.id ? (
-        <CardForm
-          key={card.id}
-          initial={card}
-          onSave={data => { onUpdate(card.id, data); setEditing(null); }}
-          onCancel={() => setEditing(null)}
-        />
-      ) : (
-        <div key={card.id} style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: 14, padding: '14px', marginBottom: 10,
-          borderLeft: `4px solid ${card.cor || 'var(--primary)'}`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${card.cor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CreditCard size={18} color={card.cor} />
+      {cards.map(card => {
+        // Calcular estatísticas de limite comprometido
+        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+        let faturaAtual = 0;
+        let comprometidoFuturo = 0;
+
+        cardTxs.forEach(tx => {
+          if (tx.itens && tx.itens.length > 0) {
+            tx.itens.forEach(item => {
+              const val = Number(item.valor) || 0;
+              faturaAtual += val;
+              if (item.isParcelado) {
+                const remaining = Math.max(0, item.totalParcelas - (item.parcelaAtual || 1));
+                comprometidoFuturo += remaining * val;
+              }
+            });
+          } else {
+            faturaAtual += Number(tx.valor) || 0;
+          }
+        });
+
+        const totalComprometido = faturaAtual + comprometidoFuturo;
+        const limiteDisponivel = Math.max(0, (card.limite || 0) - totalComprometido);
+
+        return editing === card.id ? (
+          <CardForm
+            key={card.id}
+            initial={card}
+            onSave={data => { onUpdate(card.id, data); setEditing(null); }}
+            onCancel={() => setEditing(null)}
+          />
+        ) : (
+          <div key={card.id} style={{
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            borderRadius: 14, padding: '14px', marginBottom: 10,
+            borderLeft: `4px solid ${card.cor || 'var(--primary)'}`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${card.cor}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CreditCard size={18} color={card.cor} />
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{card.nome}</p>
+                  <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                    Vence dia {card.diaVencimento} · Fecha dia {card.diaFechamento}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{card.nome}</p>
-                <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
-                  Vence dia {card.diaVencimento} · Fecha dia {card.diaFechamento}
-                </p>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button onClick={() => setEditing(card.id)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 4 }}><Pencil size={14} /></button>
+                <button onClick={() => onRemove(card.id)} style={{ background: 'none', color: 'var(--saida)', display: 'flex', padding: 4 }}><Trash2 size={14} /></button>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--cartao)' }}>{formatBRL(card.limite || 0)}</p>
-              <button onClick={() => setEditing(card.id)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 4 }}><Pencil size={14} /></button>
-              <button onClick={() => onRemove(card.id)} style={{ background: 'none', color: 'var(--saida)', display: 'flex', padding: 4 }}><Trash2 size={14} /></button>
+
+            {/* Nova seção detalhada de limite e comprometimentos */}
+            <div style={{
+              display: 'flex', flexDirection: 'column', gap: 6,
+              background: 'var(--bg-surface)', borderRadius: 10, padding: '10px 12px',
+              fontSize: 11, color: 'var(--text-secondary)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Limite Total:</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatBRL(card.limite || 0)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Fatura Atual:</span>
+                <span style={{ fontWeight: 600, color: 'var(--saida)' }}>-{formatBRL(faturaAtual)}</span>
+              </div>
+              {comprometidoFuturo > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Parcelados Futuros:</span>
+                  <span style={{ color: 'var(--text-muted)' }}>-{formatBRL(comprometidoFuturo)}</span>
+                </div>
+              )}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 2,
+                fontSize: 12, fontWeight: 700
+              }}>
+                <span style={{ color: 'var(--text-primary)' }}>Limite Disponível:</span>
+                <span style={{ color: 'var(--entrada)' }}>{formatBRL(limiteDisponivel)}</span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {cards.length === 0 && !adding && (
         <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, margin: '20px 0' }}>
