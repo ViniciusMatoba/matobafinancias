@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useToast } from '../shared/Toast';
 import { Bell, BellOff, CheckCircle, XCircle, Play, Loader, RefreshCw, Send } from 'lucide-react';
 import { formatBRL, todayStr } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
@@ -114,6 +115,8 @@ export default function NotificationSettings({ user, cards, transactions, config
     sendTestPush,
   } = useNotifications(user);
 
+  const { showToast, ToastNode } = useToast();
+
   const prefs = config?.notificacoes || { enabled: false, tipos: { ...DEFAULT_TIPOS } };
   const tipos = { ...DEFAULT_TIPOS, ...(prefs.tipos || {}) };
 
@@ -152,7 +155,7 @@ export default function NotificationSettings({ user, cards, transactions, config
   // primeira carga (antes do SW reivindicar a página via clients.claim()).
   const showNotif = async (title, body, tag = 'test') => {
     if (Notification.permission !== 'granted') {
-      alert(`[Prévia da notificação]\n\n${title}\n${body}`);
+      showToast(`[Prévia] ${title}: ${body}`, 'success');
       return;
     }
     const opts = {
@@ -590,7 +593,7 @@ export default function NotificationSettings({ user, cards, transactions, config
           )}
         </div>
       )}
-
+      {ToastNode}
     </div>
   );
 }

@@ -88,22 +88,33 @@ export default function CardManager({ cards, transactions = [], onAdd, onUpdate,
 
       {cards.map(card => {
         // Calcular estatísticas de limite comprometido
+        const todayMonth = new Date().toISOString().slice(0, 7);
         const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
         let faturaAtual = 0;
         let comprometidoFuturo = 0;
 
         cardTxs.forEach(tx => {
+          const txMonth = tx.dataInicio.slice(0, 7);
           if (tx.itens && tx.itens.length > 0) {
             tx.itens.forEach(item => {
               const val = Number(item.valor) || 0;
-              faturaAtual += val;
+              if (txMonth === todayMonth) {
+                faturaAtual += val;
+              } else if (txMonth > todayMonth) {
+                comprometidoFuturo += val;
+              }
               if (item.isParcelado) {
                 const remaining = Math.max(0, item.totalParcelas - (item.parcelaAtual || 1));
                 comprometidoFuturo += remaining * val;
               }
             });
           } else {
-            faturaAtual += Number(tx.valor) || 0;
+            const val = Number(tx.valor) || 0;
+            if (txMonth === todayMonth) {
+              faturaAtual += val;
+            } else if (txMonth > todayMonth) {
+              comprometidoFuturo += val;
+            }
           }
         });
 

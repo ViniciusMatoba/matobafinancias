@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
@@ -89,6 +89,14 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   );
   const [novoItem, setNovoItem] = useState({ ...EMPTY_ITEM });
   const [editItemIdx, setEditItemIdx] = useState(null);
+
+  // Sincroniza o valor total da fatura com a soma dos itens do cartão
+  useEffect(() => {
+    if (form.tipo === 'cartao' && itens.length > 0) {
+      const sum = itens.reduce((s, item) => s + parseBRLInput(item.valor), 0);
+      setForm(f => ({ ...f, valor: numberToBRLInput(sum) }));
+    }
+  }, [itens, form.tipo]);
 
   const [erro, setErro] = useState('');
   const [dupChoice, setDupChoice] = useState(null);      // null | 'overwrite' | 'keep'

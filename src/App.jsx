@@ -152,7 +152,7 @@ export default function App() {
           dataInicio: editingOccDate,
           categoria: null,
           dataFim: null,
-          itens: editing.itens || [],
+          itens: cleanData.itens || editing.itens || [],
           cartaoId: editing.cartaoId || null
         });
         showToast('Fatura editada separadamente!');

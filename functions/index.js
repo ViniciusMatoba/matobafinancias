@@ -795,6 +795,13 @@ async function handleProjecao(chatId, uid) {
 }
 
 async function handleAjuda(chatId) {
+  const MAIN_KEYBOARD = {
+    keyboard: [
+      [{ text: '💰 Saldo' }, { text: '💳 Cartões' }, { text: '📈 Projeção' }],
+      [{ text: '📊 Categorias' }, { text: '🎯 Metas' }, { text: '❓ Ajuda' }]
+    ],
+    resize_keyboard: true,
+  };
   return sendMessage(chatId,
     `🤖 *Matoba Finanças — Comandos disponíveis*\n\n` +
 
@@ -818,7 +825,8 @@ async function handleAjuda(chatId) {
 
     `📱 *Para adicionar ou editar lançamentos use o app:*\n` +
     `👉 ${APP_URL}\n\n` +
-    `_Para desvincular: Configurações → Bot do Telegram → Desvincular_`
+    `_Para desvincular: Configurações → Bot do Telegram → Desvincular_`,
+    { reply_markup: MAIN_KEYBOARD }
   );
 }
 
@@ -1212,8 +1220,21 @@ async function processUpdate(update) {
 
   // Parse do comando
   const [rawCmd, ...argParts] = text.split(/\s+/);
-  const cmd  = rawCmd.toLowerCase().replace(/@\w+$/, ''); // remove @BotName
+  let cmd  = rawCmd.toLowerCase().replace(/@\w+$/, ''); // remove @BotName
   const args = argParts.join(' ');
+
+  // Normalização do comando (mapeia botões de teclado personalizados)
+  if (cmd.includes('saldo')) cmd = '/saldo';
+  else if (cmd.includes('cart') || cmd.includes('cartões')) cmd = '/cartoes';
+  else if (cmd.includes('proje') || cmd.includes('projeção')) cmd = '/projecao';
+  else if (cmd.includes('categor')) cmd = '/categoria';
+  else if (cmd.includes('meta')) cmd = '/meta';
+  else if (cmd.includes('ajuda') || cmd.includes('help')) cmd = '/ajuda';
+  else if (cmd.includes('hoje')) cmd = '/hoje';
+  else if (cmd.includes('hist')) cmd = '/historico';
+  else if (cmd.includes('seman')) cmd = '/semana';
+  else if (cmd.includes('mes')) cmd = '/mes';
+  else if (cmd.includes('resum')) cmd = '/resumo';
 
   // Comandos que não precisam de vínculo
   if (cmd === '/start' || cmd === '/vincular') {

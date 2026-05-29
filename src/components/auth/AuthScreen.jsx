@@ -27,6 +27,15 @@ const ERROR_MSGS = {
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.5.5 (29/05/2026)',
+    title: 'Cálculo Consistente de Cartões & Soma de Lançamentos 💳',
+    items: [
+      'Filtragem mensal precisa nos cartões: as estatísticas de Fatura Atual e limite disponível na Home e Configurações agora filtram transações pelo mês ativo, isolando faturas passadas ou futuras da fatura do mês corrente.',
+      'Soma automática no formulário: ao lançar despesas (itens) na fatura do cartão, o total principal da fatura é somado automaticamente e mantido em perfeita sincronia.',
+      'Ajuste na edição de projeções: corrigida a gravação de itens modificados de faturas virtuais separadas na área de Projeção.'
+    ]
+  },
+  {
     version: 'v1.5.3 (29/05/2026)',
     title: 'Edição e Exclusão de Projeções 🛠️',
     items: [
@@ -335,7 +344,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       {/* Rótulo de versão com notas de atualização */}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Versão v1.5.3
+          Versão v1.5.5
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
         <button

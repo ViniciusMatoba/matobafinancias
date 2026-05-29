@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { LogOut, User, Shield, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { useToast } from '../shared/Toast';
 import { doc, collection, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import CardManager from './CardManager';
@@ -10,6 +11,15 @@ import TelegramSettings from './TelegramSettings';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.5.5 (29/05/2026)',
+    title: 'Cálculo Consistente de Cartões & Soma de Lançamentos 💳',
+    items: [
+      'Filtragem mensal precisa nos cartões: as estatísticas de Fatura Atual e limite disponível na Home e Configurações agora filtram transações pelo mês ativo, isolando faturas passadas ou futuras da fatura do mês corrente.',
+      'Soma automática no formulário: ao lançar despesas (itens) na fatura do cartão, o total principal da fatura é somado automaticamente e mantido em perfeita sincronia.',
+      'Ajuste na edição de projeções: corrigida a gravação de itens modificados de faturas virtuais separadas na área de Projeção.'
+    ]
+  },
   {
     version: 'v1.5.4 (29/05/2026)',
     title: 'Busca de Atualizações Precisa & PWA 🔄',
@@ -98,6 +108,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const { prompt: deferredPrompt, handleInstall } = useInstallPrompt();
+  const { showToast, ToastNode } = useToast();
 
   const restoreTimestamp = (val) => {
     if (!val) return val;
@@ -146,7 +157,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
           !data.wallets || !Array.isArray(data.wallets) ||
           !data.goals || !Array.isArray(data.goals) ||
           !data.config || typeof data.config !== 'object') {
-        alert('Arquivo de backup inválido. Chaves obrigatórias ausentes.');
+        showToast('Arquivo de backup inválido. Chaves obrigatórias ausentes.', 'error');
         return;
       }
 
@@ -226,11 +237,11 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
       await Promise.all(writePromises);
 
       setImporting(false);
-      alert('Backup restaurado com sucesso!');
+      showToast('Backup restaurado com sucesso!', 'success');
     } catch (err) {
       console.error('Erro na importação de backup:', err);
       setImporting(false);
-      alert('Ocorreu um erro ao restaurar o backup: ' + err.message);
+      showToast('Ocorreu um erro ao restaurar o backup: ' + err.message, 'error');
     }
   };
 
@@ -492,7 +503,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Notas de Atualização
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Versão v1.5.4 ativa
+                  Versão v1.5.5 ativa
                 </span>
               </div>
             </div>
@@ -505,7 +516,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                 type="button"
                 onClick={async () => {
                   if (!('serviceWorker' in navigator)) {
-                    alert('Seu navegador não oferece suporte a Service Workers.');
+                    showToast('Seu navegador não oferece suporte a Service Workers.', 'error');
                     return;
                   }
 
@@ -515,20 +526,20 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   try {
                     const reg = await navigator.serviceWorker.getRegistration();
                     if (!reg) {
-                      alert('Nenhum Service Worker registrado. O aplicativo pode não estar instalado ou rodando como PWA no momento.');
+                      showToast('Nenhum Service Worker registrado. O aplicativo pode não estar instalado ou rodando como PWA no momento.', 'error');
                       return;
                     }
 
                     // Se já existir uma atualização baixada e esperando ativação
                     if (reg.waiting) {
-                      alert('Nova versão pronta! Atualizando o aplicativo...');
+                      showToast('Nova versão pronta! Atualizando o aplicativo...', 'success');
                       reg.waiting.postMessage({ type: 'SKIP_WAITING' });
                       return;
                     }
 
                     // Se já estiver baixando uma atualização
                     if (reg.installing) {
-                      alert('Uma atualização já está sendo baixada. O app será reiniciado assim que concluir.');
+                      showToast('Uma atualização já está sendo baixada. O app será reiniciado assim que concluir.', 'success');
                       const worker = reg.installing;
                       worker.addEventListener('statechange', () => {
                         if (worker.state === 'installed') {
@@ -544,7 +555,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                       updateFound = true;
                       const worker = reg.installing;
                       if (worker) {
-                        alert('Nova versão encontrada! Baixando atualização...');
+                        showToast('Nova versão encontrada! Baixando atualização...', 'success');
                         worker.addEventListener('statechange', () => {
                           if (worker.state === 'installed') {
                             worker.postMessage({ type: 'SKIP_WAITING' });
@@ -563,11 +574,11 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                     reg.removeEventListener('updatefound', handleUpdateFound);
 
                     if (!updateFound) {
-                      alert('O aplicativo já está na versão mais recente!');
+                      showToast('O aplicativo já está na versão mais recente!', 'success');
                     }
                   } catch (err) {
                     console.error('Erro ao verificar SW:', err);
-                    alert('Erro ao buscar atualizações: ' + err.message);
+                    showToast('Erro ao buscar atualizações: ' + err.message, 'error');
                   }
                 }}
                 style={{
@@ -770,6 +781,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
           `}</style>
         </div>
       )}
+      {ToastNode}
     </div>
   );
 }

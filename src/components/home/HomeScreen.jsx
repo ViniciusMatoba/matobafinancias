@@ -68,17 +68,29 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       let comprometidoFuturo = 0;
 
       cardTxs.forEach(tx => {
+        const txMonth = tx.dataInicio.slice(0, 7);
+        const isCurrentInvoice = txMonth === currentMonth;
+
         if (tx.itens && tx.itens.length > 0) {
           tx.itens.forEach(item => {
             const val = Number(item.valor) || 0;
-            faturaAtual += val;
+            if (isCurrentInvoice) {
+              faturaAtual += val;
+            } else if (txMonth > currentMonth) {
+              comprometidoFuturo += val;
+            }
             if (item.isParcelado) {
               const remaining = Math.max(0, item.totalParcelas - (item.parcelaAtual || 1));
               comprometidoFuturo += remaining * val;
             }
           });
         } else {
-          faturaAtual += Number(tx.valor) || 0;
+          const val = Number(tx.valor) || 0;
+          if (isCurrentInvoice) {
+            faturaAtual += val;
+          } else if (txMonth > currentMonth) {
+            comprometidoFuturo += val;
+          }
         }
       });
 
@@ -93,7 +105,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         limiteDisponivel
       };
     });
-  }, [cards, transactions]);
+  }, [cards, transactions, currentMonth]);
 
   // Ocorrências apenas do dia selecionado
   const dayOccs = useMemo(() =>
