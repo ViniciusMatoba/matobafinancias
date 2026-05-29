@@ -7,12 +7,49 @@ import NotificationSettings from './NotificationSettings';
 import TelegramSettings from './TelegramSettings';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
+const CHANGELOG_DATA = [
+  {
+    version: 'v1.4.0 (29/05/2026)',
+    title: 'Educação Financeira & Controle de Impulsos 🧘‍♂️',
+    items: [
+      'Painel "Pense com Calma" para controle de compras impulsivas com contagem regressiva de 10 dias.',
+      'Cálculo de impacto em dias comerciais de trabalho (Preço / Salário Diário) e porcentagem da categoria.',
+      'Scoreboard de Economia Acumulada persistente com animação de confetes ao desistir de compras supérfluas.',
+      'Simulador "Viver de Renda" nas Caixinhas de Independência Financeira (FIRE) com projeção de juros compostos.',
+      'Guia tributário real de investimentos com orientações sobre Poupança, CDB/Selic, LCI/LCA e Ações/FIIs.',
+      'Novo banner inteligente de Sobra Segura ciente da conclusão da sua Reserva de Emergência.',
+      'Higienização completa de marcas anteriores para o termo neutro "Divisão Percentual".',
+      'Personalização de Tooltips gráficos com dia da semana e variação acumulada colorida.'
+    ]
+  },
+  {
+    version: 'v1.3.0 (28/05/2026)',
+    title: 'Pagamentos em Lote & Navegação Precisa 💸',
+    items: [
+      'Novo recurso de lote rápido "Pagar" para faturas e lançamentos recorrentes.',
+      'Paginação mensal fixa por calendário na Projeção (resolvendo furos do dia 31).',
+      'Visão flexível de Resumo por Período customizado.',
+      'Lançamentos recorrentes diários automáticos com divisão por 30 (rateio).'
+    ]
+  },
+  {
+    version: 'v1.2.0 (15/05/2026)',
+    title: 'Segurança & Sincronização offline 🔒',
+    items: [
+      'Criptografia completa ponta a ponta com o Firebase Authentication.',
+      'Suporte offline completo PWA e instalação na tela inicial.',
+      'Integração com o Bot de Telegram para consultas rápidas de saldo e limites.'
+    ]
+  }
+];
+
 export default function SettingsScreen({ user, cards, wallets, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout }) {
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [walletsOpen, setWalletsOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
+  const [updatesOpen, setUpdatesOpen] = useState(false);
   const { prompt: deferredPrompt, handleInstall } = useInstallPrompt();
 
   const handleExportCSV = () => {
@@ -249,6 +286,53 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   onSavePrefs={onSaveConfig}
                 />
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Notas de Atualização — card expansível */}
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 14, marginBottom: 16, overflow: 'hidden',
+        }}>
+          <button
+            type="button"
+            onClick={() => setUpdatesOpen(o => !o)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px', background: 'none', border: 'none', cursor: 'pointer'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🆕</span>
+              <div style={{ textAlign: 'left' }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'block' }}>
+                  Notas de Atualização
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  Versão v1.4.0 ativa
+                </span>
+              </div>
+            </div>
+            {updatesOpen ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
+          </button>
+          {updatesOpen && (
+            <div style={{ padding: '16px', borderTop: '1px solid var(--border)', background: 'var(--bg-surface)', fontSize: 12, lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {CHANGELOG_DATA.map((ch, idx) => (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(99,102,241,0.1)', padding: '1px 5px', borderRadius: 4 }}>
+                      {ch.version}
+                    </span>
+                    <strong style={{ fontSize: 12, color: 'var(--text-primary)' }}>{ch.title}</strong>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {ch.items.map((it, itemIdx) => (
+                      <li key={itemIdx}>{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           )}
         </div>

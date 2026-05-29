@@ -25,6 +25,42 @@ const ERROR_MSGS = {
   'auth/unauthorized-domain':   'Domínio não autorizado. Adicione "viniciusmatoba.github.io" no painel do Firebase (Authentication > Configurações > Domínios autorizados).',
 };
 
+const CHANGELOG_DATA = [
+  {
+    version: 'v1.4.0 (29/05/2026)',
+    title: 'Educação Financeira & Controle de Impulsos 🧘‍♂️',
+    items: [
+      'Painel "Pense com Calma" para controle de compras impulsivas com contagem regressiva de 10 dias.',
+      'Cálculo de impacto em dias comerciais de trabalho (Preço / Salário Diário) e porcentagem da categoria.',
+      'Scoreboard de Economia Acumulada persistente com animação de confetes ao desistir de compras supérfluas.',
+      'Simulador "Viver de Renda" nas Caixinhas de Independência Financeira (FIRE) com projeção de juros compostos.',
+      'Guia tributário real de investimentos com orientações sobre Poupança, CDB/Selic, LCI/LCA e Ações/FIIs.',
+      'Novo banner inteligente de Sobra Segura ciente da conclusão da sua Reserva de Emergência.',
+      'Higienização completa de marcas anteriores para o termo neutro "Divisão Percentual".',
+      'Personalização de Tooltips gráficos com dia da semana e variação acumulada colorida.'
+    ]
+  },
+  {
+    version: 'v1.3.0 (28/05/2026)',
+    title: 'Pagamentos em Lote & Navegação Precisa 💸',
+    items: [
+      'Novo recurso de lote rápido "Pagar" para faturas e lançamentos recorrentes.',
+      'Paginação mensal fixa por calendário na Projeção (resolvendo furos do dia 31).',
+      'Visão flexível de Resumo por Período customizado.',
+      'Lançamentos recorrentes diários automáticos com divisão por 30 (rateio).'
+    ]
+  },
+  {
+    version: 'v1.2.0 (15/05/2026)',
+    title: 'Segurança & Sincronização offline 🔒',
+    items: [
+      'Criptografia completa ponta a ponta com o Firebase Authentication.',
+      'Suporte offline completo PWA e instalação na tela inicial.',
+      'Integração com o Bot de Telegram para consultas rápidas de saldo e limites.'
+    ]
+  }
+];
+
 export default function AuthScreen({ user, redirectError, onLogin, onRegister, onLoginWithGoogle, onConfirm, onLogout }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
@@ -33,6 +69,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { prompt: deferredPrompt, handleInstall: handleInstallClick } = useInstallPrompt();
+  const [showChangelog, setShowChangelog] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -258,6 +295,77 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
         }}>
           Para instalar no celular, abra o menu do navegador e escolha
           <strong style={{ color: 'var(--text-primary)' }}> Adicionar a tela inicial</strong>.
+        </div>
+      )}
+
+      {/* Rótulo de versão com notas de atualização */}
+      <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+          Versão v1.4.0
+        </span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
+        <button
+          type="button"
+          onClick={() => setShowChangelog(true)}
+          style={{
+            background: 'none', border: 'none', color: 'var(--primary)',
+            fontSize: 12, fontWeight: 600, padding: 0, cursor: 'pointer',
+            textDecoration: 'underline'
+          }}
+        >
+          Notas de Atualização
+        </button>
+      </div>
+
+      {/* Janela Modal do Changelog */}
+      {showChangelog && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(10, 15, 30, 0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px', zIndex: 10000
+        }}>
+          <div style={{
+            width: '100%', maxWidth: 440, background: 'var(--bg-surface)',
+            border: '1px solid var(--border)', borderRadius: 20,
+            padding: '24px', display: 'flex', flexDirection: 'column', gap: 16,
+            maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                🆕 Histórico de Alterações
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setShowChangelog(false)}
+                style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  color: 'var(--text-primary)', padding: '6px 12px', borderRadius: 8,
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                }}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {CHANGELOG_DATA.map((ch, idx) => (
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--primary)', background: 'rgba(99,102,241,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                      {ch.version}
+                    </span>
+                    <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>{ch.title}</strong>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 20, color: 'var(--text-secondary)', fontSize: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {ch.items.map((it, itemIdx) => (
+                      <li key={itemIdx}>{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
