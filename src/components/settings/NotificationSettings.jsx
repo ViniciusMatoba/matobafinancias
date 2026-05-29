@@ -146,8 +146,10 @@ export default function NotificationSettings({ user, cards, transactions, config
   };
 
   // ── Exibir notificação local (teste) ─────────────────────────────────────────
-  // Android (browser + PWA) bloqueia new Notification() na thread principal.
-  // Notificações DEVEM ser criadas via serviceWorker.registration.showNotification().
+  // Android bloqueia new Notification() na thread principal.
+  // A única forma confiável é serviceWorker.ready → showNotification().
+  // Não usamos navigator.serviceWorker.controller porque pode ser null na
+  // primeira carga (antes do SW reivindicar a página via clients.claim()).
   const showNotif = async (title, body, tag = 'test') => {
     if (Notification.permission !== 'granted') {
       alert(`[Prévia da notificação]\n\n${title}\n${body}`);
@@ -155,25 +157,27 @@ export default function NotificationSettings({ user, cards, transactions, config
     }
     const opts = {
       body,
-      icon:  './icons/icon-192.png',
-      badge: './icons/icon-192.png',
+      icon:    './icons/icon-192.png',
+      badge:   './icons/icon-192.png',
       tag,
-      data:  { url: './' },
+      data:    { url: './' },
       vibrate: [200, 100, 200],
     };
-    // Usa o SW ativo quando disponível (obrigatório no Android)
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+
+    if ('serviceWorker' in navigator) {
+      // serviceWorker.ready aguarda o SW ficar ativo (resolve mesmo sem controller)
       const reg = await navigator.serviceWorker.ready;
-      reg.showNotification(title, opts);
-    } else {
-      // Fallback desktop (sem SW ativo ainda)
-      new Notification(title, opts);
+      await reg.showNotification(title, opts); // await para capturar erros
+      return;
     }
+    // Fallback desktop puro (sem service worker)
+    new Notification(title, opts);
   };
 
   // ── Funções de teste com dados reais ─────────────────────────────────────────
   const runTest = async (id) => {
     setTestingId(id);
+    setActivateError('');
     try {
       const today       = new Date();
       const todayDay    = today.getDate();
@@ -318,7 +322,7 @@ export default function NotificationSettings({ user, cards, transactions, config
             });
           });
           const saldo = entradas - saidas;
-          showNotif(
+          await showNotif(
             '📊 Resumo da semana',
             `Entradas ${formatBRL(entradas)} · Saídas ${formatBRL(saidas)} · Saldo ${formatBRL(saldo)}`
           );
@@ -327,6 +331,9 @@ export default function NotificationSettings({ user, cards, transactions, config
 
         default: break;
       }
+    } catch (err) {
+      console.error('[runTest]', err);
+      setActivateError(`Erro no teste: ${err?.message || String(err)}`);
     } finally {
       setTimeout(() => setTestingId(null), 1500);
     }
