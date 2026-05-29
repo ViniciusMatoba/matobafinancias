@@ -156,6 +156,18 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
     }
   };
 
+  const handleDownloadShortcut = () => {
+    const urlContent = `[InternetShortcut]\r\nURL=${window.location.protocol}//${window.location.host}${window.location.pathname}\r\nIconIndex=0\r\n`;
+    const blob = new Blob([urlContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'Matoba Finanças.url';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Força checagem de atualizações do Service Worker imediatamente ao abrir a tela de login
   useEffect(() => {
     if ('serviceWorker' in navigator) {
@@ -442,15 +454,31 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    Instale como aplicativo de desktop ou mobile:
+                    Aplicativo Web Progressivo (PWA) de Instalação Imediata:
+                  </p>
+                  <p style={{ margin: 0 }}>
+                    Este aplicativo é um **PWA**, o que significa que ele instala diretamente dentro do seu navegador (Google Chrome ou Microsoft Edge) e cria um atalho nativo na sua Área de Trabalho **sem a necessidade de baixar arquivos executáveis (.exe) pesados ou inseguros**.
+                  </p>
+                  <p style={{ margin: 0, fontWeight: 600 }}>
+                    Como instalar em 2 segundos:
                   </p>
                   <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <li><strong>No computador (Chrome/Edge):</strong> Clique no ícone de monitor com seta para baixo na barra de endereço (canto superior direito) e confirme a instalação.</li>
-                    <li><strong>No menu do navegador:</strong> Abra o menu (três pontinhos ou barras de opções) e selecione <strong>Instalar Matoba Finanças</strong> ou <strong>Adicionar à tela inicial</strong>.</li>
+                    <li><strong>Pelo Navegador (Recomendado):</strong> Clique no ícone de monitor com seta para baixo 🖥️ na barra de endereços (canto superior direito) ou acesse o menu de opções (três pontinhos) e selecione <strong>Instalar Matoba Finanças</strong>.</li>
+                    <li><strong>Baixar Atalho Direto:</strong> Se preferir, clique no botão abaixo para baixar um atalho oficial diretamente para a sua Área de Trabalho. Basta dar dois cliques no arquivo baixado para entrar no aplicativo!</li>
                   </ol>
-                  <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
-                    Isso criará um atalho e abrirá o aplicativo em uma janela dedicada sem as barras do navegador.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={handleDownloadShortcut}
+                    style={{
+                      marginTop: 8, padding: '10px 16px', borderRadius: 10,
+                      background: 'var(--primary)', color: '#fff', border: 'none',
+                      fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                      boxShadow: '0 4px 12px rgba(99,102,241,0.2)'
+                    }}
+                  >
+                    📥 Baixar Atalho para Área de Trabalho (.url)
+                  </button>
                 </div>
               )}
             </div>
