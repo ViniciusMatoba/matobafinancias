@@ -149,8 +149,8 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     const contas = occs.filter(o => {
       if (o.tx.tipo === 'entrada') return false;
 
-      // Ignora despesas ou faturas recorrentes que já foram pagas/conferidas
-      if (o.tx.frequencia === 'unico' || o.tx.frequencia === 'parcelado') {
+      // Ignora despesas ou faturas recorrentes que já foram pagas/conferidas (trata frequencia indefinida como unico)
+      if (!o.tx.frequencia || o.tx.frequencia === 'unico' || o.tx.frequencia === 'parcelado') {
         return !o.tx.conferido;
       }
       return !o.tx.conferidos?.includes(o.date);

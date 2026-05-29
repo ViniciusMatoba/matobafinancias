@@ -64,7 +64,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
   const isOccConferido = (occ) => {
     const tx = occ.tx;
     if (!tx) return false;
-    if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+    if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
       return !!tx.conferido;
     }
     return !!tx.conferidos?.includes(occ.date);

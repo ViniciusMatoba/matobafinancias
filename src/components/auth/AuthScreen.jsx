@@ -132,6 +132,29 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
   const [googleLoading, setGoogleLoading] = useState(false);
   const { prompt: deferredPrompt, handleInstall: handleInstallClick } = useInstallPrompt();
   const [showChangelog, setShowChangelog] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [showInstallTutorial, setShowInstallTutorial] = useState(false);
+
+  useEffect(() => {
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    setIsStandalone(!!standalone);
+  }, []);
+
+  const getOS = () => {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    if (/android/i.test(ua)) return 'android';
+    if (/iPad|iPhone|iPod/.test(ua) && !window.MSStream) return 'ios';
+    return 'other';
+  };
+  const os = getOS();
+
+  const handlePWAInstallClick = () => {
+    if (deferredPrompt) {
+      handleInstallClick();
+    } else {
+      setShowInstallTutorial(true);
+    }
+  };
 
   // Força checagem de atualizações do Service Worker imediatamente ao abrir a tela de login
   useEffect(() => {
@@ -339,10 +362,10 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
         )}
       </div>
 
-      {/* Botao de Instalacao do PWA */}
-      {deferredPrompt ? (
+      {/* Botão de Instalação do PWA */}
+      {!isStandalone && (
         <button
-          onClick={handleInstallClick}
+          onClick={handlePWAInstallClick}
           style={{
             marginTop: 24, padding: '12px 24px', borderRadius: 12,
             background: 'rgba(99,102,241,0.15)', border: '1px solid var(--primary)',
@@ -351,24 +374,87 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
             boxShadow: '0 4px 12px rgba(99,102,241,0.2)'
           }}
         >
-          Baixar aplicativo
+          📲 Instalar Aplicativo (App Nativo)
         </button>
-      ) : (
+      )}
+
+      {/* Modal de Tutorial de Instalação PWA */}
+      {showInstallTutorial && (
         <div style={{
-          marginTop: 22,
-          width: '100%',
-          maxWidth: 380,
-          padding: '12px 14px',
-          borderRadius: 14,
-          background: 'rgba(99,102,241,0.1)',
-          border: '1px solid rgba(99,102,241,0.25)',
-          color: 'var(--text-secondary)',
-          fontSize: 12,
-          lineHeight: 1.5,
-          textAlign: 'center',
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+          background: 'rgba(10, 15, 30, 0.85)', backdropFilter: 'blur(8px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px', zIndex: 10000
         }}>
-          Para instalar no celular, abra o menu do navegador e escolha
-          <strong style={{ color: 'var(--text-primary)' }}> Adicionar a tela inicial</strong>.
+          <div style={{
+            width: '100%', maxWidth: 440, background: 'var(--bg-surface)',
+            border: '1px solid var(--border)', borderRadius: 20,
+            padding: '24px', display: 'flex', flexDirection: 'column', gap: 16,
+            maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                📲 Como Instalar o Aplicativo
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setShowInstallTutorial(false)}
+                style={{
+                  background: 'var(--bg-card)', border: '1px solid var(--border)',
+                  color: 'var(--text-primary)', padding: '6px 12px', borderRadius: 8,
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer'
+                }}
+              >
+                Fechar
+              </button>
+            </div>
+
+            <div style={{ color: 'var(--text-secondary)', fontSize: 13, lineHeight: 1.6 }}>
+              {os === 'ios' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Siga estes passos simples para ter o app nativo no seu iPhone/iPad:
+                  </p>
+                  <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <li>Abra este site usando o navegador <strong>Safari</strong> original do iPhone.</li>
+                    <li>Toque no ícone de <strong>Compartilhar</strong> 📤 (quadrado com seta para cima na barra inferior).</li>
+                    <li>Role as opções para baixo e selecione <strong>Adicionar à Tela de Início</strong> 📲.</li>
+                    <li>Confirme tocando em <strong>Adicionar</strong> no canto superior direito.</li>
+                  </ol>
+                  <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                    Pronto! O ícone do Matoba Finanças aparecerá na sua tela inicial como um aplicativo nativo.
+                  </p>
+                </div>
+              ) : os === 'android' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Instale no seu dispositivo Android em segundos:
+                  </p>
+                  <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <li>Toque no botão de menu do navegador <strong>(três pontinhos no canto superior direito)</strong>.</li>
+                    <li>Selecione a opção <strong>Instalar aplicativo</strong> ou <strong>Adicionar à tela inicial</strong> 📲.</li>
+                    <li>Confirme a instalação clicando em <strong>Instalar</strong>.</li>
+                  </ol>
+                  <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                    O aplicativo aparecerá na sua gaveta de apps e tela de início automaticamente.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Instale como aplicativo de desktop ou mobile:
+                  </p>
+                  <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <li><strong>No computador (Chrome/Edge):</strong> Clique no ícone de monitor com seta para baixo na barra de endereço (canto superior direito) e confirme a instalação.</li>
+                    <li><strong>No menu do navegador:</strong> Abra o menu (três pontinhos ou barras de opções) e selecione <strong>Instalar Matoba Finanças</strong> ou <strong>Adicionar à tela inicial</strong>.</li>
+                  </ol>
+                  <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                    Isso criará um atalho e abrirá o aplicativo em uma janela dedicada sem as barras do navegador.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
