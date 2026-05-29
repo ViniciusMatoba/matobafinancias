@@ -16,10 +16,29 @@ export default function ReloadPrompt({ hidden = false }) {
   } = useRegisterSW({
     onRegistered(r) {
       if (r) {
+        const checkUpdate = () => {
+          r.update().catch(err => console.log('Erro ao checar atualizacao do SW:', err));
+        };
+
+        // Checa atualização imediatamente ao iniciar
+        checkUpdate();
+
+        // Checa sempre que o app ganha foco ou volta para o primeiro plano (essencial para PWA mobile)
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'visible') {
+            checkUpdate();
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
         // Verifica atualizações a cada 60 segundos automaticamente
-        setInterval(() => {
-          r.update().catch(err => console.log('Erro ao checar atualização do SW:', err));
-        }, 60000);
+        const interval = setInterval(checkUpdate, 60000);
+
+        // Limpeza dos event listeners ao desmontar
+        r._cleanupVisibility = () => {
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+          clearInterval(interval);
+        };
       }
     },
     onRegisterError(error) {
@@ -27,18 +46,21 @@ export default function ReloadPrompt({ hidden = false }) {
     },
   });
 
-  // Reexibe o banner caso um novo service worker seja detectado em espera
+  // Auto-atualização silenciosa imediata ao detectar nova versão
   useEffect(() => {
     if (needRefresh) {
+      setUpdating(true);
       localStorage.removeItem(DISMISSED_UPDATE_KEY);
-      setDismissed(false);
+      // Pequeno delay para exibir a tela de atualização e executar o skipWaiting
+      setTimeout(() => {
+        updateServiceWorker(true);
+      }, 150);
     }
-  }, [needRefresh]);
+  }, [needRefresh, updateServiceWorker]);
 
   const handleUpdate = () => {
     setUpdating(true);
     localStorage.removeItem(DISMISSED_UPDATE_KEY);
-    // Pequeno delay para garantir que a tela de loading renderiza antes do reload
     setTimeout(() => updateServiceWorker(true), 80);
   };
 

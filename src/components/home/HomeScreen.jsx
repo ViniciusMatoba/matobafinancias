@@ -140,14 +140,21 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     return calcularSobraSegura(transactions, wallets, 45); // Verifica os próximos 45 dias
   }, [transactions, wallets, isToday]);
 
-  // Ocorrências previstas para os próximos 15 dias (a partir de hoje)
   const próximasContas = useMemo(() => {
     const toDate = addDays(today, 15);
     const occs = transactions.flatMap(tx =>
       expandOccurrences(tx, today, toDate).map(o => ({ ...o, tx }))
     );
-    // Filtrar apenas despesas e investimentos (tudo menos tipo: 'entrada')
-    const contas = occs.filter(o => o.tx.tipo !== 'entrada');
+    // Filtrar apenas despesas e investimentos (tudo menos tipo: 'entrada') que estão pendentes (não pagos/conferidos)
+    const contas = occs.filter(o => {
+      if (o.tx.tipo === 'entrada') return false;
+
+      // Ignora despesas ou faturas recorrentes que já foram pagas/conferidas
+      if (o.tx.frequencia === 'unico' || o.tx.frequencia === 'parcelado') {
+        return !o.tx.conferido;
+      }
+      return !o.tx.conferidos?.includes(o.date);
+    });
     contas.sort((a, b) => a.date.localeCompare(b.date));
     return contas.slice(0, 5); // Mostra no máximo as 5 próximas contas
   }, [transactions, today]);

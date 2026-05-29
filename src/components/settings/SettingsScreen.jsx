@@ -12,6 +12,25 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.6.1 (29/05/2026)',
+    title: 'Controle de Pagamentos & Auto-Atualização PWA Imersiva 🔄',
+    items: [
+      'Controle de próximas contas: resolvido bug em que contas e faturas de cartão pagas continuavam aparecendo na lista de próximas contas de 15 dias na Home. Agora, ao registrar um pagamento, o status do lançamento é automaticamente marcado como pago (conferido) e removido dos compromissos futuros.',
+      'Auto-Atualização do PWA: o aplicativo agora detecta novas versões em segundo plano instantaneamente sempre que ganha foco (visibilitychange) ou é retomado do background no celular.',
+      'Instalação e recarga automática: novas atualizações do PWA são ativadas e instaladas 100% de forma autônoma e imediata, exibindo uma tela de carregamento suave e realizando o reload automaticamente sem requerer nenhuma ação manual ou navegação externa do usuário.'
+    ]
+  },
+  {
+    version: 'v1.6.0 (29/05/2026)',
+    title: 'Notificações Inteligentes & Upgrade do Bot do Telegram 🌅',
+    items: [
+      'Novas Notificações Push/Telegram (N8 a N12): adicionados alertas de limite geral de gastos mensais, contas fixas recorrentes pendentes a vencer nos próximos 2 dias, limite de cartão comprometido e relatório comparativo de fechamento mensal.',
+      'Preferências de Resumo Diário: configure horário de envio preferido (7h, 12h, 19h) e dias da semana (todo dia, dias úteis, fds) diretamente pela tela de configurações do webapp.',
+      'Novos comandos no Bot do Telegram: acesse dicas personalizadas com o comando /insight e detalhe despesas ativas nos cartões de crédito com o comando /fatura.',
+      'Simuladores de testes locais: pré-visualize e teste cada um dos 12 tipos de notificações com seus dados reais em tempo real clicando no botão Testar.'
+    ]
+  },
+  {
     version: 'v1.5.5 (29/05/2026)',
     title: 'Cálculo Consistente de Cartões & Soma de Lançamentos 💳',
     items: [
@@ -503,7 +522,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Notas de Atualização
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Versão v1.5.5 ativa
+                  Versão v1.6.1 ativa
                 </span>
               </div>
             </div>
@@ -524,7 +543,8 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   localStorage.removeItem('matoba:update-dismissed');
 
                   try {
-                    const reg = await navigator.serviceWorker.getRegistration();
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    const reg = regs?.find(r => r.active) || regs?.[0];
                     if (!reg) {
                       showToast('Nenhum Service Worker registrado. O aplicativo pode não estar instalado ou rodando como PWA no momento.', 'error');
                       return;

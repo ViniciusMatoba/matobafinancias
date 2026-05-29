@@ -21,6 +21,11 @@ if (typeof workbox !== 'undefined') {
   );
 }
 
+// Ativação automática e imediata do novo Service Worker no evento de instalação
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
 // Listener de mensagens para ativação sob demanda (SKIP_WAITING enviado pelo ReloadPrompt)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {

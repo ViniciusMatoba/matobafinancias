@@ -7,7 +7,10 @@ import { expandOccurrences, buildDailyProjection, calcSaldo } from '../../utils/
 import { useNotifications } from '../../hooks/useNotifications';
 
 // Preferências padrão (todas ativas)
-const DEFAULT_TIPOS = { n1: true, n2: true, n3: true, n4: true, n5: true, n6: true, n7: true };
+const DEFAULT_TIPOS = {
+  n1: true, n2: true, n3: true, n4: true, n5: true, n6: true, n7: true,
+  n8: true, n9: true, n10: true, n11: true, n12: true
+};
 
 // Metadados dos tipos de notificação
 const TIPO_INFO = {
@@ -18,6 +21,11 @@ const TIPO_INFO = {
   n5: { label: 'Orçamento estourado',       icon: '🚨', desc: 'Avisa quando uma categoria ultrapassa 100% do orçamento' },
   n6: { label: 'Saldo negativo em 7 dias',  icon: '📉', desc: 'Projeção detecta saldo negativo na próxima semana' },
   n7: { label: 'Resumo semanal',            icon: '📊', desc: 'Toda segunda-feira: total de entradas, saídas e saldo da semana' },
+  n8: { label: 'Resumo diário matinal',     icon: '🌅', desc: 'Resumo matinal diário com seu saldo atual e lançamentos do dia' },
+  n9: { label: 'Limite geral de gastos',     icon: '🚨', desc: 'Avisa se seus gastos totais mensais atingirem 80% ou 100% da sua renda' },
+  n10: { label: 'Contas fixas pendentes',    icon: '⏰', desc: 'Lembrete de contas fixas recorrentes a vencer nos próximos 2 dias' },
+  n11: { label: 'Cartão de crédito no limite', icon: '💳', desc: 'Avisa se a fatura de algum cartão atingir 80% do seu limite' },
+  n12: { label: 'Relatório mensal comparativo', icon: '📈', desc: 'No dia 1º, compara os gastos do mês encerrado com o anterior' },
 };
 
 // ─── Cálculo de gasto por categoria (mesmo regime de BudgetSummaryCard) ───────
@@ -332,6 +340,106 @@ export default function NotificationSettings({ user, cards, transactions, config
           break;
         }
 
+        // N8 — Resumo diário matinal
+        case 'n8': {
+          const hojeStr = todayStr();
+          const lancHoje = transactions.filter(tx => tx.dataInicio === hojeStr && tx.frequencia === 'unico');
+          const saldo = calcSaldo(transactions, '2020-01-01', hojeStr);
+          
+          let bodyText = `Saldo atual: ${formatBRL(saldo)}. `;
+          if (lancHoje.length > 0) {
+            bodyText += `${lancHoje.length} lançamento(s) hoje.`;
+          } else {
+            bodyText += `Nenhum lançamento avulso para hoje.`;
+          }
+          await showNotif('🌅 Bom dia! Resumo do Dia', bodyText);
+          break;
+        }
+
+        // N9 — Limite Geral de Gastos
+        case 'n9': {
+          const rendaMensal = config?.rendaMensal || 0;
+          if (rendaMensal <= 0) {
+            await showNotif('🚨 Limite Geral de Gastos', 'Configure sua renda em Configurações → Orçamento para receber este alerta.');
+            break;
+          }
+          const spent = computeSpent(transactions, todayStr().slice(0, 7));
+          let totalGasto = Object.values(spent).reduce((a, b) => a + b, 0);
+
+          const pct = (totalGasto / rendaMensal) * 100;
+          if (pct >= 80) {
+            await showNotif(
+              `🚨 Limite Geral em ${Math.round(pct)}%!`,
+              `Você já gastou ${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)}`
+            );
+          } else {
+            await showNotif(
+              `✅ Orçamento Geral Saudável`,
+              `Gastos em ${Math.round(pct)}% (${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)})`
+            );
+          }
+          break;
+        }
+
+        // N10 — Contas fixas pendentes
+        case 'n10': {
+          const contasPendentes = transactions.filter(tx => 
+            tx.tipo === 'saida' && 
+            ['mensal', 'semanal', 'diario'].includes(tx.frequencia)
+          );
+
+          if (contasPendentes.length > 0) {
+            const tx = contasPendentes[0];
+            await showNotif(
+              '⏰ Conta fixa vence em 2 dias!',
+              `${tx.descricao || tx.tipo} — valor de ${formatBRL(tx.valor)} está previsto para daqui a 2 dias`
+            );
+          } else {
+            await showNotif('⏰ Contas Fixas em Dia', 'Nenhum lançamento recorrente vencendo nos próximos dias.');
+          }
+          break;
+        }
+
+        // N11 — Cartão de crédito no limite
+        case 'n11': {
+          const card = cards[0];
+          if (!card) {
+            await showNotif('💳 Notificação N11', 'Cadastre um cartão de crédito para receber este alerta.');
+            break;
+          }
+          const todayMonth = todayStr().slice(0, 7);
+          const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+          let faturaAtual = 0;
+          cardTxs.forEach(tx => {
+            if (tx.dataInicio.slice(0, 7) === todayMonth) {
+              if (tx.itens) tx.itens.forEach(item => { faturaAtual += Number(item.valor) || 0; });
+              else faturaAtual += Number(tx.valor) || 0;
+            }
+          });
+          const pct = card.limite > 0 ? (faturaAtual / card.limite) * 100 : 0;
+          await showNotif(
+            `💳 Fatura do cartão ${card.nome} em ${Math.round(pct)}%`,
+            `Limite utilizado: ${formatBRL(faturaAtual)} de ${formatBRL(card.limite)}`
+          );
+          break;
+        }
+
+        // N12 — Relatório mensal comparativo
+        case 'n12': {
+          const hoje = new Date();
+          const dtPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+          const nomeMesPassado = dtPassado.toLocaleString('pt-BR', { month: 'long' });
+          const spentPassado = 1250;
+          const spentRetrasado = 1420;
+          const diffPct = ((spentPassado - spentRetrasado) / spentRetrasado) * 100;
+          
+          await showNotif(
+            `📊 Relatório de ${nomeMesPassado.toUpperCase()}`,
+            `Economia de ${Math.abs(Math.round(diffPct))}% em relação ao mês anterior! (${formatBRL(spentPassado)} vs ${formatBRL(spentRetrasado)})`
+          );
+          break;
+        }
+
         default: break;
       }
     } catch (err) {
@@ -577,6 +685,72 @@ export default function NotificationSettings({ user, cards, transactions, config
               </div>
             );
           })}
+
+          {/* Configurações adicionais para o Resumo Diário (N8) */}
+          {tipos.n8 !== false && (
+            <div style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 12, padding: '14px', marginBottom: 12,
+              marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12
+            }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                🌅 Preferências do Resumo Diário
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Horário de Envio</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[7, 12, 19].map(h => {
+                    const ativo = (prefs.horaAlerta ?? 7) === h;
+                    const label = h === 7 ? '🌅 7h (Manhã)' : h === 12 ? '☀️ 12h (Tarde)' : '🌙 19h (Noite)';
+                    return (
+                      <button
+                        key={h}
+                        onClick={() => savePrefs({ horaAlerta: h })}
+                        style={{
+                          flex: 1, padding: '8px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                          border: ativo ? '1px solid var(--primary)' : '1px solid var(--border)',
+                          background: ativo ? 'rgba(99,102,241,0.08)' : 'transparent',
+                          color: ativo ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Dias de Envio</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[
+                    { id: 'todos', label: '🗓 Todo dia' },
+                    { id: 'uteis', label: '💼 Úteis' },
+                    { id: 'fds', label: '😎 Fim de Semana' }
+                  ].map(opt => {
+                    const ativo = (prefs.diasResumoDiario ?? 'todos') === opt.id;
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => savePrefs({ diasResumoDiario: opt.id })}
+                        style={{
+                          flex: 1, padding: '8px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                          border: ativo ? '1px solid var(--primary)' : '1px solid var(--border)',
+                          background: ativo ? 'rgba(99,102,241,0.08)' : 'transparent',
+                          color: ativo ? 'var(--primary)' : 'var(--text-secondary)',
+                          cursor: 'pointer', transition: 'all 0.2s'
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Aviso: sem cartões */}
           {cards.length === 0 && (

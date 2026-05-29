@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DollarSign } from 'lucide-react';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
@@ -26,6 +26,25 @@ const ERROR_MSGS = {
 };
 
 const CHANGELOG_DATA = [
+  {
+    version: 'v1.6.1 (29/05/2026)',
+    title: 'Controle de Pagamentos & Auto-Atualização PWA Imersiva 🔄',
+    items: [
+      'Controle de próximas contas: resolvido bug em que contas e faturas de cartão pagas continuavam aparecendo na lista de próximas contas de 15 dias na Home. Agora, ao registrar um pagamento, o status do lançamento é automaticamente marcado como pago (conferido) e removido dos compromissos futuros.',
+      'Auto-Atualização do PWA: o aplicativo agora detecta novas versões em segundo plano instantaneamente sempre que ganha foco (visibilitychange) ou é retomado do background no celular.',
+      'Instalação e recarga automática: novas atualizações do PWA são ativadas e instaladas 100% de forma autônoma e imediata, exibindo uma tela de carregamento suave e realizando o reload automaticamente sem requerer nenhuma ação manual ou navegação externa do usuário.'
+    ]
+  },
+  {
+    version: 'v1.6.0 (29/05/2026)',
+    title: 'Notificações Inteligentes & Upgrade do Bot do Telegram 🌅',
+    items: [
+      'Novas Notificações Push/Telegram (N8 a N12): adicionados alertas de limite geral de gastos mensais, contas fixas recorrentes pendentes a vencer nos próximos 2 dias, limite de cartão comprometido e relatório comparativo de fechamento mensal.',
+      'Preferências de Resumo Diário: configure horário de envio preferido (7h, 12h, 19h) e dias da semana (todo dia, dias úteis, fds) diretamente pela tela de configurações do webapp.',
+      'Novos comandos no Bot do Telegram: acesse dicas personalizadas com o comando /insight e detalhe despesas ativas nos cartões de crédito com o comando /fatura.',
+      'Simuladores de testes locais: pré-visualize e teste cada um dos 12 tipos de notificações com seus dados reais em tempo real clicando no botão Testar.'
+    ]
+  },
   {
     version: 'v1.5.5 (29/05/2026)',
     title: 'Cálculo Consistente de Cartões & Soma de Lançamentos 💳',
@@ -113,6 +132,18 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
   const [googleLoading, setGoogleLoading] = useState(false);
   const { prompt: deferredPrompt, handleInstall: handleInstallClick } = useInstallPrompt();
   const [showChangelog, setShowChangelog] = useState(false);
+
+  // Força checagem de atualizações do Service Worker imediatamente ao abrir a tela de login
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        const reg = regs?.find(r => r.active) || regs?.[0];
+        if (reg) {
+          reg.update().catch(err => console.log('Erro ao checar atualizacao na tela de login:', err));
+        }
+      });
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -344,7 +375,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       {/* Rótulo de versão com notas de atualização */}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Versão v1.5.5
+          Versão v1.6.1
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
         <button

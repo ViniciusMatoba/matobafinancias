@@ -90,9 +90,10 @@ export default function App() {
     );
   }
 
-  if (!user || !authConfirmed) {
-    return (
-      <>
+  // Função auxiliar para renderizar a tela ativa com base no estado de forma estável
+  const renderScreen = () => {
+    if (!user || !authConfirmed) {
+      return (
         <AuthScreen 
           user={user}
           redirectError={redirectError}
@@ -102,15 +103,163 @@ export default function App() {
           onConfirm={() => setAuthConfirmed(true)}
           onLogout={async () => { await logout(); setAuthConfirmed(false); }}
         />
-        <ReloadPrompt />
+      );
+    }
+
+    if (!config.onboardingDone) {
+      return <SetupGoalsScreen onSave={saveConfig} />;
+    }
+
+    return (
+      <>
+        {view === 'home' && (
+          <HomeScreen
+            transactions={transactions}
+            cards={cards}
+            wallets={wallets}
+            goals={goals}
+            config={config}
+            metaMensal={config.metaMensalDiario}
+            onSaveMeta={v => saveConfig({ metaMensalDiario: v })}
+            onEdit={handleEdit}
+            onClone={handleClone}
+            onDelete={handleDelete}
+            onPay={openPayModal}
+            onNavigate={handleNavigate}
+          />
+        )}
+        {view === 'history' && (
+          <TransactionsScreen
+            transactions={transactions}
+            wallets={wallets}
+            onEdit={handleEdit}
+            onClone={handleClone}
+            onDelete={handleDelete}
+            onPay={openPayModal}
+            onUpdate={update}
+          />
+        )}
+        {view === 'goals' && (
+          <GoalsScreen
+            goals={goals}
+            transactions={transactions}
+            config={config}
+            onAddGoal={addGoal}
+            onUpdateGoal={updateGoal}
+            onRemoveGoal={removeGoal}
+            onAddTransaction={(prefill) => {
+              setEditing(prefill);
+              setFormOpen(true);
+            }}
+          />
+        )}
+        {view === 'projection' && (
+          <ProjectionScreen
+            transactions={transactions}
+            onEdit={handleEdit}
+            onClone={handleClone}
+            onDelete={handleDelete}
+            onPay={openPayModal}
+          />
+        )}
+        {view === 'reports' && (
+          <ReportsScreen
+            transactions={transactions}
+            config={config}
+            onNavigate={handleNavigate}
+          />
+        )}
+        {view === 'settings' && (
+          <SettingsScreen
+            user={user}
+            cards={cards}
+            wallets={wallets}
+            transactions={transactions}
+            config={config}
+            onSaveConfig={saveConfig}
+            onAddCard={addCard}
+            onUpdateCard={updateCard}
+            onRemoveCard={removeCard}
+            onAddWallet={addWallet}
+            onUpdateWallet={updateWallet}
+            onRemoveWallet={removeWallet}
+            onLogout={logout}
+            onResetTour={async () => { await saveConfig({ tourDone: false }); setView('home'); }}
+          />
+        )}
+
+        <BottomNav view={view} onNavigate={handleNavigate} />
+
+        <Modal
+          open={formOpen}
+          onClose={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
+          title={editing?.id ? 'Editar lançamento' : 'Novo lançamento'}
+        >
+          <TransactionForm
+            initial={editing}
+            cards={cards}
+            wallets={wallets}
+            goals={goals}
+            transactions={transactions}
+            onSave={handleSave}
+            onCancel={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
+          />
+        </Modal>
+
+        {/* Modal de Exceção Recorrente */}
+        <Modal
+          open={!!recurrenceAction}
+          onClose={() => setRecurrenceAction(null)}
+          title={recurrenceAction?.action === 'edit' ? 'Editar lançamento recorrente' : 'Remover lançamento recorrente'}
+        >
+          <div style={{ padding: '0 4px', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
+            <p style={{ marginBottom: 20 }}>
+              Este é um lançamento que se repete ({recurrenceAction?.tx?.frequencia}).<br />
+              Você deseja aplicar essa alteração apenas nesta ocorrência, ou nas futuras também?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                onClick={() => confirmRecurrenceAction('single')}
+                style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
+              >
+                Apenas nesta ocorrência
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>As outras ocorrências não serão afetadas.</span>
+              </button>
+              <button
+                onClick={() => confirmRecurrenceAction('future')}
+                style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
+              >
+                Nesta e nas futuras
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>Ocorrências passadas continuarão com o valor antigo.</span>
+              </button>
+              <button
+                onClick={() => confirmRecurrenceAction('all')}
+                style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
+              >
+                Em todas as ocorrências
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--saida)', marginTop: 2 }}>Cuidado: isso vai alterar seu histórico passado também.</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Modal de pagamento — centralizado, acessível de todas as telas */}
+        {payingItem && (
+          <PaymentModal
+            item={payingItem.item}
+            occDate={payingItem.occDate}
+            onConfirm={confirmPayment}
+            onClose={() => setPayingItem(null)}
+          />
+        )}
+
+        {/* Tour Guiado */}
+        {tourActive && (
+          <TourGuide onComplete={handleCompleteTour} />
+        )}
       </>
     );
-  }
-
-  // Onboarding: usuário logado mas sem renda configurada
-  if (!config.onboardingDone) {
-    return <SetupGoalsScreen onSave={saveConfig} />;
-  }
+  };
 
   const handleNavigate = (dest) => {
     if (dest === 'add') { setEditing(null); setFormOpen(true); return; }
@@ -248,6 +397,7 @@ export default function App() {
           dataFim:    null,
           itens:      tx.itens || [],
           cartaoId:   tx.cartaoId || null,
+          conferido:  true,
         });
 
         showToast('✅ Pagamento de fatura antecipado!');
@@ -255,23 +405,23 @@ export default function App() {
       }
 
       if (isCartao && !isVirtual) {
-        // Atualiza diretamente a data e o valor da fatura de cartão no banco de dados.
+        // Atualiza diretamente a data e o valor da fatura de cartão no banco de dados e marca como pago.
         // Os itens internos associados permanecem na mesma transação e se movem com ela.
-        await update(tx.id, { dataInicio: paymentDate, valor });
+        await update(tx.id, { dataInicio: paymentDate, valor, conferido: true });
         showToast('✅ Fatura do cartão movimentada para a data de pagamento!');
         return;
       }
 
-      // Lançamento único ou parcela → atualiza a data diretamente
+      // Lançamento único ou parcela → atualiza a data diretamente e marca como pago
       if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
-        await update(tx.id, { dataInicio: paymentDate, valor });
+        await update(tx.id, { dataInicio: paymentDate, valor, conferido: true });
         showToast('✅ Pagamento registrado!');
         return;
       }
 
       // Recorrente (mensal / semanal / diario)
       if (scope === 'single') {
-        // Cria exceção para esta ocorrência e novo lançamento único na data real
+        // Cria exceção para esta ocorrência e novo lançamento único na data real e marca como pago
         const exclusoes = [...(tx.exclusoes || [])];
         if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
         await update(tx.id, { exclusoes });
@@ -283,6 +433,7 @@ export default function App() {
           dataInicio: paymentDate,
           categoria:  tx.categoria || null,
           dataFim:    null,
+          conferido:  true,
         });
         showToast('✅ Pagamento registrado (só esta ocorrência)!');
       } else if (scope === 'future') {
@@ -291,10 +442,10 @@ export default function App() {
         d.setDate(d.getDate() - 1);
         const dataFim = d.toISOString().slice(0, 10);
         await update(tx.id, { dataFim });
-        // Nova série a partir da data de pagamento (mesmo padrão de frequência)
+        // Nova série a partir da data de pagamento (mesmo padrão de frequência) com o primeiro dia pago
         // eslint-disable-next-line no-unused-vars
         const { id: _id, exclusoes: _excl, dataFim: _df, ...txBase } = tx;
-        await add({ ...txBase, dataInicio: paymentDate, valor, dataFim: null, exclusoes: [] });
+        await add({ ...txBase, dataInicio: paymentDate, valor, dataFim: null, exclusoes: [], conferidos: [paymentDate] });
         showToast('✅ Pagamento e próximas ocorrências atualizados!');
       }
     } catch (err) {
@@ -346,154 +497,8 @@ export default function App() {
 
   return (
     <>
-      {view === 'home' && (
-        <HomeScreen
-          transactions={transactions}
-          cards={cards}
-          wallets={wallets}
-          goals={goals}
-          config={config}
-          metaMensal={config.metaMensalDiario}
-          onSaveMeta={v => saveConfig({ metaMensalDiario: v })}
-          onEdit={handleEdit}
-          onClone={handleClone}
-          onDelete={handleDelete}
-          onPay={openPayModal}
-          onNavigate={handleNavigate}
-        />
-      )}
-      {view === 'history' && (
-        <TransactionsScreen
-          transactions={transactions}
-          wallets={wallets}
-          onEdit={handleEdit}
-          onClone={handleClone}
-          onDelete={handleDelete}
-          onPay={openPayModal}
-          onUpdate={update}
-        />
-      )}
-      {view === 'goals' && (
-        <GoalsScreen
-          goals={goals}
-          transactions={transactions}
-          config={config}
-          onAddGoal={addGoal}
-          onUpdateGoal={updateGoal}
-          onRemoveGoal={removeGoal}
-          onAddTransaction={(prefill) => {
-            setEditing(prefill);
-            setFormOpen(true);
-          }}
-        />
-      )}
-      {view === 'projection' && (
-        <ProjectionScreen
-          transactions={transactions}
-          onEdit={handleEdit}
-          onClone={handleClone}
-          onDelete={handleDelete}
-          onPay={openPayModal}
-        />
-      )}
-      {view === 'reports' && (
-        <ReportsScreen
-          transactions={transactions}
-          config={config}
-          onNavigate={handleNavigate}
-        />
-      )}
-      {view === 'settings' && (
-        <SettingsScreen
-          user={user}
-          cards={cards}
-          wallets={wallets}
-          transactions={transactions}
-          config={config}
-          onSaveConfig={saveConfig}
-          onAddCard={addCard}
-          onUpdateCard={updateCard}
-          onRemoveCard={removeCard}
-          onAddWallet={addWallet}
-          onUpdateWallet={updateWallet}
-          onRemoveWallet={removeWallet}
-          onLogout={logout}
-          onResetTour={async () => { await saveConfig({ tourDone: false }); setView('home'); }}
-        />
-      )}
-
-      <BottomNav view={view} onNavigate={handleNavigate} />
-
-      <Modal
-        open={formOpen}
-        onClose={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
-        title={editing?.id ? 'Editar lançamento' : 'Novo lançamento'}
-      >
-        <TransactionForm
-          initial={editing}
-          cards={cards}
-          wallets={wallets}
-          goals={goals}
-          transactions={transactions}
-          onSave={handleSave}
-          onCancel={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
-        />
-      </Modal>
-
-      {/* Modal de Exceção Recorrente */}
-      <Modal
-        open={!!recurrenceAction}
-        onClose={() => setRecurrenceAction(null)}
-        title={recurrenceAction?.action === 'edit' ? 'Editar lançamento recorrente' : 'Remover lançamento recorrente'}
-      >
-        <div style={{ padding: '0 4px', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
-          <p style={{ marginBottom: 20 }}>
-            Este é um lançamento que se repete ({recurrenceAction?.tx?.frequencia}).<br />
-            Você deseja aplicar essa alteração apenas nesta ocorrência, ou nas futuras também?
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <button
-              onClick={() => confirmRecurrenceAction('single')}
-              style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
-            >
-              Apenas nesta ocorrência
-              <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>As outras ocorrências não serão afetadas.</span>
-            </button>
-            <button
-              onClick={() => confirmRecurrenceAction('future')}
-              style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
-            >
-              Nesta e nas futuras
-              <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>Ocorrências passadas continuarão com o valor antigo.</span>
-            </button>
-            <button
-              onClick={() => confirmRecurrenceAction('all')}
-              style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
-            >
-              Em todas as ocorrências
-              <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--saida)', marginTop: 2 }}>Cuidado: isso vai alterar seu histórico passado também.</span>
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Modal de pagamento — centralizado, acessível de todas as telas */}
-      {payingItem && (
-        <PaymentModal
-          item={payingItem.item}
-          occDate={payingItem.occDate}
-          onConfirm={confirmPayment}
-          onClose={() => setPayingItem(null)}
-        />
-      )}
-
-      {/* Tour Guiado */}
-      {tourActive && (
-        <TourGuide onComplete={handleCompleteTour} />
-      )}
-
+      {renderScreen()}
       <ReloadPrompt />
-
       {ToastNode}
     </>
   );

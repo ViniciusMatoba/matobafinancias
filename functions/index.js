@@ -405,6 +405,188 @@ function checkNotifications(cards, transactions, config, prefs) {
     } // fim if (enviarN8)
   }
 
+  // N9 — Limite Geral de Gastos Mensais
+  if (tipos.n9 !== false) {
+    const rendaMensal = config?.rendaMensal || 0;
+    if (rendaMensal > 0) {
+      let totalGasto = 0;
+      // 1. Saídas avulsas do mês atual
+      for (const tx of transactions) {
+        if (tx.tipo === 'entrada' || tx.tipo === 'cartao') continue;
+        const v = Number(tx.valor) || 0;
+        if (!v || !tx.dataInicio) continue;
+        
+        if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+          if (tx.dataInicio.startsWith(currentMonth)) totalGasto += v;
+        } else if (tx.frequencia === 'mensal') {
+          if (tx.dataInicio <= todayStr) {
+            const end = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
+            let cur = new Date(tx.dataInicio + 'T00:00:00');
+            while (dateStrFromDate(cur) <= end) {
+              const curStr = dateStrFromDate(cur);
+              if (curStr.startsWith(currentMonth)) totalGasto += v;
+              cur.setMonth(cur.getMonth() + 1);
+            }
+          }
+        }
+      }
+      // 2. Faturas de cartões do mês atual
+      for (const card of cards) {
+        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+        cardTxs.forEach(tx => {
+          const txMonth = tx.dataInicio.slice(0, 7);
+          if (txMonth === currentMonth) {
+            if (tx.itens && tx.itens.length > 0) {
+              tx.itens.forEach(item => {
+                totalGasto += Number(item.valor) || 0;
+              });
+            } else {
+              totalGasto += Number(tx.valor) || 0;
+            }
+          }
+        });
+      }
+
+      const pct = (totalGasto / rendaMensal) * 100;
+      if (pct > 100) {
+        msgs.push(`🚨 *Limite Geral Ultrapassado!*\nSeus gastos totais atingiram ${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)} (excedeu o orçamento geral em *${formatBRL(totalGasto - rendaMensal)}*).`);
+      } else if (pct >= 80) {
+        msgs.push(`⚠️ *Limite Geral em ${Math.round(pct)}%*\nVocê já utilizou ${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)} do seu orçamento geral deste mês.`);
+      }
+    }
+  }
+
+  // N10 — Alerta de Contas Fixas/Lançamentos Recorrentes Pendentes
+  if (tipos.n10 !== false) {
+    const d2 = new Date(hoje); d2.setDate(d2.getDate() + 2);
+    const in2Str = dateStrFromDate(d2);
+    
+    for (const tx of transactions) {
+      if (tx.tipo === 'entrada' || tx.tipo === 'cartao') continue;
+      const v = Number(tx.valor) || 0;
+      if (!v || !tx.dataInicio) continue;
+
+      if (tx.frequencia === 'mensal') {
+        const txDay = parseInt(tx.dataInicio.split('-')[2], 10);
+        if (d2.getDate() === txDay && in2Str >= tx.dataInicio && (!tx.dataFim || in2Str <= tx.dataFim)) {
+          const jaPago = Array.isArray(tx.conferidos) && tx.conferidos.includes(in2Str);
+          if (!jaPago) {
+            msgs.push(`⏰ *Conta fixa vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${d2.getDate()}/${String(d2.getMonth()+1).padStart(2,'0')}.`);
+          }
+        }
+      } else if (tx.frequencia === 'semanal') {
+        let cur = new Date(tx.dataInicio + 'T00:00:00');
+        const endLimit = tx.dataFim ? tx.dataFim : in2Str;
+        let achouOcorrencia = false;
+        while (dateStrFromDate(cur) <= in2Str) {
+          const ds = dateStrFromDate(cur);
+          if (ds === in2Str && ds <= endLimit) {
+            achouOcorrencia = true;
+            break;
+          }
+          cur.setDate(cur.getDate() + 7);
+        }
+        if (achouOcorrencia) {
+          const jaPago = Array.isArray(tx.conferidos) && tx.conferidos.includes(in2Str);
+          if (!jaPago) {
+            msgs.push(`⏰ *Conta semanal vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${d2.getDate()}/${String(d2.getMonth()+1).padStart(2,'0')}.`);
+          }
+        }
+      }
+    }
+  }
+
+  // N11 — Limite de Cartão Comprometido
+  if (tipos.n11 !== false) {
+    for (const card of cards) {
+      if (!card.limite || card.limite <= 0) continue;
+      
+      const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+      let faturaAtual = 0;
+      cardTxs.forEach(tx => {
+        const txMonth = tx.dataInicio.slice(0, 7);
+        if (txMonth === currentMonth) {
+          if (tx.itens && tx.itens.length > 0) {
+            tx.itens.forEach(item => {
+              faturaAtual += Number(item.valor) || 0;
+            });
+          } else {
+            faturaAtual += Number(tx.valor) || 0;
+          }
+        }
+      });
+
+      const pct = (faturaAtual / card.limite) * 100;
+      if (pct >= 80) {
+        msgs.push(`💳 *Limite de Cartão próximo do fim!*\nA fatura do seu cartão *${card.nome}* atingiu *${Math.round(pct)}%* do limite total (${formatBRL(faturaAtual)} de ${formatBRL(card.limite)}).`);
+      }
+    }
+  }
+
+  // N12 — Relatório Comparativo de Fechamento de Mês
+  if (tipos.n12 !== false && day === 1) {
+    const dtPassado = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1);
+    const dtRetrasado = new Date(hoje.getFullYear(), hoje.getMonth() - 2, 1);
+    const mesPassadoStr = `${dtPassado.getFullYear()}-${String(dtPassado.getMonth()+1).padStart(2,'0')}`;
+    const mesRetrasadoStr = `${dtRetrasado.getFullYear()}-${String(dtRetrasado.getMonth()+1).padStart(2,'0')}`;
+
+    const calcGastoMes = (targetMonth) => {
+      let total = 0;
+      for (const tx of transactions) {
+        if (tx.tipo === 'entrada' || tx.tipo === 'cartao') continue;
+        const v = Number(tx.valor) || 0;
+        if (!v || !tx.dataInicio) continue;
+        
+        if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+          if (tx.dataInicio.startsWith(targetMonth)) total += v;
+        } else if (tx.frequencia === 'mensal') {
+          if (tx.dataInicio <= todayStr) {
+            const end = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
+            let cur = new Date(tx.dataInicio + 'T00:00:00');
+            while (dateStrFromDate(cur) <= end) {
+              const curStr = dateStrFromDate(cur);
+              if (curStr.startsWith(targetMonth)) total += v;
+              cur.setMonth(cur.getMonth() + 1);
+            }
+          }
+        }
+      }
+      for (const card of cards) {
+        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+        cardTxs.forEach(tx => {
+          const txMonth = tx.dataInicio.slice(0, 7);
+          if (txMonth === targetMonth) {
+            if (tx.itens && tx.itens.length > 0) {
+              tx.itens.forEach(item => {
+                total += Number(item.valor) || 0;
+              });
+            } else {
+              total += Number(tx.valor) || 0;
+            }
+          }
+        });
+      }
+      return total;
+    };
+
+    const spentPassado = calcGastoMes(mesPassadoStr);
+    const spentRetrasado = calcGastoMes(mesRetrasadoStr);
+
+    const nomeMesPassado = dtPassado.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+    const nomeMesRetrasado = dtRetrasado.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+
+    if (spentRetrasado > 0) {
+      const diffPct = ((spentPassado - spentRetrasado) / spentRetrasado) * 100;
+      if (diffPct < 0) {
+        msgs.push(`📊 *Relatório do Mês Anterior (${nomeMesPassado.toUpperCase()})*\nEconomia de *${Math.abs(Math.round(diffPct))}%* em relação a ${nomeMesRetrasado}! Gastos: ${formatBRL(spentPassado)} vs ${formatBRL(spentRetrasado)}. Parabéns! 🚀`);
+      } else if (diffPct > 0) {
+        msgs.push(`📊 *Relatório do Mês Anterior (${nomeMesPassado.toUpperCase()})*\nSeus gastos subiram *${Math.round(diffPct)}%* em relação a ${nomeMesRetrasado}. Gastos: ${formatBRL(spentPassado)} vs ${formatBRL(spentRetrasado)}. Fique atento neste mês! ⚠️`);
+      }
+    } else if (spentPassado > 0) {
+      msgs.push(`📊 *Relatório do Mês Anterior (${nomeMesPassado.toUpperCase()})*\nGastos totais no mês recém-encerrado: *${formatBRL(spentPassado)}*.`);
+    }
+  }
+
   return msgs;
 }
 
@@ -794,11 +976,125 @@ async function handleProjecao(chatId, uid) {
   return sendMessage(chatId, text.trim());
 }
 
+async function handleInsight(chatId, uid) {
+  const agora = getNowBrasilia();
+  const mesStr = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
+
+  const configDoc = await db.collection('config').doc(uid).get();
+  const config    = configDoc.exists ? configDoc.data() : {};
+  const renda     = config.rendaMensal || 0;
+  const pcts      = config.budgetPcts  || {};
+
+  if (renda <= 0) {
+    return sendMessage(chatId, '💡 *Dica:* Defina sua renda mensal no app para receber insights de orçamento personalizados!');
+  }
+
+  const txSnap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs    = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const spent  = computeSpentByCategory(txs, mesStr);
+
+  const worst = { catId: null, pct: 0, s: 0, budget: 0 };
+  for (const catId of CATEGORY_ORDER) {
+    const budget = (renda * (Number(pcts[catId]) || 0)) / 100;
+    if (budget <= 0) continue;
+    const s = spent[catId] || 0;
+    const pct = (s / budget) * 100;
+    if (pct > worst.pct) {
+      worst.catId = catId;
+      worst.pct = pct;
+      worst.s = s;
+      worst.budget = budget;
+    }
+  }
+
+  const LABELS = {
+    liberdade: '💎 Liberdade', custos_fixos: '🏠 Custos Fixos', conforto: '🛋 Conforto',
+    metas: '🎯 Metas', prazeres: '🎉 Prazeres', conhecimento: '📚 Conhecimento',
+  };
+
+  const diasNoMes = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).getDate();
+  const restDias = diasNoMes - agora.getDate();
+
+  let text = '💡 *Insight Financeiro Matoba*\n\n';
+  if (worst.catId) {
+    const label = LABELS[worst.catId];
+    if (worst.pct > 100) {
+      text += `🚨 A categoria *${label}* já estourou em *${formatBRL(worst.s - worst.budget)}* (${Math.round(worst.pct)}% do planejado).\n\n`;
+      text += `👉 _Recomendação: Para compensar, tente reduzir saídas em outras categorias ou remanejar o saldo até o fim do mês._`;
+    } else if (worst.pct >= 80) {
+      text += `⚠️ Alerta: *${label}* consumiu *${Math.round(worst.pct)}%* do limite. Você tem apenas *${formatBRL(worst.budget - worst.s)}* para os próximos ${restDias} dias.\n\n`;
+      text += `👉 _Recomendação: Tente evitar compras impulsivas e adiar despesas nessa categoria para o mês seguinte._`;
+    } else {
+      text += `✅ Excelente! Todas as categorias de orçamento estão saudáveis e abaixo de 80% do limite.\n\n`;
+      text += `👉 _Recomendação: Continue assim! Seu controle está muito firme e no ritmo ideal._`;
+    }
+  } else {
+    text += `🌱 Você ainda não realizou gastos com categorias orçamentárias este mês. Aproveite para planejar seus aportes!`;
+  }
+
+  return sendMessage(chatId, text);
+}
+
+async function handleFatura(chatId, uid) {
+  const agora = getNowBrasilia();
+  const currentMonth = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
+  
+  const cardsSnap = await db.collection('cards').doc(uid).collection('list').get();
+  const cards = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  if (cards.length === 0) {
+    return sendMessage(chatId, '💳 Nenhum cartão cadastrado.');
+  }
+
+  const txSnap = await db.collection('transactions').doc(uid).collection('entries').get();
+  const txs    = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  let text = `🧾 *Detalhamento das Faturas (${agora.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' })})*\n\n`;
+
+  for (const card of cards) {
+    const cardTxs = txs.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+    let faturaAtual = 0;
+    const items = [];
+
+    cardTxs.forEach(tx => {
+      const txMonth = tx.dataInicio.slice(0, 7);
+      if (txMonth === currentMonth) {
+        if (tx.itens && tx.itens.length > 0) {
+          tx.itens.forEach(item => {
+            faturaAtual += Number(item.valor) || 0;
+            items.push(item);
+          });
+        } else {
+          faturaAtual += Number(tx.valor) || 0;
+          items.push({ descricao: tx.descricao || 'Despesa Cartão', valor: tx.valor, dataCompra: tx.dataInicio });
+        }
+      }
+    });
+
+    text += `💳 *${card.nome}* (Limite: ${formatBRL(card.limite)})\n`;
+    text += `Total Acumulado: *${formatBRL(faturaAtual)}*\n`;
+    
+    if (items.length > 0) {
+      text += `_Lançamentos:_\n`;
+      items.sort((a,b) => (a.dataCompra || '').localeCompare(b.dataCompra || '')).forEach(item => {
+        const dia = item.dataCompra ? item.dataCompra.split('-')[2] : '–';
+        text += ` • ${dia} · ${item.descricao || 'Despesa'}: *${formatBRL(item.valor)}*\n`;
+      });
+    } else {
+      text += `_Nenhum lançamento no mês corrente._\n`;
+    }
+    text += `\n`;
+  }
+
+  return sendMessage(chatId, text.trim());
+}
+
 async function handleAjuda(chatId) {
   const MAIN_KEYBOARD = {
     keyboard: [
-      [{ text: '💰 Saldo' }, { text: '💳 Cartões' }, { text: '📈 Projeção' }],
-      [{ text: '📊 Categorias' }, { text: '🎯 Metas' }, { text: '❓ Ajuda' }]
+      [{ text: '💰 Saldo' }, { text: '💳 Cartões' }, { text: '🧾 Fatura' }],
+      [{ text: '📊 Categorias' }, { text: '🎯 Metas' }, { text: '📈 Projeção' }],
+      [{ text: '💡 Insight' }, { text: '❓ Ajuda' }]
     ],
     resize_keyboard: true,
   };
@@ -815,10 +1111,12 @@ async function handleAjuda(chatId) {
 
     `*🎯 Orçamento e metas*\n` +
     `/categoria — Orçamento por categoria com barras de progresso\n` +
-    `/meta — Status de cada meta da Divisão Percentual\n\n` +
+    `/meta — Status de cada meta da Divisão Percentual\n` +
+    `/insight — Dicas e análises dinâmicas de gastos 💡\n\n` +
 
-    `*💳 Cartões*\n` +
-    `/cartoes — Seus cartões, vencimentos e limites\n\n` +
+    `*💳 Cartões de Crédito*\n` +
+    `/cartoes — Seus cartões, limites e vencimentos\n` +
+    `/fatura — Detalhamento de faturas e compras do mês 🧾\n\n` +
 
     `*📈 Projeção*\n` +
     `/projecao — Saldo projetado nos próximos 7 dias\n\n` +
@@ -1226,9 +1524,11 @@ async function processUpdate(update) {
   // Normalização do comando (mapeia botões de teclado personalizados)
   if (cmd.includes('saldo')) cmd = '/saldo';
   else if (cmd.includes('cart') || cmd.includes('cartões')) cmd = '/cartoes';
+  else if (cmd.includes('fatur')) cmd = '/fatura';
   else if (cmd.includes('proje') || cmd.includes('projeção')) cmd = '/projecao';
   else if (cmd.includes('categor')) cmd = '/categoria';
   else if (cmd.includes('meta')) cmd = '/meta';
+  else if (cmd.includes('insig') || cmd.includes('dica') || cmd.includes('insight')) cmd = '/insight';
   else if (cmd.includes('ajuda') || cmd.includes('help')) cmd = '/ajuda';
   else if (cmd.includes('hoje')) cmd = '/hoje';
   else if (cmd.includes('hist')) cmd = '/historico';
@@ -1276,7 +1576,9 @@ async function processUpdate(update) {
     case '/categoria': return handleCategoria(chatId, uid);
     case '/meta':      return handleMeta(chatId, uid);
     case '/cartoes':   return handleCartoes(chatId, uid);
+    case '/fatura':    return handleFatura(chatId, uid);
     case '/projecao':  return handleProjecao(chatId, uid);
+    case '/insight':   return handleInsight(chatId, uid);
     case '/ajuda':
     case '/help':      return handleAjuda(chatId);
     default:
@@ -1455,7 +1757,9 @@ const BOT_COMMANDS = [
   { command: 'resumo',    description: 'Entradas, saidas e saldo do mes corrente' },
   { command: 'categoria', description: 'Orcamento por categoria com barras de progresso' },
   { command: 'meta',      description: 'Status das metas da Divisao Percentual' },
+  { command: 'insight',   description: 'Dicas e analises inteligentes de gastos' },
   { command: 'cartoes',   description: 'Cartoes cadastrados e vencimentos' },
+  { command: 'fatura',    description: 'Itens e total acumulado na fatura atual' },
   { command: 'projecao',  description: 'Saldo projetado para os proximos 7 dias' },
   { command: 'ajuda',     description: 'Lista completa de comandos' },
 ];
