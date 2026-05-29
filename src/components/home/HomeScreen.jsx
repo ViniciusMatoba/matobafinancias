@@ -140,36 +140,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     return calcularSobraSegura(transactions, wallets, 45); // Verifica os próximos 45 dias
   }, [transactions, wallets, isToday]);
 
-  const próximasContas = useMemo(() => {
-    const toDate = addDays(today, 15);
-    const occs = transactions.flatMap(tx =>
-      expandOccurrences(tx, FAR_PAST, toDate).map(o => ({ ...o, tx }))
-    );
-    // Filtrar apenas despesas e investimentos (tudo menos tipo: 'entrada') que estão pendentes (não pagos/conferidos)
-    const contas = occs.filter(o => {
-      if (o.tx.tipo === 'entrada') return false;
 
-      // Ignora despesas ou faturas recorrentes que já foram pagas/conferidas (trata frequencia indefinida como unico)
-      if (!o.tx.frequencia || o.tx.frequencia === 'unico' || o.tx.frequencia === 'parcelado') {
-        return !o.tx.conferido;
-      }
-      return !o.tx.conferidos?.includes(o.date);
-    });
-    contas.sort((a, b) => a.date.localeCompare(b.date));
-    return contas;
-  }, [transactions, today]);
-
-  const totalPróximasContas = useMemo(() => {
-    return próximasContas.reduce((acc, o) => acc + (Number(o.valor) || 0), 0);
-  }, [próximasContas]);
-
-  const formatContasHeader = (dateStr) => {
-    if (dateStr === today) return 'Hoje';
-    if (dateStr === addDays(today, 1)) return 'Amanhã';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const dt = new Date(y, m - 1, d);
-    return `${DAY_NAMES[dt.getDay()]}, ${d}/${m}`;
-  };
 
   const reserveGoal = useMemo(() => {
     if (!goals) return null;
@@ -509,79 +480,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         />
       </div>
 
-      {/* Próximas Contas (Próximos 15 dias) */}
-      {próximasContas.length > 0 && (
-        <div style={{ padding: '16px 20px 0' }}>
-          <div style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border)',
-            borderRadius: 16, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span>📅</span> Próximas Contas (15 dias)
-              </h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--saida)', background: 'rgba(239,68,68,0.12)', padding: '3px 8px', borderRadius: 6 }}>
-                  Total: {formatBRL(totalPróximasContas)}
-                </span>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '3px 8px', borderRadius: 6 }}>
-                  {próximasContas.length} item{próximasContas.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {próximasContas.slice(0, 5).map((occ, idx) => {
-                const cfg = TYPE_CONFIG[occ.tx.tipo] || {};
-                const Icon = TIPO_ICONS[occ.tx.tipo] || Zap;
-                return (
-                  <div key={`${occ.tx.id}-${idx}`} style={{
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    padding: '10px 12px', background: 'var(--bg-surface)',
-                    borderRadius: 12, border: '1px solid var(--border)'
-                  }}>
-                    <div style={{
-                      width: 32, height: 32, borderRadius: 8,
-                      background: cfg.bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      flexShrink: 0
-                    }}>
-                      <Icon size={16} color={cfg.color} />
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {occ.tx.descricao || cfg.label}
-                      </p>
-                      <p style={{ margin: 0, fontSize: 10, color: 'var(--text-secondary)' }}>
-                        {formatContasHeader(occ.date)} {occ.parcela ? ` · ${occ.parcela}/${occ.totalParcelas}x` : ''}
-                      </p>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--saida)' }}>
-                        {formatBRL(occ.valor)}
-                      </span>
-                      {onPay && (
-                        <button
-                          onClick={() => onPay(occ, occ.date)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 3,
-                            height: 24, padding: '0 6px', borderRadius: 6,
-                            background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
-                            color: '#10b981', fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                          }}
-                        >
-                          💸 Pagar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
 
 

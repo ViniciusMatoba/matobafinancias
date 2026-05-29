@@ -60,38 +60,38 @@ export default function App() {
     showToast('🏆 Tour guiado concluído! Aproveite o app.');
   };
 
-  if (!isConfigured) return <SetupScreen />;
-
-  if (user === undefined || (user && configLoading && authConfirmed)) {
-    return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: 'var(--bg-primary)' }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: 20,
-          background: 'linear-gradient(135deg, var(--primary), var(--investimento))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-          boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)'
-        }}>
-          <DollarSign size={36} color="#fff" />
-        </div>
-        <h1 style={{ 
-          margin: 0, fontSize: 24, fontWeight: 700, 
-          background: 'linear-gradient(135deg, #fff, #A1A5C1)', 
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          animation: 'fadeIn 1s ease-out'
-        }}>
-          Matoba Finanças
-        </h1>
-        <style>{`
-          @keyframes pulse { 0%,100%{opacity:1; transform: scale(1);} 50%{opacity:0.8; transform: scale(0.95);} }
-          @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        `}</style>
-      </div>
-    );
-  }
-
   // Função auxiliar para renderizar a tela ativa com base no estado de forma estável
   const renderScreen = () => {
+    if (!isConfigured) return <SetupScreen />;
+
+    if (user === undefined || (user && configLoading && authConfirmed)) {
+      return (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: 'var(--bg-primary)' }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: 20,
+            background: 'linear-gradient(135deg, var(--primary), var(--investimento))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.3)'
+          }}>
+            <DollarSign size={36} color="#fff" />
+          </div>
+          <h1 style={{ 
+            margin: 0, fontSize: 24, fontWeight: 700, 
+            background: 'linear-gradient(135deg, #fff, #A1A5C1)', 
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            animation: 'fadeIn 1s ease-out'
+          }}>
+            Matoba Finanças
+          </h1>
+          <style>{`
+            @keyframes pulse { 0%,100%{opacity:1; transform: scale(1);} 50%{opacity:0.8; transform: scale(0.95);} }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+          `}</style>
+        </div>
+      );
+    }
+
     if (!user || !authConfirmed) {
       return (
         <AuthScreen 

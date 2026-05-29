@@ -46,6 +46,7 @@ export function expandOccurrences(tx, from, to) {
               valor: futureValor,
               descricao: `${tx.descricao || 'Fatura'} (Parcelas restantes)`,
               itens: futureItens,
+              conferido: false,
             };
             occurrences.push({ date: futureDate, valor: futureValor, sinal: sign, tx: virtualTx });
           }
