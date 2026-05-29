@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ChevronRight, RotateCcw, DollarSign, CheckCircle } from 'lucide-react';
 import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput } from '../../utils/formatters';
-import { SARDINHA_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 
 const STEPS = ['renda', 'categorias', 'confirmar'];
 
@@ -19,7 +19,7 @@ export default function SetupGoalsScreen({ onSave }) {
     setPcts(p => ({ ...p, [id]: n }));
   };
 
-  const resetSardinha = () => setPcts({ ...DEFAULT_BUDGET_PCTS });
+  const resetPercentual = () => setPcts({ ...DEFAULT_BUDGET_PCTS });
 
   const handleFinish = () => {
     onSave({
@@ -114,10 +114,10 @@ export default function SetupGoalsScreen({ onSave }) {
               borderRadius: 14, padding: '14px 16px', marginBottom: 24,
             }}>
               <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>
-                📊 Método Sardinha — Como funciona?
+                📊 Divisão Percentual — Como funciona?
               </p>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Raul Sardinha recomenda distribuir a renda em 6 categorias com tetos definidos.
+                A Divisão Percentual recomenda distribuir a renda em 6 categorias com tetos definidos.
                 A prioridade é sempre <strong style={{ color: 'var(--text-primary)' }}>investir 25% primeiro</strong> — antes de qualquer gasto.
               </p>
             </div>
@@ -146,7 +146,7 @@ export default function SetupGoalsScreen({ onSave }) {
                 Defina seus limites
               </p>
               <button
-                onClick={resetSardinha}
+                onClick={resetPercentual}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
                   background: 'var(--bg-card)', border: '1px solid var(--border)',
@@ -180,7 +180,7 @@ export default function SetupGoalsScreen({ onSave }) {
 
             {/* Category sliders */}
             {CATEGORY_ORDER.map(id => {
-              const cat = SARDINHA_CATEGORIES[id];
+              const cat = PERCENTUAL_CATEGORIES[id];
               const val = Number(pcts[id]) || 0;
               const amount = (rendaNum * val) / 100;
               return (
@@ -266,7 +266,7 @@ export default function SetupGoalsScreen({ onSave }) {
             </p>
 
             {CATEGORY_ORDER.map(id => {
-              const cat = SARDINHA_CATEGORIES[id];
+              const cat = PERCENTUAL_CATEGORIES[id];
               const val = Number(pcts[id]) || 0;
               const amount = (rendaNum * val) / 100;
               return (

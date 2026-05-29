@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
-import { SARDINHA_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 
 const TIPOS = Object.entries(TYPE_CONFIG).map(([id, cfg]) => ({ id, ...cfg }));
@@ -140,8 +140,8 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   const needsCat = TIPOS_COM_CATEGORIA.includes(form.tipo);
   const autocat = getAutoCategory(form.tipo);
   const selectedCat = autocat
-    ? SARDINHA_CATEGORIES[autocat]
-    : (form.categoria ? SARDINHA_CATEGORIES[form.categoria] : null);
+    ? PERCENTUAL_CATEGORIES[autocat]
+    : (form.categoria ? PERCENTUAL_CATEGORIES[form.categoria] : null);
 
   // Modo com itens: cartão com pelo menos 1 item adicionado
   const useItens = form.tipo === 'cartao' && itens.length > 0;
@@ -441,7 +441,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
         )}
         {/* ── fim Banner ────────────────────────────────────────────────── */}
 
-        {suggestedCat && SARDINHA_CATEGORIES[suggestedCat] && (
+        {suggestedCat && PERCENTUAL_CATEGORIES[suggestedCat] && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8, marginTop: 6,
             padding: '8px 12px', borderRadius: 10,
@@ -451,7 +451,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
             <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
               Usado antes como{' '}
               <strong style={{ color: 'var(--text-primary)' }}>
-                {SARDINHA_CATEGORIES[suggestedCat].icon} {SARDINHA_CATEGORIES[suggestedCat].label}
+                {PERCENTUAL_CATEGORIES[suggestedCat].icon} {PERCENTUAL_CATEGORIES[suggestedCat].label}
               </strong>
             </span>
             <button type="button" onClick={() => set('categoria', suggestedCat)} style={{
@@ -647,7 +647,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
 
           {/* Lista de itens adicionados */}
           {itens.map((item, idx) => {
-            const cat = item.categoria ? SARDINHA_CATEGORIES[item.categoria] : null;
+            const cat = item.categoria ? PERCENTUAL_CATEGORIES[item.categoria] : null;
             return (
               <div key={idx} style={{
                 display: 'flex', alignItems: 'center', gap: 8,
@@ -732,7 +732,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
             )}
 
             {/* Sugestão de categoria para o item */}
-            {novoItemSuggestedCat && SARDINHA_CATEGORIES[novoItemSuggestedCat] && (
+            {novoItemSuggestedCat && PERCENTUAL_CATEGORIES[novoItemSuggestedCat] && (
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8,
                 padding: '6px 10px', borderRadius: 8,
@@ -741,7 +741,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
                 <History size={11} color="var(--primary)" />
                 <span style={{ flex: 1, fontSize: 11, color: 'var(--text-secondary)' }}>
                   Antes: <strong style={{ color: 'var(--text-primary)' }}>
-                    {SARDINHA_CATEGORIES[novoItemSuggestedCat].icon} {SARDINHA_CATEGORIES[novoItemSuggestedCat].label}
+                    {PERCENTUAL_CATEGORIES[novoItemSuggestedCat].icon} {PERCENTUAL_CATEGORIES[novoItemSuggestedCat].label}
                   </strong>
                 </span>
                 <button type="button"
@@ -814,7 +814,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       )}
       {/* ── fim Itens ──────────────────────────────────────────────────────────── */}
 
-      {/* Categoria Sardinha — oculta para cartão (feito por item) */}
+      {/* Categoria do Orçamento — oculta para cartão (feito por item) */}
       {form.tipo !== 'cartao' && (autocat ? (
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
@@ -841,9 +841,9 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
               <option key={cat.id} value={cat.id}>{cat.icon} {cat.label} ({cat.defaultPct}%)</option>
             ))}
           </select>
-          {form.categoria && SARDINHA_CATEGORIES[form.categoria] && (
+          {form.categoria && PERCENTUAL_CATEGORIES[form.categoria] && (
             <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)', paddingLeft: 4 }}>
-              {SARDINHA_CATEGORIES[form.categoria].desc}
+              {PERCENTUAL_CATEGORIES[form.categoria].desc}
             </p>
           )}
         </div>

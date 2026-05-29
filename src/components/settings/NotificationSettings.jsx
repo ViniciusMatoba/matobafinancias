@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Bell, BellOff, CheckCircle, XCircle, Play, Loader, RefreshCw, Send } from 'lucide-react';
 import { formatBRL, todayStr } from '../../utils/formatters';
-import { SARDINHA_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { expandOccurrences, buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { useNotifications } from '../../hooks/useNotifications';
 
@@ -243,7 +243,7 @@ export default function NotificationSettings({ user, cards, transactions, config
             if (uso > worstPct) { worstPct = uso; worstId = catId; }
           });
           if (worstId) {
-            const cat    = SARDINHA_CATEGORIES[worstId];
+            const cat    = PERCENTUAL_CATEGORIES[worstId];
             const budget = (rendaMensal * (Number(budgetPcts[worstId]) || 0)) / 100;
             await showNotif(
               `⚠️ ${cat.label} em ${Math.round(worstPct)}%`,
@@ -273,7 +273,7 @@ export default function NotificationSettings({ user, cards, transactions, config
 
           if (overCats.length > 0) {
             const { catId, budget, s } = overCats.reduce((a, b) => (b.s - b.budget > a.s - a.budget ? b : a));
-            const cat = SARDINHA_CATEGORIES[catId];
+            const cat = PERCENTUAL_CATEGORIES[catId];
             await showNotif(
               `🚨 ${cat.label} estourou o orçamento!`,
               `${formatBRL(s - budget)} acima do limite de ${formatBRL(budget)}`

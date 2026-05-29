@@ -808,7 +808,7 @@ async function handleAjuda(chatId) {
 
     `*🎯 Orçamento e metas*\n` +
     `/categoria — Orçamento por categoria com barras de progresso\n` +
-    `/meta — Status de cada meta do Método Sardinha\n\n` +
+    `/meta — Status de cada meta da Divisão Percentual\n\n` +
 
     `*💳 Cartões*\n` +
     `/cartoes — Seus cartões, vencimentos e limites\n\n` +
@@ -920,7 +920,7 @@ const STEPS = {
     mainStep: 3,
     msg: () =>
       `📍 *Etapa 3 de 6 — Alertas de orçamento*\n\n` +
-      `Posso te avisar quando uma categoria (Método Sardinha) atingir 80% do limite ou ultrapassá-lo.\n\n` +
+      `Posso te avisar quando uma categoria (Divisão Percentual) atingir 80% do limite ou ultrapassá-lo.\n\n` +
       `Ativar alertas de orçamento?`,
     kb: SIM_NAO_KB,
     parse: parseSN,
@@ -1433,7 +1433,7 @@ const BOT_COMMANDS = [
   { command: 'mes',       description: 'Resumo do mes (ex: /mes 4 para abril)' },
   { command: 'resumo',    description: 'Entradas, saidas e saldo do mes corrente' },
   { command: 'categoria', description: 'Orcamento por categoria com barras de progresso' },
-  { command: 'meta',      description: 'Status das metas do Metodo Sardinha' },
+  { command: 'meta',      description: 'Status das metas da Divisao Percentual' },
   { command: 'cartoes',   description: 'Cartoes cadastrados e vencimentos' },
   { command: 'projecao',  description: 'Saldo projetado para os proximos 7 dias' },
   { command: 'ajuda',     description: 'Lista completa de comandos' },

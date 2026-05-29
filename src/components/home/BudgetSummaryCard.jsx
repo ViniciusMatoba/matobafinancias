@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, Settings } from 'lucide-react';
 import { formatBRL, todayStr } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
-import { SARDINHA_CATEGORIES, CATEGORY_ORDER, TIPOS_COM_CATEGORIA } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER, TIPOS_COM_CATEGORIA } from '../../utils/categories';
 
 export default function BudgetSummaryCard({ transactions, rendaMensal, budgetPcts, currentMonth, onNavigateSettings }) {
   const [expanded, setExpanded] = useState(true);
@@ -122,7 +122,7 @@ export default function BudgetSummaryCard({ transactions, rendaMensal, budgetPct
       {expanded && (
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {CATEGORY_ORDER.map(id => {
-            const cat = SARDINHA_CATEGORIES[id];
+            const cat = PERCENTUAL_CATEGORIES[id];
             const pct = Number(budgetPcts?.[id]) || 0;
             const budget = (rendaMensal * pct) / 100;
             const gasto = spent[id] || 0;

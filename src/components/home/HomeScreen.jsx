@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
-import { SARDINHA_CATEGORIES } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import BudgetSummaryCard from './BudgetSummaryCard';
 
 const TIPO_ICONS = {
@@ -23,7 +23,7 @@ function formatDayHeader(dateStr, isToday) {
 
 const FAR_PAST = '2020-01-01';
 
-export default function HomeScreen({ transactions, cards, wallets, config, onEdit, onDelete, onPay, onNavigate }) {
+export default function HomeScreen({ transactions, cards, wallets, goals, config, onEdit, onDelete, onPay, onNavigate }) {
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
@@ -88,6 +88,84 @@ export default function HomeScreen({ transactions, cards, wallets, config, onEdi
     if (!isToday) return null;
     return calcularSobraSegura(transactions, wallets, 45); // Verifica os próximos 45 dias
   }, [transactions, wallets, isToday]);
+
+  const reserveGoal = useMemo(() => {
+    if (!goals) return null;
+    return goals.find(g => 
+      g.nome.toLowerCase().includes('reserva de emergência') || 
+      g.nome.toLowerCase().includes('reserva de emergencia')
+    );
+  }, [goals]);
+
+  const reserveStats = useMemo(() => {
+    const monthlyFixedCostBudget = config?.rendaMensal 
+      ? (config.rendaMensal * (Number(config.budgetPcts?.['custos_fixos']) || 30)) / 100 
+      : 1500;
+    const metaRecomendada = monthlyFixedCostBudget * 6;
+
+    if (!reserveGoal) {
+      return {
+        exists: false,
+        saldo: 0,
+        metaRecomendada,
+        completed: false
+      };
+    }
+
+    const vinculado = transactions.filter(t => t.metaId === reserveGoal.id);
+    const saldo = vinculado.reduce((acc, t) => {
+      if (t.tipo === 'saida') return acc - t.valor;
+      return acc + t.valor;
+    }, 0);
+
+    const completed = reserveGoal.metaFinal > 0 && saldo >= reserveGoal.metaFinal;
+
+    return {
+      exists: true,
+      saldo,
+      metaFinal: reserveGoal.metaFinal,
+      metaRecomendada,
+      completed
+    };
+  }, [reserveGoal, transactions, config]);
+
+  const bannerContent = useMemo(() => {
+    if (!sobraSegura) return null;
+    const formatSobra = formatBRL(sobraSegura.sobra);
+    const dataFim = `${sobraSegura.dataVerificada.slice(8,10)}/${sobraSegura.dataVerificada.slice(5,7)}`;
+
+    if (!reserveStats.completed) {
+      if (!reserveStats.exists) {
+        return {
+          title: 'Reserva de Emergência Recomendada!',
+          desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}). Vimos que você ainda não criou uma caixinha de "Reserva de Emergência". Recomendamos criar uma com meta recomendada de ${formatBRL(reserveStats.metaRecomendada)} (6 meses de custos fixos) e priorizar este saldo nela!`,
+          buttonText: 'Criar Reserva de Emergência',
+          bg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+          shadow: 'rgba(245,158,11,0.3)',
+          color: '#f59e0b',
+        };
+      } else {
+        const falta = formatBRL(reserveStats.metaFinal - reserveStats.saldo);
+        return {
+          title: 'Acelere sua Reserva de Emergência!',
+          desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}). Recomendamos priorizar a conclusão da sua caixinha "Reserva de Emergência" (atualmente com ${formatBRL(reserveStats.saldo)} de ${formatBRL(reserveStats.metaFinal)}). Falta apenas ${falta} para garantir sua tranquilidade financeira!`,
+          buttonText: 'Aportar na Reserva',
+          bg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+          shadow: 'rgba(59,130,246,0.3)',
+          color: '#3b82f6',
+        };
+      }
+    }
+
+    return {
+      title: 'Dinheiro sobrando de forma segura! 🎉',
+      desc: `Parabéns! Sua Reserva de Emergência está concluída. Projetamos suas despesas até ${dataFim} e você tem ${formatSobra} livres e seguros. Você pode guardar esse valor agora para acelerar suas outras metas de investimento sem comprometer seu orçamento!`,
+      buttonText: 'Aportar nas Caixinhas',
+      bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      shadow: 'rgba(16,185,129,0.3)',
+      color: '#059669',
+    };
+  }, [sobraSegura, reserveStats]);
 
   const saldoPositivo = saldoAcumulado >= 0;
   const summaryCards = [
@@ -228,13 +306,14 @@ export default function HomeScreen({ transactions, cards, wallets, config, onEdi
         </button>
       </div>
 
-      {/* Banner de Sobra Segura Inteligente */}
-      {sobraSegura && sobraSegura.sobra > 0 && (
+      {/* Banner de Sobra Segura Inteligente com Reserva de Emergência */}
+      {sobraSegura && sobraSegura.sobra > 0 && bannerContent && (
         <div style={{ padding: '16px 20px 0' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            background: bannerContent.bg,
             borderRadius: 16, padding: '16px', position: 'relative', overflow: 'hidden',
-            boxShadow: '0 8px 24px rgba(16,185,129,0.3)'
+            boxShadow: `0 8px 24px ${bannerContent.shadow}`,
+            transition: 'all 0.3s ease-in-out'
           }}>
             <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.1, transform: 'rotate(15deg)' }}>
               <Target size={120} color="#fff" />
@@ -242,22 +321,24 @@ export default function HomeScreen({ transactions, cards, wallets, config, onEdi
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                 <span style={{ fontSize: 20 }}>🎉</span>
-                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#fff' }}>Dinheiro sobrando!</h3>
+                <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#fff' }}>{bannerContent.title}</h3>
               </div>
-              <p style={{ margin: '0 0 14px', fontSize: 13, color: 'rgba(255,255,255,0.9)', lineHeight: 1.5 }}>
-                Avaliamos suas despesas até <strong>{sobraSegura.dataVerificada.slice(8,10)}/{sobraSegura.dataVerificada.slice(5,7)}</strong> e você tem 
-                <strong style={{ fontSize: 15, marginLeft: 4 }}>{formatBRL(sobraSegura.sobra)}</strong> livres. 
-                <br/>Você pode guardar esse valor agora sem comprometer seu orçamento diário nem suas faturas futuras.
+              <p style={{ margin: '0 0 12px', fontSize: 13, color: 'rgba(255,255,255,0.95)', lineHeight: 1.5 }}>
+                {bannerContent.desc}
+              </p>
+              <p style={{ margin: '0 0 16px', fontSize: 11, color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', borderTop: '1px dashed rgba(255,255,255,0.3)', paddingTop: 8 }}>
+                ⚠️ <strong>Ação real no banco:</strong> Este controle no aplicativo é apenas virtual. Para garantir sua meta, abra o aplicativo do seu banco real e deposite este valor de verdade!
               </p>
               <button 
                 onClick={() => onNavigate('goals')} 
                 style={{ 
-                  background: '#fff', color: '#059669', border: 'none', 
+                  background: '#fff', color: bannerContent.color, border: 'none', 
                   padding: '10px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700,
-                  display: 'flex', alignItems: 'center', gap: 6
+                  display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                 }}
               >
-                <PiggyBank size={16} /> Guardar na Caixinha
+                <PiggyBank size={16} /> {bannerContent.buttonText}
               </button>
             </div>
           </div>
@@ -290,7 +371,7 @@ export default function HomeScreen({ transactions, cards, wallets, config, onEdi
         </div>
       )}
 
-      {/* Orçamento Sardinha (mensal do mês selecionado) */}
+      {/* Orçamento por Divisão Percentual (mensal do mês selecionado) */}
       <div style={{ padding: '16px 20px 0' }}>
         <BudgetSummaryCard
           transactions={transactions}
@@ -390,7 +471,7 @@ export default function HomeScreen({ transactions, cards, wallets, config, onEdi
               {hasItens && isExpanded && (
                 <div style={{ borderTop: '1px solid var(--border)', background: 'rgba(59,130,246,0.05)', padding: '8px 14px 10px' }}>
                   {occ.tx.itens.map((item, i) => {
-                    const itemCat = item.categoria ? SARDINHA_CATEGORIES[item.categoria] : null;
+                    const itemCat = item.categoria ? PERCENTUAL_CATEGORIES[item.categoria] : null;
                     return (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0',

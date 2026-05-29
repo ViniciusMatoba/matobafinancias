@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatBRL, formatDateShort, TYPE_CONFIG, todayStr } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
-import { SARDINHA_CATEGORIES } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -191,7 +191,7 @@ export default function TransactionsScreen({ transactions, onEdit, onDelete, onP
                   {hasItens && isExpanded && (
                     <div style={{ borderTop: '1px solid var(--border)', background: 'rgba(59,130,246,0.05)', padding: '8px 14px 10px' }}>
                       {occ.tx.itens.map((item, i) => {
-                        const itemCat = item.categoria ? SARDINHA_CATEGORIES[item.categoria] : null;
+                        const itemCat = item.categoria ? PERCENTUAL_CATEGORIES[item.categoria] : null;
                         return (
                           <div key={i} style={{
                             display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0',

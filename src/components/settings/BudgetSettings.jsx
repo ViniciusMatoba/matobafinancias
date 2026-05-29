@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { RotateCcw, Check } from 'lucide-react';
 import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
-import { SARDINHA_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 
 export default function BudgetSettings({ config, onSave }) {
   const [renda, setRenda] = useState(
@@ -72,7 +72,7 @@ export default function BudgetSettings({ config, onSave }) {
 
       {/* Categorias */}
       {CATEGORY_ORDER.map(id => {
-        const cat = SARDINHA_CATEGORIES[id];
+        const cat = PERCENTUAL_CATEGORIES[id];
         const val = Number(pcts[id]) || 0;
         const amount = rendaNum > 0 ? (rendaNum * val) / 100 : null;
         return (

@@ -4,12 +4,94 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { formatBRL, TYPE_CONFIG } from '../../utils/formatters';
-import { SARDINHA_CATEGORIES } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
 const CHART_TYPES = {
   SALDO: 'saldo',
   FLUXO: 'fluxo',
   CATEGORIAS: 'categorias',
+};
+
+const CustomTooltip = ({ active, payload, label, saldoInicial }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const isLineChart = payload[0].dataKey === 'saldo';
+    const isPieChart = payload[0].name !== undefined && !isLineChart;
+    
+    let formattedDate = '';
+    if (data.fullDate) {
+      try {
+        const dateObj = new Date(data.fullDate + 'T12:00:00');
+        formattedDate = dateObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+        formattedDate = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+      } catch {
+        formattedDate = data.fullDate;
+      }
+    }
+
+    return (
+      <div style={{
+        background: 'rgba(23, 23, 37, 0.95)',
+        backdropFilter: 'blur(8px)',
+        border: '1px solid var(--border)',
+        borderRadius: 12,
+        padding: '12px 16px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+        color: '#fff',
+        fontSize: 12,
+        fontFamily: 'inherit',
+        lineHeight: 1.5,
+        zIndex: 1000
+      }}>
+        {formattedDate && !isPieChart && (
+          <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>
+            {formattedDate}
+          </p>
+        )}
+        
+        {payload.map((entry, idx) => {
+          const name = entry.name || entry.dataKey;
+          const val = entry.value;
+          const color = entry.color || entry.fill || 'var(--primary)';
+          
+          let formattedName = name;
+          if (name === 'saldo') formattedName = '💵 Saldo Projetado';
+          else if (name === 'entradas' || name === 'Entradas') formattedName = '📈 Entradas';
+          else if (name === 'saidas' || name === 'Saídas') formattedName = '📉 Saídas';
+
+          return (
+            <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, margin: '4px 0' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-secondary)' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: color, display: 'inline-block' }} />
+                {formattedName}
+              </span>
+              <span style={{ fontWeight: 700, color: '#fff' }}>{formatBRL(val)}</span>
+            </div>
+          );
+        })}
+
+        {isLineChart && saldoInicial !== undefined && (
+          <div style={{
+            marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex', justifyContent: 'space-between', gap: 20, fontSize: 11
+          }}>
+            <span style={{ color: 'var(--text-muted)' }}>📊 Variação no Período</span>
+            {(() => {
+              const diff = data.saldo - saldoInicial;
+              const color = diff >= 0 ? 'var(--entrada)' : 'var(--saida)';
+              const sign = diff >= 0 ? '+' : '';
+              return (
+                <span style={{ fontWeight: 700, color }}>
+                  {sign}{formatBRL(diff)}
+                </span>
+              );
+            })()}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return null;
 };
 
 export default function ProjectionCharts({ days, saldoInicial }) {
@@ -58,12 +140,6 @@ export default function ProjectionCharts({ days, saldoInicial }) {
                 let subVal = Number(sub.valor) || 0;
                 catTotals[subCat] = (catTotals[subCat] || 0) + subVal;
              });
-             // Subtract card total so we don't double count? No, the card invoice is the only thing in `items` for the day.
-             // Wait, the projection `buildDailyProjection` puts the card invoice as an item on the invoice due date.
-             // But the user requested category breakdown by purchase date!
-             // Wait! The projection only has `day.items` which includes credit card *invoices*.
-             // For the sake of the projection chart, we break down the invoice items that are IN this period.
-             // It's a cash flow pie chart (where did the money that left my account this month go?)
           } else {
              catTotals[cat] = (catTotals[cat] || 0) + valor;
           }
@@ -74,9 +150,9 @@ export default function ProjectionCharts({ days, saldoInicial }) {
     return Object.entries(catTotals)
       .filter(([_, val]) => val > 0)
       .map(([key, val]) => ({
-        name: SARDINHA_CATEGORIES[key]?.label || 'Outros',
+        name: PERCENTUAL_CATEGORIES[key]?.label || 'Outros',
         value: val,
-        color: SARDINHA_CATEGORIES[key]?.color || '#94a3b8'
+        color: PERCENTUAL_CATEGORIES[key]?.color || '#94a3b8'
       }))
       .sort((a, b) => b.value - a.value);
   }, [days]);
@@ -131,11 +207,7 @@ export default function ProjectionCharts({ days, saldoInicial }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                 <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickMargin={10} />
                 <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={(val) => `R$${val}`} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff' }}
-                  labelStyle={{ color: 'var(--text-muted)', marginBottom: 4 }}
-                  formatter={(value) => [formatBRL(value), 'Saldo']}
-                />
+                <Tooltip content={<CustomTooltip saldoInicial={saldoInicial} />} />
                 <Line type="monotone" dataKey="saldo" stroke="var(--primary)" strokeWidth={3} dot={{ r: 3, fill: 'var(--bg-surface)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
               </LineChart>
             )}
@@ -145,11 +217,7 @@ export default function ProjectionCharts({ days, saldoInicial }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
                 <XAxis dataKey="date" stroke="var(--text-muted)" fontSize={11} tickMargin={10} />
                 <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={(val) => `R$${val}`} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff' }}
-                  labelStyle={{ color: 'var(--text-muted)', marginBottom: 4 }}
-                  formatter={(value, name) => [formatBRL(value), name === 'entradas' ? 'Entradas' : 'Saídas']}
-                />
+                <Tooltip content={<CustomTooltip />} />
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 12, paddingTop: 10 }} />
                 <Bar dataKey="entradas" name="Entradas" fill="var(--entrada)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="saidas" name="Saídas" fill="var(--saida)" radius={[4, 4, 0, 0]} />
@@ -171,10 +239,7 @@ export default function ProjectionCharts({ days, saldoInicial }) {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip
-                  contentStyle={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 8, color: '#fff' }}
-                  formatter={(value) => formatBRL(value)}
-                />
+                <Tooltip content={<CustomTooltip />} />
                 <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ fontSize: 11 }} />
               </PieChart>
             )}

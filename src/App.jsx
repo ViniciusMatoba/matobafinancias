@@ -256,6 +256,7 @@ export default function App() {
           transactions={transactions}
           cards={cards}
           wallets={wallets}
+          goals={goals}
           config={config}
           metaMensal={config.metaMensalDiario}
           onSaveMeta={v => saveConfig({ metaMensalDiario: v })}
@@ -277,6 +278,7 @@ export default function App() {
         <GoalsScreen
           goals={goals}
           transactions={transactions}
+          config={config}
           onAddGoal={addGoal}
           onUpdateGoal={updateGoal}
           onRemoveGoal={removeGoal}

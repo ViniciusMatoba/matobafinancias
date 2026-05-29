@@ -95,7 +95,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Divisão de Orçamento
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Método Investidor Sardinha · Raul Sena
+                  Modelo de Alocação por Percentual
                 </span>
               </div>
             </div>

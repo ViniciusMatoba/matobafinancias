@@ -1,4 +1,4 @@
-export const SARDINHA_CATEGORIES = {
+export const PERCENTUAL_CATEGORIES = {
   liberdade: {
     label: 'Liberdade Financeira',
     sublabel: 'Investimentos',
@@ -83,8 +83,8 @@ export function getAutoCategory(tipo) {
 // Opções de categoria para o formulário (excluindo liberdade, que é automática)
 export const CATEGORY_OPTIONS = CATEGORY_ORDER
   .filter(id => id !== 'liberdade')
-  .map(id => ({ id, ...SARDINHA_CATEGORIES[id] }));
+  .map(id => ({ id, ...PERCENTUAL_CATEGORIES[id] }));
 
 export const DEFAULT_BUDGET_PCTS = Object.fromEntries(
-  CATEGORY_ORDER.map(id => [id, SARDINHA_CATEGORIES[id].defaultPct])
+  CATEGORY_ORDER.map(id => [id, PERCENTUAL_CATEGORIES[id].defaultPct])
 );

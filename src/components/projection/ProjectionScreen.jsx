@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Calendar, Pencil, Trash2, BarChart2 } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../utils/formatters';
 import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
-import { SARDINHA_CATEGORIES } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
@@ -403,7 +403,7 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete, onPay
                         {hasSubItens && (
                           <div style={{ marginTop: 4, marginLeft: 36, display: 'flex', flexDirection: 'column', gap: 2 }}>
                             {item.tx.itens.map((subItem, j) => {
-                              const subCat = subItem.categoria ? SARDINHA_CATEGORIES[subItem.categoria] : null;
+                              const subCat = subItem.categoria ? PERCENTUAL_CATEGORIES[subItem.categoria] : null;
                               return (
                                 <div key={j} style={{
                                   display: 'flex', alignItems: 'center', gap: 6,
