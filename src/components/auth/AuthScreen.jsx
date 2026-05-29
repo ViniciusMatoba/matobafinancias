@@ -228,8 +228,8 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
         )}
       </div>
 
-      {/* Botão de Instalação do PWA */}
-      {deferredPrompt && (
+      {/* Botao de Instalacao do PWA */}
+      {deferredPrompt ? (
         <button
           onClick={handleInstallClick}
           style={{
@@ -240,8 +240,25 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
             boxShadow: '0 4px 12px rgba(99,102,241,0.2)'
           }}
         >
-          ⬇️ Instalar Aplicativo (App Nativo)
+          Baixar aplicativo
         </button>
+      ) : (
+        <div style={{
+          marginTop: 22,
+          width: '100%',
+          maxWidth: 380,
+          padding: '12px 14px',
+          borderRadius: 14,
+          background: 'rgba(99,102,241,0.1)',
+          border: '1px solid rgba(99,102,241,0.25)',
+          color: 'var(--text-secondary)',
+          fontSize: 12,
+          lineHeight: 1.5,
+          textAlign: 'center',
+        }}>
+          Para instalar no celular, abra o menu do navegador e escolha
+          <strong style={{ color: 'var(--text-primary)' }}> Adicionar a tela inicial</strong>.
+        </div>
       )}
     </div>
   );
