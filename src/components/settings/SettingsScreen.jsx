@@ -11,6 +11,14 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.5.4 (29/05/2026)',
+    title: 'Busca de Atualizações Precisa & PWA 🔄',
+    items: [
+      'Aprimoramento completo no sistema de busca de atualizações manuais: agora a verificação de nova versão se conecta em tempo real ao servidor e informa exatamente se há atualizações prontas, em andamento ou se o app já está na versão mais recente.',
+      'Reset inteligente do estado oculto: fechar o aviso temporário não bloqueia mais permanentemente novos avisos automáticos de futuras versões.'
+    ]
+  },
+  {
     version: 'v1.5.3 (29/05/2026)',
     title: 'Edição e Exclusão de Projeções 🛠️',
     items: [
@@ -484,7 +492,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Notas de Atualização
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Versão v1.5.3 ativa
+                  Versão v1.5.4 ativa
                 </span>
               </div>
             </div>
@@ -496,17 +504,70 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
               <button
                 type="button"
                 onClick={async () => {
-                  if ('serviceWorker' in navigator) {
-                    try {
-                      const reg = await navigator.serviceWorker.ready;
-                      await reg.update();
-                      alert('Verificação de atualização realizada! Se houver uma nova versão disponível no servidor, a notificação de atualização aparecerá no topo da sua tela em instantes.');
-                    } catch (err) {
-                      console.error('Erro ao verificar SW:', err);
-                      alert('Erro ao buscar atualizações: ' + err.message);
-                    }
-                  } else {
+                  if (!('serviceWorker' in navigator)) {
                     alert('Seu navegador não oferece suporte a Service Workers.');
+                    return;
+                  }
+
+                  // Limpa dismissed para reativar a exibição do banner global
+                  localStorage.removeItem('matoba:update-dismissed');
+
+                  try {
+                    const reg = await navigator.serviceWorker.getRegistration();
+                    if (!reg) {
+                      alert('Nenhum Service Worker registrado. O aplicativo pode não estar instalado ou rodando como PWA no momento.');
+                      return;
+                    }
+
+                    // Se já existir uma atualização baixada e esperando ativação
+                    if (reg.waiting) {
+                      alert('Nova versão pronta! Atualizando o aplicativo...');
+                      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+                      return;
+                    }
+
+                    // Se já estiver baixando uma atualização
+                    if (reg.installing) {
+                      alert('Uma atualização já está sendo baixada. O app será reiniciado assim que concluir.');
+                      const worker = reg.installing;
+                      worker.addEventListener('statechange', () => {
+                        if (worker.state === 'installed') {
+                          worker.postMessage({ type: 'SKIP_WAITING' });
+                        }
+                      });
+                      return;
+                    }
+
+                    // Caso geral: Checar atualização no servidor
+                    let updateFound = false;
+                    const handleUpdateFound = () => {
+                      updateFound = true;
+                      const worker = reg.installing;
+                      if (worker) {
+                        alert('Nova versão encontrada! Baixando atualização...');
+                        worker.addEventListener('statechange', () => {
+                          if (worker.state === 'installed') {
+                            worker.postMessage({ type: 'SKIP_WAITING' });
+                          }
+                        });
+                      }
+                    };
+
+                    reg.addEventListener('updatefound', handleUpdateFound);
+
+                    // Executa a busca real no servidor
+                    await reg.update();
+
+                    // Aguarda até 2 segundos para dar tempo do evento disparar
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    reg.removeEventListener('updatefound', handleUpdateFound);
+
+                    if (!updateFound) {
+                      alert('O aplicativo já está na versão mais recente!');
+                    }
+                  } catch (err) {
+                    console.error('Erro ao verificar SW:', err);
+                    alert('Erro ao buscar atualizações: ' + err.message);
                   }
                 }}
                 style={{

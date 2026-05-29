@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { RefreshCw, X, DollarSign } from 'lucide-react';
 
@@ -26,6 +26,14 @@ export default function ReloadPrompt({ hidden = false }) {
       console.log('SW registration error', error);
     },
   });
+
+  // Reexibe o banner caso um novo service worker seja detectado em espera
+  useEffect(() => {
+    if (needRefresh) {
+      localStorage.removeItem(DISMISSED_UPDATE_KEY);
+      setDismissed(false);
+    }
+  }, [needRefresh]);
 
   const handleUpdate = () => {
     setUpdating(true);
