@@ -140,9 +140,11 @@ export default function NotificationSettings({ user, cards, transactions, config
     setActivateError('');
     const result = await enableNotifications();
     if (result.ok) {
-      savePrefs({ enabled: true });
+      savePrefs({ enabled: true, horaAlerta: prefs.horaAlerta ?? 7 });
     } else if (result.reason === 'denied') {
       // A UI já reflete o estado "bloqueado" automaticamente
+    } else if (result.reason === 'no_token') {
+      setActivateError('Não foi possível obter o token de notificação. Certifique-se de que o Service Worker está registrado e tente novamente.');
     } else if (result.reason === 'error') {
       setActivateError(`Erro ao ativar: ${result.message || 'verifique o console do navegador.'}`);
     }

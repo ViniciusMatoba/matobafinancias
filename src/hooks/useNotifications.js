@@ -113,7 +113,7 @@ export function useNotifications(user) {
     setDiagnosticsLoading(true);
 
     try {
-      let token = fcmToken;
+      let token = null; // usa variável local — evita recriação do callback quando fcmToken muda
       let savedToken = null;
       let savedVapidKey = null;
       let tokenUpdatedAt = null;
@@ -163,7 +163,7 @@ export function useNotifications(user) {
     } finally {
       setDiagnosticsLoading(false);
     }
-  }, [canUsePush, fcmToken, syncToken, user]);
+  }, [canUsePush, syncToken, user]); // fcmToken removido: usamos variável local para evitar re-execução dupla
 
   useEffect(() => {
     setSupported(canUsePush());

@@ -1,1 +1,11 @@
-{"version":"0.0.1","configurations":[{"name":"matoba-financas","runtimeExecutable":"npm","runtimeArgs":["run","dev","--","--port","5200"],"port":5200,"autoPort":false}]}
+﻿{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "matobafinancias",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview"],
+      "port": 4173
+    }
+  ]
+}
