@@ -12,6 +12,15 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.6.2 (29/05/2026)',
+    title: 'Self-Healing do PWA, Projeções de Fluxo de Caixa e Limpeza da Home 🛠️',
+    items: [
+      'Recuperação Autônoma (Self-Healing): movido o gerenciador de atualização do PWA para fora das rotas de carregamento precoce. Agora, mesmo que haja erro nas credenciais locais, o Service Worker é executado e atualiza o app de forma totalmente transparente e automática.',
+      'Projeções de fluxo de caixa: corrigido bug de herança de status pago em faturas virtuais futuras dos cartões. Agora as parcelas de meses futuros permanecem em aberto para uma estimativa precisa e real de fluxo de caixa.',
+      'Limpeza de redundâncias na Home: a seção de Próximas Contas de 15 dias foi inteiramente removida do início, mantendo esses dados centralizados e organizados unicamente na aba de Projeção.'
+    ]
+  },
+  {
     version: 'v1.6.1 (29/05/2026)',
     title: 'Controle de Pagamentos & Auto-Atualização PWA Imersiva 🔄',
     items: [
@@ -522,7 +531,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Notas de Atualização
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Versão v1.6.1 ativa
+                  Versão v1.6.2 ativa
                 </span>
               </div>
             </div>
