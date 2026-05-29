@@ -143,7 +143,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   const próximasContas = useMemo(() => {
     const toDate = addDays(today, 15);
     const occs = transactions.flatMap(tx =>
-      expandOccurrences(tx, today, toDate).map(o => ({ ...o, tx }))
+      expandOccurrences(tx, FAR_PAST, toDate).map(o => ({ ...o, tx }))
     );
     // Filtrar apenas despesas e investimentos (tudo menos tipo: 'entrada') que estão pendentes (não pagos/conferidos)
     const contas = occs.filter(o => {
@@ -156,8 +156,12 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       return !o.tx.conferidos?.includes(o.date);
     });
     contas.sort((a, b) => a.date.localeCompare(b.date));
-    return contas.slice(0, 5); // Mostra no máximo as 5 próximas contas
+    return contas;
   }, [transactions, today]);
+
+  const totalPróximasContas = useMemo(() => {
+    return próximasContas.reduce((acc, o) => acc + (Number(o.valor) || 0), 0);
+  }, [próximasContas]);
 
   const formatContasHeader = (dateStr) => {
     if (dateStr === today) return 'Hoje';
@@ -516,13 +520,18 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
               <h3 style={{ margin: 0, fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span>📅</span> Próximas Contas (15 dias)
               </h3>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '2px 7px', borderRadius: 6 }}>
-                {próximasContas.length} pendente{próximasContas.length !== 1 ? 's' : ''}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--saida)', background: 'rgba(239,68,68,0.12)', padding: '3px 8px', borderRadius: 6 }}>
+                  Total: {formatBRL(totalPróximasContas)}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '3px 8px', borderRadius: 6 }}>
+                  {próximasContas.length} item{próximasContas.length !== 1 ? 's' : ''}
+                </span>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {próximasContas.map((occ, idx) => {
+              {próximasContas.slice(0, 5).map((occ, idx) => {
                 const cfg = TYPE_CONFIG[occ.tx.tipo] || {};
                 const Icon = TIPO_ICONS[occ.tx.tipo] || Zap;
                 return (
