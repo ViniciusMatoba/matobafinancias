@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -26,6 +26,9 @@ const FAR_PAST = '2020-01-01';
 export default function HomeScreen({ transactions, cards, wallets, goals, config, onEdit, onClone, onDelete, onPay, onNavigate }) {
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => localStorage.getItem('matoba:sobra-banner-dismissed') === todayStr()
+  );
 
   const toggleExpand = (id) => setExpandedIds(prev => {
     const next = new Set(prev);
@@ -392,7 +395,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       </div>
 
       {/* Banner de Sobra Segura Inteligente com Reserva de Emergência */}
-      {sobraSegura && sobraSegura.sobra > 0 && bannerContent && (
+      {sobraSegura && sobraSegura.sobra > 0 && bannerContent && !bannerDismissed && (
         <div style={{ padding: '16px 20px 0' }}>
           <div style={{
             background: bannerContent.bg,
@@ -400,6 +403,22 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
             boxShadow: `0 8px 24px ${bannerContent.shadow}`,
             transition: 'all 0.3s ease-in-out'
           }}>
+            {/* Botão de Fechar */}
+            <button
+              onClick={() => {
+                localStorage.setItem('matoba:sobra-banner-dismissed', today);
+                setBannerDismissed(true);
+              }}
+              style={{
+                position: 'absolute', top: 12, right: 12,
+                background: 'none', border: 'none', color: 'rgba(255,255,255,0.72)',
+                cursor: 'pointer', padding: 4, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                zIndex: 10
+              }}
+            >
+              <X size={16} />
+            </button>
+
             <div style={{ position: 'absolute', right: -20, top: -20, opacity: 0.1, transform: 'rotate(15deg)' }}>
               <Target size={120} color="#fff" />
             </div>

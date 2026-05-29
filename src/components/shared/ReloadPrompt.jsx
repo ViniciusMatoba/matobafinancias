@@ -14,6 +14,14 @@ export default function ReloadPrompt({ hidden = false }) {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
   } = useRegisterSW({
+    onRegistered(r) {
+      if (r) {
+        // Verifica atualizações a cada 60 segundos automaticamente
+        setInterval(() => {
+          r.update().catch(err => console.log('Erro ao checar atualização do SW:', err));
+        }, 60000);
+      }
+    },
     onRegisterError(error) {
       console.log('SW registration error', error);
     },

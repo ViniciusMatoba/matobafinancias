@@ -11,6 +11,32 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.5.2 (29/05/2026)',
+    title: 'Notificações PWA Globais & Ajustes Finos 🚀',
+    items: [
+      'Configuração global das notificações de atualização do PWA em todas as telas, garantindo que usuários logados recebam avisos imediatos de novas versões sem depender da tela de login.',
+      'Implementação de botão de fechar (X) com persistência diária em localStorage no banner inteligente de Sobra Segura na Home, permitindo ocultar recomendações temporariamente por 24 horas.'
+    ]
+  },
+  {
+    version: 'v1.5.1 (29/05/2026)',
+    title: 'Correção de Pagamentos Antecipados 💳',
+    items: [
+      'Resolução definitiva na antecipação de faturas de cartão: ao pagar antecipadamente, a fatura programada e suas cobranças internas (itens) são movidas juntas para a data do pagamento real, limpando o dia futuro.',
+      'Sincronização do motor de projeção de parcelas para evitar duplicidades visuais e respeitar exclusões de faturas pagas.'
+    ]
+  },
+  {
+    version: 'v1.5.0 (29/05/2026)',
+    title: 'Controle de Pagamentos & Projeções Inteligentes 💸',
+    items: [
+      'Novo botão universal "Pagar" na Projeção, Home e Histórico com modal centralizado para simplificar o controle.',
+      'Planejamento anual expandido, histórico avançado de transações com filtros e conciliação manual rápida.',
+      'Relatórios financeiros em formato PDF de alto padrão prontos para exportação direta.',
+      'Painel dinâmico de contas próximas a vencer no topo da Home e limite detalhado de cartões de crédito.'
+    ]
+  },
+  {
     version: 'v1.4.0 (29/05/2026)',
     title: 'Educação Financeira & Controle de Impulsos 🧘‍♂️',
     items: [
@@ -40,7 +66,7 @@ const CHANGELOG_DATA = [
     items: [
       'Criptografia completa ponta a ponta com o Firebase Authentication.',
       'Suporte offline completo PWA e instalação na tela inicial.',
-      'Integração com o Bot de Telegram para consultas rápidas de saldo e limites.'
+      'Integração com o Bot de Telegram para consultas rápidos de saldo e limites.'
     ]
   }
 ];
@@ -450,7 +476,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Notas de Atualização
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Versão v1.4.0 ativa
+                  Versão v1.5.2 ativa
                 </span>
               </div>
             </div>
@@ -458,6 +484,34 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
           </button>
           {updatesOpen && (
             <div style={{ padding: '16px', borderTop: '1px solid var(--border)', background: 'var(--bg-surface)', fontSize: 12, lineHeight: 1.5, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Botão de Forçar Atualização */}
+              <button
+                type="button"
+                onClick={async () => {
+                  if ('serviceWorker' in navigator) {
+                    try {
+                      const reg = await navigator.serviceWorker.ready;
+                      await reg.update();
+                      alert('Verificação de atualização realizada! Se houver uma nova versão disponível no servidor, a notificação de atualização aparecerá no topo da sua tela em instantes.');
+                    } catch (err) {
+                      console.error('Erro ao verificar SW:', err);
+                      alert('Erro ao buscar atualizações: ' + err.message);
+                    }
+                  } else {
+                    alert('Seu navegador não oferece suporte a Service Workers.');
+                  }
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  padding: '10px 14px', borderRadius: 10,
+                  background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)',
+                  color: 'var(--primary)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                  width: '100%', marginBottom: 4, transition: 'all 0.2s'
+                }}
+              >
+                🔄 Buscar Atualização do Aplicativo (PWA)
+              </button>
+
               {CHANGELOG_DATA.map((ch, idx) => (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>

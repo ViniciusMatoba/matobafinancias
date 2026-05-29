@@ -32,6 +32,7 @@ export function expandOccurrences(tx, from, to) {
         for (let m = 1; m <= maxMeses; m++) {
           const futureDate = addMonths(tx.dataInicio, m);
           if (futureDate > to) continue;
+          if (tx.exclusoes?.includes(futureDate)) continue;
 
           const futureItens = parcelados
             .filter(i => (i.parcelaAtual || 1) + m <= i.totalParcelas)

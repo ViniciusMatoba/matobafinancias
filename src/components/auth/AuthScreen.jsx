@@ -27,6 +27,32 @@ const ERROR_MSGS = {
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.5.2 (29/05/2026)',
+    title: 'Notificações PWA Globais & Ajustes Finos 🚀',
+    items: [
+      'Configuração global das notificações de atualização do PWA em todas as telas, garantindo que usuários logados recebam avisos imediatos de novas versões sem depender da tela de login.',
+      'Implementação de botão de fechar (X) com persistência diária em localStorage no banner inteligente de Sobra Segura na Home, permitindo ocultar recomendações temporariamente por 24 horas.'
+    ]
+  },
+  {
+    version: 'v1.5.1 (29/05/2026)',
+    title: 'Correção de Pagamentos Antecipados 💳',
+    items: [
+      'Resolução definitiva na antecipação de faturas de cartão: ao pagar antecipadamente, a fatura programada e suas cobranças internas (itens) são movidas juntas para a data do pagamento real, limpando o dia futuro.',
+      'Sincronização do motor de projeção de parcelas para evitar duplicidades visuais e respeitar exclusões de faturas pagas.'
+    ]
+  },
+  {
+    version: 'v1.5.0 (29/05/2026)',
+    title: 'Controle de Pagamentos & Projeções Inteligentes 💸',
+    items: [
+      'Novo botão universal "Pagar" na Projeção, Home e Histórico com modal centralizado para simplificar o controle.',
+      'Planejamento anual expandido, histórico avançado de transações com filtros e conciliação manual rápida.',
+      'Relatórios financeiros em formato PDF de alto padrão prontos para exportação direta.',
+      'Painel dinâmico de contas próximas a vencer no topo da Home e limite detalhado de cartões de crédito.'
+    ]
+  },
+  {
     version: 'v1.4.0 (29/05/2026)',
     title: 'Educação Financeira & Controle de Impulsos 🧘‍♂️',
     items: [
@@ -301,7 +327,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       {/* Rótulo de versão com notas de atualização */}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Versão v1.4.0
+          Versão v1.5.2
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
         <button

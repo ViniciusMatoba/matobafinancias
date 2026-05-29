@@ -182,19 +182,41 @@ export default function App() {
     const isVirtual = String(tx.id).includes('-proj-');
 
     try {
-      // Cartão ou projeção virtual de parcelas → cria lançamento de pagamento
-      if (isCartao || isVirtual) {
-        const nomeDesc = tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura';
+      if (isVirtual) {
+        const parentId = tx.id.split('-proj-')[0];
+        const parentTx = transactions.find(t => t.id === parentId);
+        if (!parentTx) {
+          showToast('Erro: Transação pai não encontrada.', 'error');
+          return;
+        }
+
+        // 1. Exclui a projeção virtual na data futura programada
+        const exclusoes = [...(parentTx.exclusoes || [])];
+        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+        await update(parentId, { exclusoes });
+
+        // 2. Cria a fatura real paga hoje contendo todo o conteúdo (itens) correspondente
         await add({
-          tipo:       'saida',
+          tipo:       'cartao',
           frequencia: 'unico',
-          descricao:  nomeDesc,
+          descricao:  tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura',
           valor,
           dataInicio: paymentDate,
-          categoria:  'custos_fixos',
+          categoria:  null,
           dataFim:    null,
+          itens:      tx.itens || [],
+          cartaoId:   tx.cartaoId || null,
         });
-        showToast('✅ Pagamento de fatura registrado!');
+
+        showToast('✅ Pagamento de fatura antecipado!');
+        return;
+      }
+
+      if (isCartao && !isVirtual) {
+        // Atualiza diretamente a data e o valor da fatura de cartão no banco de dados.
+        // Os itens internos associados permanecem na mesma transação e se movem com ela.
+        await update(tx.id, { dataInicio: paymentDate, valor });
+        showToast('✅ Fatura do cartão movimentada para a data de pagamento!');
         return;
       }
 
@@ -427,6 +449,8 @@ export default function App() {
       {tourActive && (
         <TourGuide onComplete={handleCompleteTour} />
       )}
+
+      <ReloadPrompt />
 
       {ToastNode}
     </>
