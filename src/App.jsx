@@ -16,6 +16,7 @@ import ProjectionScreen from './components/projection/ProjectionScreen';
 import GoalsScreen from './components/goals/GoalsScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
 import BottomNav from './components/shared/BottomNav';
+import ReloadPrompt from './components/shared/ReloadPrompt';
 import Modal from './components/shared/Modal';
 import TransactionForm from './components/transactions/TransactionForm';
 import { DollarSign } from 'lucide-react';
@@ -238,6 +239,7 @@ export default function App() {
       )}
 
       <BottomNav view={view} onNavigate={handleNavigate} />
+      <ReloadPrompt hidden={view === 'settings'} />
 
       <Modal
         open={formOpen}

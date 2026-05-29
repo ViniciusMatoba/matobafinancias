@@ -4,10 +4,10 @@ import { RefreshCw, X, DollarSign } from 'lucide-react';
 
 const DISMISSED_UPDATE_KEY = 'matoba:update-dismissed';
 
-export default function ReloadPrompt() {
+export default function ReloadPrompt({ hidden = false }) {
   const [updating, setUpdating] = useState(false);
   const [dismissed, setDismissed] = useState(
-    () => sessionStorage.getItem(DISMISSED_UPDATE_KEY) === '1'
+    () => localStorage.getItem(DISMISSED_UPDATE_KEY) === '1'
   );
 
   const {
@@ -21,13 +21,13 @@ export default function ReloadPrompt() {
 
   const handleUpdate = () => {
     setUpdating(true);
-    sessionStorage.removeItem(DISMISSED_UPDATE_KEY);
+    localStorage.removeItem(DISMISSED_UPDATE_KEY);
     // Pequeno delay para garantir que a tela de loading renderiza antes do reload
     setTimeout(() => updateServiceWorker(true), 80);
   };
 
   const handleDismiss = () => {
-    sessionStorage.setItem(DISMISSED_UPDATE_KEY, '1');
+    localStorage.setItem(DISMISSED_UPDATE_KEY, '1');
     setDismissed(true);
     setNeedRefresh(false);
   };
@@ -83,7 +83,7 @@ export default function ReloadPrompt() {
   }
 
   // ── Banner de atualização disponível ──────────────────────────────────────
-  if (!needRefresh || dismissed) return null;
+  if (!needRefresh || dismissed || hidden) return null;
 
   return (
     <div style={{
