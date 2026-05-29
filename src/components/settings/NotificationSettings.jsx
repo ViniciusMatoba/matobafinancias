@@ -146,13 +146,29 @@ export default function NotificationSettings({ user, cards, transactions, config
   };
 
   // ── Exibir notificação local (teste) ─────────────────────────────────────────
-  const showNotif = (title, body, tag = 'test') => {
+  // Android (browser + PWA) bloqueia new Notification() na thread principal.
+  // Notificações DEVEM ser criadas via serviceWorker.registration.showNotification().
+  const showNotif = async (title, body, tag = 'test') => {
     if (Notification.permission !== 'granted') {
-      // Fallback visual para quem ainda não concedeu permissão
       alert(`[Prévia da notificação]\n\n${title}\n${body}`);
       return;
     }
-    new Notification(title, { body, icon: '/icons/icon-192.png', badge: '/icons/icon-192.png', tag });
+    const opts = {
+      body,
+      icon:  './icons/icon-192.png',
+      badge: './icons/icon-192.png',
+      tag,
+      data:  { url: './' },
+      vibrate: [200, 100, 200],
+    };
+    // Usa o SW ativo quando disponível (obrigatório no Android)
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      const reg = await navigator.serviceWorker.ready;
+      reg.showNotification(title, opts);
+    } else {
+      // Fallback desktop (sem SW ativo ainda)
+      new Notification(title, opts);
+    }
   };
 
   // ── Funções de teste com dados reais ─────────────────────────────────────────
@@ -169,10 +185,10 @@ export default function NotificationSettings({ user, cards, transactions, config
         case 'n1': {
           const card = cards.find(c => c.diaVencimento === todayDay) || cards[0];
           if (!card) {
-            showNotif('💳 Fatura vence hoje!', 'Exemplo: Nubank — verifique o valor e pague!');
+            await showNotif('💳 Fatura vence hoje!', 'Exemplo: Nubank — verifique o valor e pague!');
           } else {
             const isToday = card.diaVencimento === todayDay;
-            showNotif('💳 Fatura vence hoje!',
+            await showNotif('💳 Fatura vence hoje!',
               `${card.nome} (dia ${card.diaVencimento})${isToday ? '' : ' — usando cartão disponível como exemplo'}`);
           }
           break;
@@ -185,9 +201,9 @@ export default function NotificationSettings({ user, cards, transactions, config
             || cards.find(c => c.diaVencimento > todayDay)
             || cards[0];
           if (!card) {
-            showNotif('📅 Fatura vence em 3 dias', 'Exemplo: Itaú — vence no dia 15');
+            await showNotif('📅 Fatura vence em 3 dias', 'Exemplo: Itaú — vence no dia 15');
           } else {
-            showNotif('📅 Fatura vence em 3 dias', `${card.nome} — vence no dia ${card.diaVencimento}`);
+            await showNotif('📅 Fatura vence em 3 dias', `${card.nome} — vence no dia ${card.diaVencimento}`);
           }
           break;
         }
@@ -199,9 +215,9 @@ export default function NotificationSettings({ user, cards, transactions, config
             || cards.find(c => c.diaFechamento > todayDay)
             || cards[0];
           if (!card) {
-            showNotif('⏰ Fatura fecha em 2 dias', 'Exemplo: Nubank — últimos dias para compras nesta fatura!');
+            await showNotif('⏰ Fatura fecha em 2 dias', 'Exemplo: Nubank — últimos dias para compras nesta fatura!');
           } else {
-            showNotif('⏰ Fatura fecha em 2 dias',
+            await showNotif('⏰ Fatura fecha em 2 dias',
               `${card.nome} fecha dia ${card.diaFechamento} — últimos dias para compras nesta fatura!`);
           }
           break;
@@ -212,7 +228,7 @@ export default function NotificationSettings({ user, cards, transactions, config
           const rendaMensal = config?.rendaMensal || 0;
           const budgetPcts  = config?.budgetPcts  || {};
           if (rendaMensal <= 0) {
-            showNotif('⚠️ Orçamento acima de 80%', 'Configure sua renda em Configurações → Orçamento para receber este alerta.');
+            await showNotif('⚠️ Orçamento acima de 80%', 'Configure sua renda em Configurações → Orçamento para receber este alerta.');
             break;
           }
           const spent = computeSpent(transactions, currentMonth);
@@ -225,12 +241,12 @@ export default function NotificationSettings({ user, cards, transactions, config
           if (worstId) {
             const cat    = SARDINHA_CATEGORIES[worstId];
             const budget = (rendaMensal * (Number(budgetPcts[worstId]) || 0)) / 100;
-            showNotif(
+            await showNotif(
               `⚠️ ${cat.label} em ${Math.round(worstPct)}%`,
               `${formatBRL(spent[worstId])} de ${formatBRL(budget)} utilizados este mês`
             );
           } else {
-            showNotif('⚠️ Orçamento sob controle', 'Todas as categorias abaixo de 80% — parabéns!');
+            await showNotif('⚠️ Orçamento sob controle', 'Todas as categorias abaixo de 80% — parabéns!');
           }
           break;
         }
@@ -240,7 +256,7 @@ export default function NotificationSettings({ user, cards, transactions, config
           const rendaMensal = config?.rendaMensal || 0;
           const budgetPcts  = config?.budgetPcts  || {};
           if (rendaMensal <= 0) {
-            showNotif('🚨 Orçamento estourado', 'Configure sua renda em Configurações → Orçamento para receber este alerta.');
+            await showNotif('🚨 Orçamento estourado', 'Configure sua renda em Configurações → Orçamento para receber este alerta.');
             break;
           }
           const spent    = computeSpent(transactions, currentMonth);
@@ -254,12 +270,12 @@ export default function NotificationSettings({ user, cards, transactions, config
           if (overCats.length > 0) {
             const { catId, budget, s } = overCats.reduce((a, b) => (b.s - b.budget > a.s - a.budget ? b : a));
             const cat = SARDINHA_CATEGORIES[catId];
-            showNotif(
+            await showNotif(
               `🚨 ${cat.label} estourou o orçamento!`,
               `${formatBRL(s - budget)} acima do limite de ${formatBRL(budget)}`
             );
           } else {
-            showNotif('🚨 Teste N5', 'Nenhuma categoria estourada este mês — ótimo controle!');
+            await showNotif('🚨 Teste N5', 'Nenhuma categoria estourada este mês — ótimo controle!');
           }
           break;
         }
@@ -275,13 +291,13 @@ export default function NotificationSettings({ user, cards, transactions, config
           const negDay     = projection.find(p => p.saldo < 0);
 
           if (negDay) {
-            showNotif(
+            await showNotif(
               '📉 Alerta: saldo negativo em 7 dias!',
               `Projeção: ${formatBRL(negDay.saldo)} em ${negDay.date.split('-').reverse().join('/')}`
             );
           } else {
             const lastSaldo = projection[projection.length - 1]?.saldo ?? saldoIni;
-            showNotif(
+            await showNotif(
               '📉 Projeção dos próximos 7 dias',
               `Saldo projetado: ${formatBRL(lastSaldo)} — tudo certo!`
             );
