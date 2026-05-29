@@ -20,6 +20,7 @@ import ReloadPrompt from './components/shared/ReloadPrompt';
 import Modal from './components/shared/Modal';
 import TransactionForm from './components/transactions/TransactionForm';
 import { DollarSign } from 'lucide-react';
+import PaymentModal from './components/projection/PaymentModal';
 
 export default function App() {
   const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
@@ -36,6 +37,7 @@ export default function App() {
   const [editingOccDate, setEditingOccDate] = useState(null);
   const [authConfirmed, setAuthConfirmed] = useState(false);
   const [recurrenceAction, setRecurrenceAction] = useState(null);
+  const [payingItem, setPayingItem] = useState(null); // { item, occDate }
 
   // Se o usuário acabou de voltar de um login Google via redirect
   useEffect(() => {
@@ -137,8 +139,13 @@ export default function App() {
     }
   };
 
-  // ── Registrar pagamento a partir da Projeção ──────────────────────────────────
-  const handlePay = async (item, occDate, { paymentDate, valor, scope }) => {
+  // ── Registrar pagamento (centralizado — usado por todas as telas) ─────────────
+  const openPayModal = (item, occDate) => setPayingItem({ item, occDate });
+
+  const confirmPayment = async ({ paymentDate, valor, scope }) => {
+    if (!payingItem) return;
+    const { item, occDate } = payingItem;
+    setPayingItem(null);
     const tx        = item.tx;
     const isCartao  = tx.tipo === 'cartao';
     const isVirtual = String(tx.id).includes('-proj-');
@@ -196,7 +203,7 @@ export default function App() {
         showToast('✅ Pagamento e próximas ocorrências atualizados!');
       }
     } catch (err) {
-      console.error('[handlePay]', err);
+      console.error('[confirmPayment]', err);
       showToast('Erro ao registrar pagamento.', 'error');
     }
   };
@@ -254,6 +261,7 @@ export default function App() {
           onSaveMeta={v => saveConfig({ metaMensalDiario: v })}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onPay={openPayModal}
           onNavigate={handleNavigate}
         />
       )}
@@ -262,6 +270,7 @@ export default function App() {
           transactions={transactions}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onPay={openPayModal}
         />
       )}
       {view === 'goals' && (
@@ -282,7 +291,7 @@ export default function App() {
           transactions={transactions}
           onEdit={handleEdit}
           onDelete={handleDelete}
-          onPay={handlePay}
+          onPay={openPayModal}
         />
       )}
       {view === 'settings' && (
@@ -358,6 +367,16 @@ export default function App() {
           </div>
         </div>
       </Modal>
+
+      {/* Modal de pagamento — centralizado, acessível de todas as telas */}
+      {payingItem && (
+        <PaymentModal
+          item={payingItem.item}
+          occDate={payingItem.occDate}
+          onConfirm={confirmPayment}
+          onClose={() => setPayingItem(null)}
+        />
+      )}
 
       {ToastNode}
     </>

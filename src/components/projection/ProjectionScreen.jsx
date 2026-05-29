@@ -4,7 +4,6 @@ import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../util
 import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { SARDINHA_CATEGORIES } from '../../utils/categories';
 import ProjectionCharts from './ProjectionCharts';
-import PaymentModal from './PaymentModal';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -37,7 +36,6 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete, onPay
   const [expanded, setExpanded] = useState({});
   const [isSummaryMode, setIsSummaryMode] = useState(false);
   const [isChartMode, setIsChartMode] = useState(false);
-  const [payingItem, setPayingItem] = useState(null); // { item, occDate }
   
   const today = todayStr();
   const [customFrom, setCustomFrom] = useState(today);
@@ -356,7 +354,7 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete, onPay
                             {onPay && item.tx.tipo !== 'entrada' && day.date >= today && (
                               <button
                                 type="button"
-                                onClick={e => { e.stopPropagation(); setPayingItem({ item, occDate: day.date }); }}
+                                onClick={e => { e.stopPropagation(); onPay(item, day.date); }}
                                 title="Registrar pagamento"
                                 style={{
                                   display: 'flex', alignItems: 'center', gap: 4,
@@ -453,18 +451,6 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete, onPay
       </div>
     </div>
 
-      {/* Modal de pagamento */}
-      {payingItem && (
-        <PaymentModal
-          item={payingItem.item}
-          occDate={payingItem.occDate}
-          onConfirm={(data) => {
-            onPay?.(payingItem.item, payingItem.occDate, data);
-            setPayingItem(null);
-          }}
-          onClose={() => setPayingItem(null)}
-        />
-      )}
     </>
   );
 }

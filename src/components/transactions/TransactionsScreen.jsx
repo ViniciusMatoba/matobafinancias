@@ -15,7 +15,7 @@ function monthStr(offset) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function TransactionsScreen({ transactions, onEdit, onDelete }) {
+export default function TransactionsScreen({ transactions, onEdit, onDelete, onPay }) {
   const [search, setSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [monthOffset, setMonthOffset] = useState(0);
@@ -168,7 +168,21 @@ export default function TransactionsScreen({ transactions, onEdit, onDelete }) {
                           </button>
                         )}
                       </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        {/* Botão Pagar — apenas para despesas futuras ou de hoje */}
+                        {onPay && occ.tx.tipo !== 'entrada' && occ.date >= todayStr() && (
+                          <button
+                            onClick={() => onPay(occ, occ.date)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 3,
+                              height: 26, padding: '0 7px', borderRadius: 7,
+                              background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
+                              color: '#10b981', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                            }}
+                          >
+                            💸 Pagar
+                          </button>
+                        )}
                         <button onClick={() => onEdit(occ.tx, occ.date)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2 }}><Pencil size={12} /></button>
                         <button onClick={() => onDelete(occ.tx.id, occ.date)} style={{ background: 'none', color: 'var(--saida)', display: 'flex', padding: 2 }}><Trash2 size={12} /></button>
                       </div>

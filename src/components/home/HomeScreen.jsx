@@ -23,7 +23,7 @@ function formatDayHeader(dateStr, isToday) {
 
 const FAR_PAST = '2020-01-01';
 
-export default function HomeScreen({ transactions, cards, wallets, config, onEdit, onDelete, onNavigate }) {
+export default function HomeScreen({ transactions, cards, wallets, config, onEdit, onDelete, onPay, onNavigate }) {
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
@@ -363,7 +363,21 @@ export default function HomeScreen({ transactions, cards, wallets, config, onEdi
                       </button>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {/* Botão Pagar — hoje e futuro, apenas despesas */}
+                    {onPay && occ.tx.tipo !== 'entrada' && selectedDate >= today && (
+                      <button
+                        onClick={() => onPay(occ, occ.date)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 3,
+                          height: 26, padding: '0 7px', borderRadius: 7,
+                          background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
+                          color: '#10b981', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                        }}
+                      >
+                        💸 Pagar
+                      </button>
+                    )}
                     <button onClick={() => onEdit(occ.tx, occ.date)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2 }}>
                       <Pencil size={12} />
                     </button>
