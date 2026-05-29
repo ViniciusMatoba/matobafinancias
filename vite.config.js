@@ -8,7 +8,16 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // injectManifest: usa firebase-messaging-sw.js como SW único
+      // que combina PWA caching (Workbox) + FCM push handling.
+      // Elimina o conflito de escopo entre sw.js e firebase-messaging-sw.js.
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'firebase-messaging-sw.js',
       registerType: 'prompt',
+      injectManifest: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
+      },
       includeAssets: ['favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
         name: 'Matoba Finanças',

@@ -74,7 +74,10 @@ export function useNotifications(user) {
 
   const registerMessagingSw = useCallback(async () => {
     if (!canUsePush()) return null;
-    return navigator.serviceWorker.register(getMessagingSwUrl());
+    // O firebase-messaging-sw.js já é registrado pelo vite-plugin-pwa como
+    // SW único (injectManifest). Não registramos um segundo SW — apenas
+    // aguardamos o SW ativo, eliminando o conflito de escopo que bloqueava push.
+    return navigator.serviceWorker.ready;
   }, [canUsePush]);
 
   const syncToken = useCallback(async ({ save = false, forceRefresh = false } = {}) => {
