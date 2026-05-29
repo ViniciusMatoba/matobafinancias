@@ -21,9 +21,13 @@ if (typeof workbox !== 'undefined') {
   );
 }
 
-// Ativa imediatamente — sem esperar por tabs fechadas
-// Garante que este SW sempre fica ativo (nunca fica em "waiting")
-self.addEventListener('install', () => self.skipWaiting());
+// Listener de mensagens para ativação sob demanda (SKIP_WAITING enviado pelo ReloadPrompt)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 self.addEventListener('activate', (event) =>
   event.waitUntil(self.clients.claim())
 );
