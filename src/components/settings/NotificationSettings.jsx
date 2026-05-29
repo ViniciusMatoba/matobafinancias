@@ -456,6 +456,7 @@ export default function NotificationSettings({ user, cards, transactions, config
             <DiagnosticItem label="Service worker" ok={diagnostics.serviceWorkerReady} value={diagnostics.serviceWorkerReady ? 'Registrado' : 'Pendente'} />
             <DiagnosticItem label="Token FCM salvo" ok={diagnostics.tokenSaved} value={diagnostics.tokenSaved ? 'Salvo' : 'Ausente'} />
             <DiagnosticItem label="Token sincronizado" ok={diagnostics.tokenMatchesSaved} value={diagnostics.tokenMatchesSaved ? 'Atual' : 'Verificar'} />
+            <DiagnosticItem label="Token com VAPID atual" ok={diagnostics.tokenUsesCurrentVapid} value={diagnostics.tokenUsesCurrentVapid ? 'Atual' : 'Renovar'} />
 
             {diagnostics.tokenUpdatedAt && (
               <p style={{ margin: '8px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>

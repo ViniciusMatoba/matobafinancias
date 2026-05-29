@@ -63,6 +63,7 @@ async function sendPushNotification(token, markdownText) {
   const { title, body } = notificationParts(markdownText);
   return admin.messaging().send({
     token,
+    notification: { title, body },
     data: {
       title,
       body,
@@ -70,6 +71,10 @@ async function sendPushNotification(token, markdownText) {
       tag: 'matoba-financas',
     },
     webpush: {
+      headers: {
+        TTL: '300',
+        Urgency: 'high',
+      },
       fcmOptions: { link: APP_URL },
       notification: {
         title,
@@ -1333,9 +1338,19 @@ exports.sendTestPush = onCall(
         '🔔 *Teste de push real*\nSe esta notificação chegou, o Firebase Cloud Messaging está funcionando.'
       );
 
+      await userRef.set({
+        lastTestPush: {
+          ok: true,
+          messageId,
+          tokenSuffix: String(fcmToken).slice(-12),
+          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+      }, { merge: true });
+
       return {
         ok: true,
         messageId,
+        tokenSuffix: String(fcmToken).slice(-12),
         sentAt: new Date().toISOString(),
       };
     } catch (err) {

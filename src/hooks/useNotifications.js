@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getToken, onMessage } from 'firebase/messaging';
+import { deleteToken, getToken, onMessage } from 'firebase/messaging';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { messaging, db, functions } from '../firebase';
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+const VAPID_ID = VAPID_KEY || 'firebase-default';
 
 function getNotificationPermission() {
   return typeof Notification !== 'undefined' ? Notification.permission : 'default';
@@ -65,6 +66,7 @@ export function useNotifications(user) {
     if (!db || !user || !token) return;
     await setDoc(doc(db, 'users', user.uid), {
       fcmToken: token,
+      fcmVapidKey: VAPID_ID,
       fcmUpdatedAt: new Date().toISOString(),
       email: user.email || '',
     }, { merge: true });
@@ -75,12 +77,16 @@ export function useNotifications(user) {
     return navigator.serviceWorker.register(getMessagingSwUrl());
   }, [canUsePush]);
 
-  const syncToken = useCallback(async ({ save = false } = {}) => {
+  const syncToken = useCallback(async ({ save = false, forceRefresh = false } = {}) => {
     if (!canUsePush() || getNotificationPermission() !== 'granted') {
       return null;
     }
 
     const swReg = await registerMessagingSw();
+    if (forceRefresh) {
+      try { await deleteToken(messaging); } catch { /* token pode ainda não existir */ }
+    }
+
     const tokenOptions = {
       serviceWorkerRegistration: swReg,
     };
@@ -106,6 +112,7 @@ export function useNotifications(user) {
     try {
       let token = fcmToken;
       let savedToken = null;
+      let savedVapidKey = null;
       let tokenUpdatedAt = null;
       let serviceWorkerReady = false;
 
@@ -114,15 +121,23 @@ export function useNotifications(user) {
         serviceWorkerReady = !!reg;
       }
 
-      if (pushSupported && currentPermission === 'granted') {
-        token = await syncToken({ save: true });
-        serviceWorkerReady = true;
-      }
-
       if (db && user) {
         const userSnap = await getDoc(doc(db, 'users', user.uid));
         savedToken = userSnap.data()?.fcmToken || null;
+        savedVapidKey = userSnap.data()?.fcmVapidKey || null;
         tokenUpdatedAt = userSnap.data()?.fcmUpdatedAt || null;
+      }
+
+      if (pushSupported && currentPermission === 'granted') {
+        token = await syncToken({ save: true, forceRefresh: !!savedVapidKey && savedVapidKey !== VAPID_ID });
+        serviceWorkerReady = true;
+
+        if (db && user) {
+          const userSnap = await getDoc(doc(db, 'users', user.uid));
+          savedToken = userSnap.data()?.fcmToken || null;
+          savedVapidKey = userSnap.data()?.fcmVapidKey || null;
+          tokenUpdatedAt = userSnap.data()?.fcmUpdatedAt || null;
+        }
       }
 
       setDiagnostics({
@@ -132,6 +147,7 @@ export function useNotifications(user) {
         tokenInMemory: !!token,
         tokenSaved: !!savedToken,
         tokenMatchesSaved: !!token && !!savedToken && token === savedToken,
+        tokenUsesCurrentVapid: savedVapidKey === VAPID_ID,
         tokenUpdatedAt,
         lastError: '',
       });
@@ -178,7 +194,7 @@ export function useNotifications(user) {
       setPermission(result);
       if (result !== 'granted') return { ok: false, reason: 'denied' };
 
-      const token = await syncToken({ save: true });
+      const token = await syncToken({ save: true, forceRefresh: true });
       await refreshDiagnostics();
 
       return token ? { ok: true } : { ok: false, reason: 'no_token' };
