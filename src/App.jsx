@@ -76,15 +76,18 @@ export default function App() {
 
   if (!user || !authConfirmed) {
     return (
-      <AuthScreen 
-        user={user}
-        redirectError={redirectError}
-        onLogin={async (e, p) => { await login(e, p); setAuthConfirmed(true); }}
-        onRegister={async (e, p) => { await register(e, p); setAuthConfirmed(true); }}
-        onLoginWithGoogle={async () => { await loginWithGoogle(); }}
-        onConfirm={() => setAuthConfirmed(true)}
-        onLogout={async () => { await logout(); setAuthConfirmed(false); }}
-      />
+      <>
+        <AuthScreen 
+          user={user}
+          redirectError={redirectError}
+          onLogin={async (e, p) => { await login(e, p); setAuthConfirmed(true); }}
+          onRegister={async (e, p) => { await register(e, p); setAuthConfirmed(true); }}
+          onLoginWithGoogle={async () => { await loginWithGoogle(); }}
+          onConfirm={() => setAuthConfirmed(true)}
+          onLogout={async () => { await logout(); setAuthConfirmed(false); }}
+        />
+        <ReloadPrompt />
+      </>
     );
   }
 
@@ -315,7 +318,6 @@ export default function App() {
       )}
 
       <BottomNav view={view} onNavigate={handleNavigate} />
-      <ReloadPrompt hidden={view === 'settings'} />
 
       <Modal
         open={formOpen}
