@@ -4,6 +4,7 @@ import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../util
 import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { SARDINHA_CATEGORIES } from '../../utils/categories';
 import ProjectionCharts from './ProjectionCharts';
+import PaymentModal from './PaymentModal';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -31,11 +32,12 @@ function formatRangeLabel(from, to) {
   return `${String(df).padStart(2,'0')} ${MONTH_NAMES[mf-1]} – ${String(dt).padStart(2,'0')} ${MONTH_NAMES[mt-1]} ${yt}`;
 }
 
-export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
+export default function ProjectionScreen({ transactions, onEdit, onDelete, onPay }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [expanded, setExpanded] = useState({});
   const [isSummaryMode, setIsSummaryMode] = useState(false);
   const [isChartMode, setIsChartMode] = useState(false);
+  const [payingItem, setPayingItem] = useState(null); // { item, occDate }
   
   const today = todayStr();
   const [customFrom, setCustomFrom] = useState(today);
@@ -77,6 +79,7 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
   const maxSaldo = days.length > 0 ? Math.max(...days.map(d => d.saldo)) : saldoInicial;
 
   return (
+    <>
     <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
 
       {/* Header fixo */}
@@ -347,41 +350,55 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
                           <span style={{ fontSize: 13, fontWeight: 600, color: cfg.color, flexShrink: 0 }}>
                             {cfg.sign > 0 ? '+' : '-'}{formatBRL(item.valor)}
                           </span>
-                          {/* Ações: editar / excluir */}
-                          {(onEdit || onDelete) && (
-                            <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                              {onEdit && (
-                                <button
-                                  type="button"
-                                  onClick={e => { e.stopPropagation(); onEdit(item.tx, item.date); }}
-                                  title="Editar"
-                                  style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    width: 28, height: 28, borderRadius: 7,
-                                    background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
-                                    color: 'var(--primary)', cursor: 'pointer',
-                                  }}
-                                >
-                                  <Pencil size={12} />
-                                </button>
-                              )}
-                              {onDelete && (
-                                <button
-                                  type="button"
-                                  onClick={e => { e.stopPropagation(); onDelete(item.tx.id, item.date); }}
-                                  title="Excluir"
-                                  style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    width: 28, height: 28, borderRadius: 7,
-                                    background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-                                    color: 'var(--saida)', cursor: 'pointer',
-                                  }}
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              )}
-                            </div>
-                          )}
+                          {/* Ações: pagar / editar / excluir */}
+                          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                            {/* Botão Pagar — visível para despesas de hoje em diante */}
+                            {onPay && item.tx.tipo !== 'entrada' && day.date >= today && (
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); setPayingItem({ item, occDate: day.date }); }}
+                                title="Registrar pagamento"
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 4,
+                                  height: 28, padding: '0 8px', borderRadius: 7,
+                                  background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.35)',
+                                  color: '#10b981', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                }}
+                              >
+                                💸 Pagar
+                              </button>
+                            )}
+                            {onEdit && (
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); onEdit(item.tx, item.date); }}
+                                title="Editar"
+                                style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  width: 28, height: 28, borderRadius: 7,
+                                  background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
+                                  color: 'var(--primary)', cursor: 'pointer',
+                                }}
+                              >
+                                <Pencil size={12} />
+                              </button>
+                            )}
+                            {onDelete && (
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); onDelete(item.tx.id, item.date); }}
+                                title="Excluir"
+                                style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  width: 28, height: 28, borderRadius: 7,
+                                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                                  color: 'var(--saida)', cursor: 'pointer',
+                                }}
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Sub-itens da fatura do cartão */}
@@ -435,5 +452,19 @@ export default function ProjectionScreen({ transactions, onEdit, onDelete }) {
         <div style={{ height: 8 }} />
       </div>
     </div>
+
+      {/* Modal de pagamento */}
+      {payingItem && (
+        <PaymentModal
+          item={payingItem.item}
+          occDate={payingItem.occDate}
+          onConfirm={(data) => {
+            onPay?.(payingItem.item, payingItem.occDate, data);
+            setPayingItem(null);
+          }}
+          onClose={() => setPayingItem(null)}
+        />
+      )}
+    </>
   );
 }

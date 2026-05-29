@@ -137,6 +137,70 @@ export default function App() {
     }
   };
 
+  // ── Registrar pagamento a partir da Projeção ──────────────────────────────────
+  const handlePay = async (item, occDate, { paymentDate, valor, scope }) => {
+    const tx        = item.tx;
+    const isCartao  = tx.tipo === 'cartao';
+    const isVirtual = String(tx.id).includes('-proj-');
+
+    try {
+      // Cartão ou projeção virtual de parcelas → cria lançamento de pagamento
+      if (isCartao || isVirtual) {
+        const nomeDesc = tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura';
+        await add({
+          tipo:       'saida',
+          frequencia: 'unico',
+          descricao:  nomeDesc,
+          valor,
+          dataInicio: paymentDate,
+          categoria:  'custos_fixos',
+          dataFim:    null,
+        });
+        showToast('✅ Pagamento de fatura registrado!');
+        return;
+      }
+
+      // Lançamento único ou parcela → atualiza a data diretamente
+      if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+        await update(tx.id, { dataInicio: paymentDate, valor });
+        showToast('✅ Pagamento registrado!');
+        return;
+      }
+
+      // Recorrente (mensal / semanal / diario)
+      if (scope === 'single') {
+        // Cria exceção para esta ocorrência e novo lançamento único na data real
+        const exclusoes = [...(tx.exclusoes || [])];
+        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+        await update(tx.id, { exclusoes });
+        await add({
+          tipo:       tx.tipo,
+          frequencia: 'unico',
+          descricao:  tx.descricao,
+          valor,
+          dataInicio: paymentDate,
+          categoria:  tx.categoria || null,
+          dataFim:    null,
+        });
+        showToast('✅ Pagamento registrado (só esta ocorrência)!');
+      } else if (scope === 'future') {
+        // Encerra a série atual no dia anterior à ocorrência
+        const d = new Date(`${occDate}T12:00:00`);
+        d.setDate(d.getDate() - 1);
+        const dataFim = d.toISOString().slice(0, 10);
+        await update(tx.id, { dataFim });
+        // Nova série a partir da data de pagamento (mesmo padrão de frequência)
+        // eslint-disable-next-line no-unused-vars
+        const { id: _id, exclusoes: _excl, dataFim: _df, ...txBase } = tx;
+        await add({ ...txBase, dataInicio: paymentDate, valor, dataFim: null, exclusoes: [] });
+        showToast('✅ Pagamento e próximas ocorrências atualizados!');
+      }
+    } catch (err) {
+      console.error('[handlePay]', err);
+      showToast('Erro ao registrar pagamento.', 'error');
+    }
+  };
+
   const confirmRecurrenceAction = async (scope) => {
     const { tx, occDate, newData, action } = recurrenceAction;
     setRecurrenceAction(null);
@@ -218,6 +282,7 @@ export default function App() {
           transactions={transactions}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onPay={handlePay}
         />
       )}
       {view === 'settings' && (
