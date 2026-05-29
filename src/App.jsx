@@ -133,8 +133,37 @@ export default function App() {
 
   const handleSave = async (data) => {
     const { _overwriteId, ...cleanData } = data;
+
+    // Caso de edição de fatura de cartão virtual projetada
+    if (editing && String(editing.id).includes('-proj-') && editingOccDate) {
+      const parentId = editing.id.split('-proj-')[0];
+      const parentTx = transactions.find(t => t.id === parentId);
+      if (parentTx) {
+        // 1. Exclui a projeção original nesta data
+        const exclusoes = [...(parentTx.exclusoes || [])];
+        if (!exclusoes.includes(editingOccDate)) exclusoes.push(editingOccDate);
+        await update(parentId, { exclusoes });
+
+        // 2. Cria a nova fatura real com os valores modificados
+        await add({
+          ...cleanData,
+          tipo: 'cartao',
+          frequencia: 'unico',
+          dataInicio: editingOccDate,
+          categoria: null,
+          dataFim: null,
+          itens: editing.itens || [],
+          cartaoId: editing.cartaoId || null
+        });
+        showToast('Fatura editada separadamente!');
+      }
+      setFormOpen(false);
+      setEditing(null);
+      setEditingOccDate(null);
+      return;
+    }
     
-    if (editing && ['diario','semanal','mensal'].includes(editing.frequencia) && editingOccDate) {
+    if (editing && ['diario','semanal','mensal','parcelado'].includes(editing.frequencia) && editingOccDate) {
       setRecurrenceAction({ tx: editing, occDate: editingOccDate, newData: cleanData, action: 'edit' });
       setFormOpen(false);
       setEditing(null);
@@ -156,10 +185,23 @@ export default function App() {
   };
 
   const handleDelete = async (id, occDate) => {
+    // Caso de remoção de fatura de cartão virtual projetada
+    if (String(id).includes('-proj-')) {
+      const parentId = id.split('-proj-')[0];
+      const parentTx = transactions.find(t => t.id === parentId);
+      if (parentTx && window.confirm('Remover esta fatura projetada?')) {
+        const exclusoes = [...(parentTx.exclusoes || [])];
+        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+        await update(parentId, { exclusoes });
+        showToast('Fatura projetada removida.');
+      }
+      return;
+    }
+
     const tx = transactions.find(t => t.id === id);
     if (!tx) return;
     
-    if (['diario','semanal','mensal'].includes(tx.frequencia) && occDate) {
+    if (['diario','semanal','mensal','parcelado'].includes(tx.frequencia) && occDate) {
       setRecurrenceAction({ tx, occDate, action: 'delete' });
       return;
     }

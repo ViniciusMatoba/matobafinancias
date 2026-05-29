@@ -11,6 +11,14 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.5.3 (29/05/2026)',
+    title: 'Edição e Exclusão de Projeções 🛠️',
+    items: [
+      'Correção na exclusão e edição de faturas de cartão projetadas (virtuais): agora é possível remover ou editar faturas futuras, gerando a exclusão na transação pai de cartão e permitindo criar exceções personalizadas.',
+      'Suporte completo a lançamentos parcelados: a edição e exclusão de ocorrências individuais de compras parceladas agora segue o mesmo padrão flexível de recorrência (apenas esta, esta e próximas, todas) e respeita a data final definida no motor de projeção.'
+    ]
+  },
+  {
     version: 'v1.5.2 (29/05/2026)',
     title: 'Notificações PWA Globais & Ajustes Finos 🚀',
     items: [
@@ -476,7 +484,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Notas de Atualização
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Versão v1.5.2 ativa
+                  Versão v1.5.3 ativa
                 </span>
               </div>
             </div>

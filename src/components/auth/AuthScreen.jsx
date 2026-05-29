@@ -27,6 +27,14 @@ const ERROR_MSGS = {
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.5.3 (29/05/2026)',
+    title: 'Edição e Exclusão de Projeções 🛠️',
+    items: [
+      'Correção na exclusão e edição de faturas de cartão projetadas (virtuais): agora é possível remover ou editar faturas futuras, gerando a exclusão na transação pai de cartão e permitindo criar exceções personalizadas.',
+      'Suporte completo a lançamentos parcelados: a edição e exclusão de ocorrências individuais de compras parceladas agora segue o mesmo padrão flexível de recorrência (apenas esta, esta e próximas, todas) e respeita a data final definida no motor de projeção.'
+    ]
+  },
+  {
     version: 'v1.5.2 (29/05/2026)',
     title: 'Notificações PWA Globais & Ajustes Finos 🚀',
     items: [
@@ -327,7 +335,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       {/* Rótulo de versão com notas de atualização */}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Versão v1.5.2
+          Versão v1.5.3
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
         <button

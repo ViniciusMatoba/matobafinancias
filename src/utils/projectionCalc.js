@@ -61,7 +61,7 @@ export function expandOccurrences(tx, from, to) {
     const remaining = Math.max(0, (tx.totalParcelas || 1) - startParcela + 1);
     for (let i = 0; i < remaining; i++) {
       const date = addMonths(tx.dataInicio, i);
-      if (date > to) break;
+      if (date > to || (tx.dataFim && date > tx.dataFim)) break;
       if (date >= from) {
         if (!tx.exclusoes?.includes(date)) {
           occurrences.push({ date, valor: tx.valor, sinal: sign, tx, parcela: startParcela + i, totalParcelas: tx.totalParcelas });
