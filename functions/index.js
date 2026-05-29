@@ -63,7 +63,6 @@ async function sendPushNotification(token, markdownText) {
   const { title, body } = notificationParts(markdownText);
   return admin.messaging().send({
     token,
-    notification: { title, body },
     data: {
       title,
       body,
@@ -76,15 +75,6 @@ async function sendPushNotification(token, markdownText) {
         Urgency: 'high',
       },
       fcmOptions: { link: APP_URL },
-      notification: {
-        title,
-        body,
-        icon: `${APP_URL}icons/icon-192.png`,
-        badge: `${APP_URL}icons/icon-192.png`,
-        tag: 'matoba-financas',
-        requireInteraction: false,
-        data: { url: APP_URL },
-      },
     },
   });
 }
