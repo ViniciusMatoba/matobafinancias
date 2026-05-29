@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -23,7 +23,7 @@ function formatDayHeader(dateStr, isToday) {
 
 const FAR_PAST = '2020-01-01';
 
-export default function HomeScreen({ transactions, cards, wallets, goals, config, onEdit, onDelete, onPay, onNavigate }) {
+export default function HomeScreen({ transactions, cards, wallets, goals, config, onEdit, onClone, onDelete, onPay, onNavigate }) {
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
 
@@ -613,10 +613,15 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                         💸 Pagar
                       </button>
                     )}
-                    <button onClick={() => onEdit(occ.tx, occ.date)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2 }}>
+                    {onClone && (
+                      <button onClick={() => onClone(occ.tx)} title="Repetir lançamento" style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2, cursor: 'pointer' }}>
+                        <Copy size={12} />
+                      </button>
+                    )}
+                    <button onClick={() => onEdit(occ.tx, occ.date)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2, cursor: 'pointer' }}>
                       <Pencil size={12} />
                     </button>
-                    <button onClick={() => onDelete(occ.tx.id, occ.date)} style={{ background: 'none', color: 'var(--saida)', display: 'flex', padding: 2 }}>
+                    <button onClick={() => onDelete(occ.tx.id, occ.date)} style={{ background: 'none', color: 'var(--saida)', display: 'flex', padding: 2, cursor: 'pointer' }}>
                       <Trash2 size={12} />
                     </button>
                   </div>

@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { Plus, Pencil, Trash2, Wallet } from 'lucide-react';
-import { formatBRL, formatBRLInput, normalizeBRLInput } from '../../utils/formatters';
+import { useState, useMemo } from 'react';
+import { Plus, Pencil, Trash2, Wallet, FileText, ArrowRightLeft, Calendar } from 'lucide-react';
+import { formatBRL, formatBRLInput, normalizeBRLInput, addDays } from '../../utils/formatters';
+import { calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
+import Modal from '../shared/Modal';
 
 const DEFAULT_COLOR = '#8b5cf6';
 
@@ -9,13 +11,70 @@ const COLOR_OPTIONS = [
   '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef', '#f43f5e', '#64748b'
 ];
 
-export default function WalletManager({ wallets, onAdd, onUpdate, onRemove }) {
+export default function WalletManager({ wallets, transactions = [], onAdd, onUpdate, onRemove }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
   const [nome, setNome] = useState('');
   const [cor, setCor] = useState(DEFAULT_COLOR);
   const [saldoInicial, setSaldoInicial] = useState('');
+
+  const [activeWallet, setActiveWallet] = useState(null);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  const handleOpenStatement = (wallet) => {
+    setActiveWallet(wallet);
+    // Configura o filtro padrão para os últimos 30 dias
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    setFromDate(d.toISOString().slice(0, 10));
+    setToDate(new Date().toISOString().slice(0, 10));
+  };
+
+  const statementData = useMemo(() => {
+    if (!activeWallet) return null;
+
+    const walletTxs = transactions.filter(t => t.carteiraId === activeWallet.id);
+    
+    // Saldo inicial acumulado antes de de fromDate
+    const beforeSaldo = calcSaldo(walletTxs, '2020-01-01', addDays(fromDate, -1));
+    const saldoAbertura = (activeWallet.saldoInicial || 0) + beforeSaldo;
+
+    // Ocorrências do período
+    const occs = walletTxs.flatMap(tx =>
+      expandOccurrences(tx, fromDate, toDate).map(o => ({ ...o, tx }))
+    );
+    // Ordenação cronológica crescente
+    occs.sort((a, b) => a.date.localeCompare(b.date));
+
+    let runningSaldo = saldoAbertura;
+    const historyList = occs.map(o => {
+      runningSaldo += o.sinal * o.valor;
+      return {
+        ...o,
+        saldoProgressivo: runningSaldo
+      };
+    });
+
+    // Inverte para exibir mais recente em primeiro
+    historyList.reverse();
+
+    let totalEntradas = 0;
+    let totalSaidas = 0;
+    occs.forEach(o => {
+      if (o.sinal > 0) totalEntradas += o.valor;
+      else totalSaidas += o.valor;
+    });
+
+    return {
+      saldoAbertura,
+      saldoFechamento: runningSaldo,
+      historyList,
+      totalEntradas,
+      totalSaidas
+    };
+  }, [activeWallet, transactions, fromDate, toDate]);
 
   const resetForm = () => {
     setNome('');
@@ -84,10 +143,18 @@ export default function WalletManager({ wallets, onAdd, onUpdate, onRemove }) {
                 </p>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={() => handleEdit(w)} style={{ background: 'none', color: 'var(--text-muted)', padding: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => handleOpenStatement(w)}
+                  title="Ver extrato"
+                  style={{ background: 'none', color: 'var(--primary)', padding: 4, display: 'flex', alignItems: 'center', cursor: 'pointer' }}
+                >
+                  <FileText size={16} />
+                </button>
+                <button type="button" onClick={() => handleEdit(w)} style={{ background: 'none', color: 'var(--text-muted)', padding: 4, cursor: 'pointer' }}>
                   <Pencil size={16} />
                 </button>
-                <button onClick={() => { if(window.confirm('Remover carteira?')) onRemove(w.id); }} style={{ background: 'none', color: 'var(--saida)', padding: 4 }}>
+                <button type="button" onClick={() => { if(window.confirm('Remover carteira?')) onRemove(w.id); }} style={{ background: 'none', color: 'var(--saida)', padding: 4, cursor: 'pointer' }}>
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -157,6 +224,102 @@ export default function WalletManager({ wallets, onAdd, onUpdate, onRemove }) {
             </button>
           </div>
         </form>
+      )}
+      {/* Modal de Extrato por Carteira */}
+      {activeWallet && statementData && (
+        <Modal
+          open={!!activeWallet}
+          onClose={() => setActiveWallet(null)}
+          title={`Extrato – ${activeWallet.nome}`}
+        >
+          <div style={{ padding: '0 4px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Seletor de Período */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '10px' }}>
+              <div>
+                <label style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>Data Início</label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={e => setFromDate(e.target.value)}
+                  style={{ width: '100%', padding: '6px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', colorScheme: 'dark', background: 'var(--bg-card)' }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, display: 'block' }}>Data Fim</label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={e => setToDate(e.target.value)}
+                  style={{ width: '100%', padding: '6px', fontSize: 12, border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-primary)', colorScheme: 'dark', background: 'var(--bg-card)' }}
+                />
+              </div>
+            </div>
+
+            {/* Painel Financeiro Resumido */}
+            <div style={{
+              background: 'var(--bg-surface)', border: '1px solid var(--border)',
+              borderRadius: 12, padding: '12px', display: 'flex', flexDirection: 'column', gap: 6,
+              fontSize: 11, color: 'var(--text-secondary)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Saldo Abertura:</span>
+                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{formatBRL(statementData.saldoAbertura)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--entrada)' }}>
+                <span>Total Entradas (+):</span>
+                <span style={{ fontWeight: 600 }}>{formatBRL(statementData.totalEntradas)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--saida)' }}>
+                <span>Total Saídas (-):</span>
+                <span style={{ fontWeight: 600 }}>{formatBRL(statementData.totalSaidas)}</span>
+              </div>
+              <div style={{
+                display: 'flex', justifyContent: 'space-between',
+                borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 2,
+                fontSize: 12, fontWeight: 700
+              }}>
+                <span style={{ color: 'var(--text-primary)' }}>Saldo Fechamento:</span>
+                <span style={{ color: statementData.saldoFechamento >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>{formatBRL(statementData.saldoFechamento)}</span>
+              </div>
+            </div>
+
+            {/* Lista Cronológica */}
+            <p style={{ margin: '4px 0 0', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Histórico de Lançamentos</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '35vh', overflowY: 'auto', paddingRight: 2 }}>
+              {statementData.historyList.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 12, margin: '20px 0' }}>
+                  Nenhuma movimentação no período selecionado.
+                </p>
+              ) : statementData.historyList.map((o, idx) => {
+                const isEntrada = o.sinal > 0;
+                return (
+                  <div key={idx} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '8px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                    borderRadius: 10, fontSize: 12
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {o.tx.descricao || (isEntrada ? 'Entrada' : 'Saída')}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>
+                        {o.date.slice(8, 10)}/{o.date.slice(5, 7)}
+                      </p>
+                    </div>
+                    <div style={{ textAlign: 'right', marginLeft: 8 }}>
+                      <p style={{ margin: 0, fontWeight: 700, color: isEntrada ? 'var(--entrada)' : 'var(--saida)' }}>
+                        {isEntrada ? '+' : '-'}{formatBRL(o.valor)}
+                      </p>
+                      <p style={{ margin: 0, fontSize: 9, color: 'var(--text-muted)' }}>
+                        {formatBRL(o.saldoProgressivo)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

@@ -45,7 +45,7 @@ const CHANGELOG_DATA = [
   }
 ];
 
-export default function SettingsScreen({ user, cards, wallets, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout }) {
+export default function SettingsScreen({ user, cards, wallets, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour }) {
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [walletsOpen, setWalletsOpen] = useState(false);
@@ -353,7 +353,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
           {walletsOpen && (
             <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
               <div style={{ paddingTop: 14 }}>
-                <WalletManager wallets={wallets || []} onAdd={onAddWallet} onUpdate={onUpdateWallet} onRemove={onRemoveWallet} />
+                <WalletManager wallets={wallets || []} transactions={transactions} onAdd={onAddWallet} onUpdate={onUpdateWallet} onRemove={onRemoveWallet} />
               </div>
             </div>
           )}
@@ -577,6 +577,21 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
             </div>
           )}
         </div>
+
+        {/* Reiniciar Tour Guiado */}
+        <button
+          type="button"
+          onClick={onResetTour}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            padding: '14px', marginBottom: 16, borderRadius: 14,
+            background: 'var(--bg-card)', border: '1px solid var(--border)',
+            color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            transition: 'background 0.2s, border-color 0.2s'
+          }}
+        >
+          <span>🚀</span> Reiniciar Tour do Aplicativo
+        </button>
 
         {/* Nota de segurança */}
         <div style={{

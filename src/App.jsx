@@ -15,6 +15,8 @@ import TransactionsScreen from './components/transactions/TransactionsScreen';
 import ProjectionScreen from './components/projection/ProjectionScreen';
 import GoalsScreen from './components/goals/GoalsScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
+import ReportsScreen from './components/reports/ReportsScreen';
+import TourGuide from './components/shared/TourGuide';
 import BottomNav from './components/shared/BottomNav';
 import ReloadPrompt from './components/shared/ReloadPrompt';
 import Modal from './components/shared/Modal';
@@ -38,11 +40,25 @@ export default function App() {
   const [authConfirmed, setAuthConfirmed] = useState(false);
   const [recurrenceAction, setRecurrenceAction] = useState(null);
   const [payingItem, setPayingItem] = useState(null); // { item, occDate }
+  const [tourActive, setTourActive] = useState(false);
 
   // Se o usuário acabou de voltar de um login Google via redirect
   useEffect(() => {
     if (justLoggedIn) setAuthConfirmed(true);
   }, [justLoggedIn]);
+
+  // Ativa o tour guiado se o onboarding estiver concluído e o tour não tiver sido feito
+  useEffect(() => {
+    if (user && config && config.onboardingDone && !config.tourDone) {
+      setTourActive(true);
+    }
+  }, [user, config]);
+
+  const handleCompleteTour = async () => {
+    setTourActive(false);
+    await saveConfig({ tourDone: true });
+    showToast('🏆 Tour guiado concluído! Aproveite o app.');
+  };
 
   if (!isConfigured) return <SetupScreen />;
 
@@ -103,6 +119,18 @@ export default function App() {
 
   const handleEdit = (tx, occDate) => { setEditing(tx); setEditingOccDate(occDate); setFormOpen(true); };
 
+  const handleClone = (tx) => {
+    // eslint-disable-next-line no-unused-vars
+    const { id, criadoEm, exclusoes, dataFim, ...cloneBase } = tx;
+    const cloned = {
+      ...cloneBase,
+      dataInicio: new Date().toISOString().slice(0, 10),
+    };
+    setEditing(cloned);
+    setEditingOccDate(null);
+    setFormOpen(true);
+  };
+
   const handleSave = async (data) => {
     const { _overwriteId, ...cleanData } = data;
     
@@ -114,7 +142,7 @@ export default function App() {
       return;
     }
 
-    if (editing || _overwriteId) {
+    if ((editing && editing.id) || _overwriteId) {
       const id = editing?.id || _overwriteId;
       await update(id, cleanData);
       showToast(_overwriteId && !editing ? 'Lançamento substituído!' : 'Lançamento atualizado!');
@@ -264,6 +292,7 @@ export default function App() {
           metaMensal={config.metaMensalDiario}
           onSaveMeta={v => saveConfig({ metaMensalDiario: v })}
           onEdit={handleEdit}
+          onClone={handleClone}
           onDelete={handleDelete}
           onPay={openPayModal}
           onNavigate={handleNavigate}
@@ -272,9 +301,12 @@ export default function App() {
       {view === 'history' && (
         <TransactionsScreen
           transactions={transactions}
+          wallets={wallets}
           onEdit={handleEdit}
+          onClone={handleClone}
           onDelete={handleDelete}
           onPay={openPayModal}
+          onUpdate={update}
         />
       )}
       {view === 'goals' && (
@@ -295,8 +327,16 @@ export default function App() {
         <ProjectionScreen
           transactions={transactions}
           onEdit={handleEdit}
+          onClone={handleClone}
           onDelete={handleDelete}
           onPay={openPayModal}
+        />
+      )}
+      {view === 'reports' && (
+        <ReportsScreen
+          transactions={transactions}
+          config={config}
+          onNavigate={handleNavigate}
         />
       )}
       {view === 'settings' && (
@@ -314,6 +354,7 @@ export default function App() {
           onUpdateWallet={updateWallet}
           onRemoveWallet={removeWallet}
           onLogout={logout}
+          onResetTour={async () => { await saveConfig({ tourDone: false }); setView('home'); }}
         />
       )}
 
@@ -380,6 +421,11 @@ export default function App() {
           onConfirm={confirmPayment}
           onClose={() => setPayingItem(null)}
         />
+      )}
+
+      {/* Tour Guiado */}
+      {tourActive && (
+        <TourGuide onComplete={handleCompleteTour} />
       )}
 
       {ToastNode}
