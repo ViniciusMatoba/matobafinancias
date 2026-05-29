@@ -262,13 +262,36 @@ function checkNotifications(cards, transactions, config, prefs) {
     let saidas7 = 0;
     for (const tx of transactions) {
       if (tx.tipo === 'entrada') continue;
-      if (tx.frequencia === 'unico' && tx.dataInicio > todayStr && tx.dataInicio <= in7) {
-        saidas7 += Number(tx.valor) || 0;
+      const v = Number(tx.valor) || 0;
+      if (!v || !tx.dataInicio) continue;
+
+      if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+        // Lançamento único ou parcela: verifica se cai na janela
+        if (tx.dataInicio > todayStr && tx.dataInicio <= in7) saidas7 += v;
+
       } else if (tx.frequencia === 'mensal') {
-        const pd = new Date(tx.dataInicio + 'T00:00:00');
-        pd.setDate(hoje.getDate()); // próximo dia do mês
-        const ds = dateStrFromDate(pd);
-        if (ds > todayStr && ds <= in7) saidas7 += Number(tx.valor) || 0;
+        // Verifica mês corrente E mês seguinte para cobrir qualquer janela de 7 dias
+        const txDay = parseInt(tx.dataInicio.split('-')[2], 10);
+        for (let delta = 0; delta <= 1; delta++) {
+          const occ = new Date(hoje.getFullYear(), hoje.getMonth() + delta, txDay);
+          const ds  = dateStrFromDate(occ);
+          const inWindow    = ds > todayStr && ds <= in7;
+          const afterStart  = ds >= tx.dataInicio;
+          const beforeEnd   = !tx.dataFim || ds <= tx.dataFim;
+          if (inWindow && afterStart && beforeEnd) saidas7 += v;
+        }
+
+      } else if (tx.frequencia === 'semanal') {
+        // Avança da dataInicio até o primeiro dia futuro, depois verifica janela
+        let cur = new Date(tx.dataInicio + 'T00:00:00');
+        const endDate = tx.dataFim ? tx.dataFim : in7;
+        // Pula para próxima ocorrência futura sem loop desnecessário
+        while (dateStrFromDate(cur) <= todayStr) cur.setDate(cur.getDate() + 7);
+        while (dateStrFromDate(cur) <= in7) {
+          const ds = dateStrFromDate(cur);
+          if (ds <= endDate) saidas7 += v;
+          cur.setDate(cur.getDate() + 7);
+        }
       }
     }
 
@@ -285,11 +308,49 @@ function checkNotifications(cards, transactions, config, prefs) {
     const d7ago = new Date(hoje); d7ago.setDate(d7ago.getDate() - 7);
     const fromStr = dateStrFromDate(d7ago);
     let entradas = 0, saidas = 0;
+
     for (const tx of transactions) {
-      if (!tx.dataInicio || tx.dataInicio < fromStr || tx.dataInicio > todayStr) continue;
-      if (tx.tipo === 'entrada') entradas += Number(tx.valor) || 0;
-      else                       saidas   += Number(tx.valor) || 0;
+      if (!tx.dataInicio || tx.dataInicio > todayStr) continue;
+      const v    = Number(tx.valor) || 0;
+      if (!v) continue;
+      const isEnt = tx.tipo === 'entrada';
+
+      if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+        if (tx.dataInicio >= fromStr) {
+          if (isEnt) entradas += v; else saidas += v;
+        }
+      } else if (tx.frequencia === 'mensal') {
+        // Expande ocorrências mensais dentro da janela
+        let cur = new Date(tx.dataInicio + 'T00:00:00');
+        const endDate = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
+        while (dateStrFromDate(cur) <= endDate) {
+          const ds = dateStrFromDate(cur);
+          if (ds >= fromStr) {
+            if (isEnt) entradas += v; else saidas += v;
+          }
+          cur.setMonth(cur.getMonth() + 1);
+        }
+      } else if (tx.frequencia === 'semanal') {
+        let cur = new Date(tx.dataInicio + 'T00:00:00');
+        const endDate = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
+        while (dateStrFromDate(cur) <= endDate) {
+          const ds = dateStrFromDate(cur);
+          if (ds >= fromStr) {
+            if (isEnt) entradas += v; else saidas += v;
+          }
+          cur.setDate(cur.getDate() + 7);
+        }
+      } else if (tx.frequencia === 'diario') {
+        // Valor já é diário; soma os dias da janela que o tx cobre
+        const inicio = tx.dataInicio > fromStr ? tx.dataInicio : fromStr;
+        const fim    = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
+        if (inicio <= fim) {
+          const dias = Math.round((new Date(fim) - new Date(inicio)) / 86400000) + 1;
+          if (isEnt) entradas += v * dias; else saidas += v * dias;
+        }
+      }
     }
+
     msgs.push(`📊 *Resumo semanal*\n✅ Entradas: ${formatBRL(entradas)}\n❌ Saídas: ${formatBRL(saidas)}\n💰 Saldo da semana: *${formatBRL(entradas - saidas)}*`);
   }
 
@@ -328,8 +389,9 @@ function checkNotifications(cards, transactions, config, prefs) {
       msg += `_Nenhum lançamento avulso para hoje._\n\n`;
     }
 
-    // Inclui faturas só se N1 não estiver ativo (evitar duplicata)
-    if (tipos.n1 !== true) {
+    // Inclui faturas só se N1 estiver explicitamente desativado
+    // (N1 é ativo por padrão quando tipos.n1 !== false, então só omite quando === false)
+    if (tipos.n1 === false) {
       const fatHoje = cards.filter(c => c.diaVencimento === day);
       if (fatHoje.length > 0) {
         msg += `💳 *Fatura vencendo hoje:*\n`;
