@@ -42,6 +42,9 @@ export default function App() {
   const [payingItem, setPayingItem] = useState(null); // { item, occDate }
   const [tourActive, setTourActive] = useState(false);
 
+  // Atualização do PWA só pode ser aplicada na tela de login
+  const isLoginScreen = !isConfigured || user === undefined || !user || !authConfirmed;
+
   // Se o usuário acabou de voltar de um login Google via redirect
   useEffect(() => {
     if (justLoggedIn) setAuthConfirmed(true);
@@ -126,6 +129,7 @@ export default function App() {
             onDelete={handleDelete}
             onPay={openPayModal}
             onNavigate={handleNavigate}
+            onAdjustBalance={handleAdjustBalance}
           />
         )}
         {view === 'history' && (
@@ -258,6 +262,34 @@ export default function App() {
           <TourGuide onComplete={handleCompleteTour} />
         )}
       </>
+    );
+  };
+
+  // ── Ajuste manual do saldo global ────────────────────────────────────────────
+  const handleAdjustBalance = async (diff, justificativa) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const isPositive = diff > 0;
+    const valor = Math.abs(diff);
+
+    const descricao = isPositive
+      ? 'Ajuste de saldo'
+      : `Ajuste de saldo – ${justificativa}`;
+
+    await add({
+      tipo:       isPositive ? 'entrada' : 'saida',
+      frequencia: 'unico',
+      descricao,
+      valor,
+      dataInicio: today,
+      categoria:  null,
+      dataFim:    null,
+      conferido:  true,
+    });
+
+    showToast(
+      isPositive
+        ? `✅ Saldo ajustado: +${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}`
+        : `✅ Ajuste de saldo registrado: −${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}`
     );
   };
 
@@ -498,7 +530,7 @@ export default function App() {
   return (
     <>
       {renderScreen()}
-      <ReloadPrompt />
+      <ReloadPrompt isLoginScreen={isLoginScreen} />
       {ToastNode}
     </>
   );

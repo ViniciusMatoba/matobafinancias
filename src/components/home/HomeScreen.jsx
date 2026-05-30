@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import BudgetSummaryCard from './BudgetSummaryCard';
+import AdjustBalanceModal from './AdjustBalanceModal';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -23,9 +24,10 @@ function formatDayHeader(dateStr, isToday) {
 
 const FAR_PAST = '2020-01-01';
 
-export default function HomeScreen({ transactions, cards, wallets, goals, config, onEdit, onClone, onDelete, onPay, onNavigate }) {
+export default function HomeScreen({ transactions, cards, wallets, goals, config, onEdit, onClone, onDelete, onPay, onNavigate, onAdjustBalance }) {
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
+  const [adjustOpen, setAdjustOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem('matoba:sobra-banner-dismissed') === todayStr()
   );
@@ -281,13 +283,31 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--text-secondary)' }}>
             {isFuture ? 'Saldo projetado' : 'Saldo Global'}
           </p>
-          <p style={{
-            margin: 0, fontSize: 40, fontWeight: 700,
-            color: saldoPositivo ? 'var(--entrada)' : 'var(--saida)',
-            letterSpacing: -1,
-          }}>
-            {formatBRL(saldoAcumulado)}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <p style={{
+              margin: 0, fontSize: 40, fontWeight: 700,
+              color: saldoPositivo ? 'var(--entrada)' : 'var(--saida)',
+              letterSpacing: -1,
+            }}>
+              {formatBRL(saldoAcumulado)}
+            </p>
+            {/* Botão ajustar saldo — apenas no dia de hoje */}
+            {isToday && onAdjustBalance && (
+              <button
+                onClick={() => setAdjustOpen(true)}
+                title="Ajustar saldo global"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32, height: 32, borderRadius: 9,
+                  background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)',
+                  color: 'var(--primary, #6366f1)', cursor: 'pointer', flexShrink: 0,
+                  transition: 'background 0.2s',
+                }}
+              >
+                <SlidersHorizontal size={15} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Contas/Carteiras em Scroll Horizontal */}
@@ -483,6 +503,19 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
 
 
+
+      {/* Modal de Ajuste de Saldo */}
+      {adjustOpen && (
+        <AdjustBalanceModal
+          saldoAtual={saldoAcumulado}
+          onConfirm={(diff, justificativa) => {
+            setAdjustOpen(false);
+            onAdjustBalance(diff, justificativa);
+          }}
+          onAddSaida={() => onNavigate('add')}
+          onClose={() => setAdjustOpen(false)}
+        />
+      )}
 
       {/* Lançamentos do dia */}
       <div style={{ padding: '0 20px 16px' }}>

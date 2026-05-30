@@ -27,6 +27,15 @@ const ERROR_MSGS = {
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.6.3 (30/05/2026)',
+    title: 'Ajuste Manual do Saldo Global ⚖️',
+    items: [
+      'Novo botão "Ajustar Saldo" (ícone de controles) ao lado do Saldo Global na Home: permite corrigir o saldo exibido sem precisar desfazer lançamentos.',
+      'Ajuste positivo (saldo sobe): cria automaticamente um lançamento de entrada "Ajuste de saldo" na data de hoje, sem necessidade de justificativa.',
+      'Ajuste negativo (saldo cai): exibe aviso educativo sugerindo verificar se há lançamento de saída faltante, e exige justificativa obrigatória antes de criar o lançamento de saída. Atalho rápido para abrir o formulário de novo lançamento caso prefira registrar a despesa real.',
+    ]
+  },
+  {
     version: 'v1.6.2 (30/05/2026)',
     title: 'Correção de Projeção para Dias 29–31 em Meses Curtos 📅',
     items: [
@@ -497,7 +506,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       {/* Rótulo de versão com notas de atualização */}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Versão v1.6.2
+          Versão v1.6.3
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
         <button
