@@ -29,8 +29,11 @@ export const todayStr = () => {
 
 export const addMonths = (dateStr, n) => {
   const [y, m, d] = dateStr.split('-').map(Number);
-  const dt = new Date(y, m - 1 + n, d);
-  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+  const targetYear  = y + Math.floor((m - 1 + n) / 12);
+  const targetMonth = ((m - 1 + n) % 12 + 12) % 12; // 0-indexed
+  const lastDay     = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const clampedDay  = Math.min(d, lastDay);
+  return `${targetYear}-${String(targetMonth + 1).padStart(2,'0')}-${String(clampedDay).padStart(2,'0')}`;
 };
 
 export const addDays = (dateStr, n) => {

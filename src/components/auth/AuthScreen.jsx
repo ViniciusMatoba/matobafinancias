@@ -27,6 +27,14 @@ const ERROR_MSGS = {
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.6.2 (30/05/2026)',
+    title: 'Correção de Projeção para Dias 29–31 em Meses Curtos 📅',
+    items: [
+      'Correção do cálculo de addMonths: lançamentos mensais com vencimento nos dias 29, 30 ou 31 agora são corretamente incluídos no último dia do mês quando o mês destino não possui esse dia (ex: fevereiro). Anteriormente esses lançamentos eram pulados ou saltavam para o mês seguinte.',
+      'Correção aplicada tanto no motor de projeção do frontend (projectionCalc.js) quanto nas Cloud Functions do backend, garantindo consistência total entre relatórios e alertas.',
+    ]
+  },
+  {
     version: 'v1.6.1 (29/05/2026)',
     title: 'Controle de Pagamentos & Auto-Atualização PWA Imersiva 🔄',
     items: [
@@ -489,7 +497,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       {/* Rótulo de versão com notas de atualização */}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Versão v1.6.1
+          Versão v1.6.2
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
         <button

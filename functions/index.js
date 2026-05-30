@@ -94,6 +94,18 @@ function dateStrFromDate(dt) {
   return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
 }
 
+/**
+ * Avança `cur` em 1 mês, travando o dia no último dia do mês destino.
+ * Corrige o overflow do JavaScript (ex: 31 jan + 1 mês → 28/29 fev, não 3 mar).
+ */
+function addOneMonthClamped(cur) {
+  const day = cur.getDate();
+  cur.setDate(1); // evita overflow ao mudar o mês
+  cur.setMonth(cur.getMonth() + 1);
+  const lastDay = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+  cur.setDate(Math.min(day, lastDay));
+}
+
 function formatBRL(n) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0);
 }
@@ -127,7 +139,7 @@ function calcSaldoSimples(transactions, upTo) {
       let cur = new Date(tx.dataInicio + 'T00:00:00');
       while (dateStrFromDate(cur) <= end) {
         saldo += sign * v;
-        cur.setMonth(cur.getMonth() + 1);
+        addOneMonthClamped(cur);
       }
     } else if (tx.frequencia === 'semanal') {
       let cur = new Date(tx.dataInicio + 'T00:00:00');
@@ -141,7 +153,7 @@ function calcSaldoSimples(transactions, upTo) {
       const start = tx.parcelaAtual  || 1;
       for (let i = 0; i < total - start + 1; i++) {
         const pd = new Date(tx.dataInicio + 'T00:00:00');
-        pd.setMonth(pd.getMonth() + i);
+        for (let j = 0; j < i; j++) addOneMonthClamped(pd);
         if (dateStrFromDate(pd) <= upTo) saldo += sign * v;
       }
     }
@@ -328,7 +340,7 @@ function checkNotifications(cards, transactions, config, prefs) {
           if (ds >= fromStr) {
             if (isEnt) entradas += v; else saidas += v;
           }
-          cur.setMonth(cur.getMonth() + 1);
+          addOneMonthClamped(cur);
         }
       } else if (tx.frequencia === 'semanal') {
         let cur = new Date(tx.dataInicio + 'T00:00:00');
@@ -425,7 +437,7 @@ function checkNotifications(cards, transactions, config, prefs) {
             while (dateStrFromDate(cur) <= end) {
               const curStr = dateStrFromDate(cur);
               if (curStr.startsWith(currentMonth)) totalGasto += v;
-              cur.setMonth(cur.getMonth() + 1);
+              addOneMonthClamped(cur);
             }
           }
         }
@@ -546,7 +558,7 @@ function checkNotifications(cards, transactions, config, prefs) {
             while (dateStrFromDate(cur) <= end) {
               const curStr = dateStrFromDate(cur);
               if (curStr.startsWith(targetMonth)) total += v;
-              cur.setMonth(cur.getMonth() + 1);
+              addOneMonthClamped(cur);
             }
           }
         }
