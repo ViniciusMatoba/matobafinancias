@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.12';
+export const APP_VERSION = '1.6.13';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.13',
+    date: '01/06/2026',
+    changes: [
+      'Fix: botão "Ativar Notificações" não travava mais em "Ativando..."',
+      'Timeout de 20s no registro do token FCM com mensagem de erro clara',
+      'Primeira ativação não apaga token existente antes de criar novo',
+    ],
+  },
   {
     version: '1.6.12',
     date: '01/06/2026',

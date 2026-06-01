@@ -8,16 +8,29 @@ import { APP_VERSION } from '../utils/version';
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 const VAPID_ID  = VAPID_KEY || 'firebase-default';
 
+// ── Timeout helper ────────────────────────────────────────────────────────────
+function withTimeout(promise, ms, msg) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(msg)), ms)
+    ),
+  ]);
+}
+
 // ── Contramedida: detecta mudança de versão do app ou de SW ──────────────────
-// Retorna true se o token FCM precisa ser renovado.
-function shouldForceTokenRefresh(savedVapidKey) {
+// Retorna true SOMENTE se a versão mudou após uma primeira ativação bem-sucedida.
+// Na primeira ativação (sem token salvo), não força delete para não travar.
+function shouldForceTokenRefresh(savedVapidKey, hasSavedToken) {
   const storedVersion = localStorage.getItem('matoba:fcm-app-version');
-  const storedSwUrl   = localStorage.getItem('matoba:fcm-sw-url');
+
+  // Primeira ativação: nunca força delete — só obtém o token
+  if (!storedVersion && !hasSavedToken) return false;
 
   const versionChanged = storedVersion && storedVersion !== APP_VERSION;
   const vapidChanged   = !!savedVapidKey && savedVapidKey !== VAPID_ID;
 
-  return !!(versionChanged || vapidChanged || !storedVersion);
+  return !!(versionChanged || vapidChanged);
 }
 
 // Salva marcadores para detectar mudanças futuras
@@ -113,23 +126,26 @@ export function useNotifications(user) {
     // deixar o SW em estado inconsistente durante a nova assinatura
     if (forceRefresh) {
       try { await deleteToken(messaging); } catch { /* ignora — token pode não existir */ }
-      // Pequena pausa para o SW estabilizar após o deleteToken
-      await new Promise(r => setTimeout(r, 300));
+      // Pausa para o SW estabilizar após o deleteToken
+      await new Promise(r => setTimeout(r, 500));
     }
 
     const tokenOptions = { serviceWorkerRegistration: swReg };
     if (VAPID_KEY) tokenOptions.vapidKey = VAPID_KEY;
 
+    const TIMEOUT_MS  = 20_000;
+    const TIMEOUT_MSG = 'Tempo esgotado ao registrar push. Verifique sua conexão e tente novamente.';
+
     let token = null;
     try {
-      token = await getToken(messaging, tokenOptions);
+      token = await withTimeout(getToken(messaging, tokenOptions), TIMEOUT_MS, TIMEOUT_MSG);
     } catch (err) {
-      // Fallback: tenta sem serviceWorkerRegistration (Firebase encontra o SW automaticamente)
+      // Fallback: tenta sem serviceWorkerRegistration explícito
       console.warn('[FCM] getToken com swReg falhou, tentando sem swReg:', err.message);
       try {
         const fallbackOpts = {};
         if (VAPID_KEY) fallbackOpts.vapidKey = VAPID_KEY;
-        token = await getToken(messaging, fallbackOpts);
+        token = await withTimeout(getToken(messaging, fallbackOpts), TIMEOUT_MS, TIMEOUT_MSG);
       } catch (err2) {
         console.error('[FCM] getToken falhou completamente:', err2.message);
         throw err2;
@@ -174,7 +190,8 @@ export function useNotifications(user) {
 
       if (pushSupported && currentPermission === 'granted') {
         // Contramedida: força refresh se versão do app ou VAPID mudou
-        const needsRefresh = shouldForceTokenRefresh(savedVapidKey);
+        // Passa hasSavedToken para não fazer deleteToken na primeira ativação
+        const needsRefresh = shouldForceTokenRefresh(savedVapidKey, !!savedToken);
         try {
           token = await syncToken({ save: true, forceRefresh: needsRefresh });
         } catch (tokenErr) {
