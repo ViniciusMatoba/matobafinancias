@@ -7,19 +7,21 @@ export default function ReloadPrompt() {
 
   useRegisterSW({
     // onNeedRefresh: disparado pelo vite-plugin-pwa (autoUpdate) quando
-    // um novo SW está esperando. Mostramos a tela de loading e o
-    // vite-plugin-pwa cuida do skipWaiting + reload automaticamente.
+    // um novo SW está esperando. Mostramos a tela de loading e garantimos
+    // o reload com um fallback de segurança caso o autoUpdate trave.
     onNeedRefresh() {
       setUpdating(true);
+      // Safeguard: se o autoUpdate não recarregar em 8s, forçamos o reload
+      setTimeout(() => window.location.reload(), 8_000);
     },
     onRegistered(r) {
       if (!r) return;
       const check = () => r.update().catch(() => {});
+      // Verifica atualização ao abrir e ao voltar ao foco — sem polling periódico
       check();
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check();
       });
-      setInterval(check, 60_000);
     },
     onRegisterError(err) {
       console.log('SW registration error', err);

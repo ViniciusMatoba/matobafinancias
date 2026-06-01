@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.14';
+export const APP_VERSION = '1.6.15';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.15',
+    date: '01/06/2026',
+    changes: [
+      'Fix crítico: tela preta ao abrir o app corrigida',
+      'Safeguard de 8s: se autoUpdate travar, força reload automaticamente',
+      'Removido polling periódico de atualização (verificação apenas na abertura)',
+    ],
+  },
   {
     version: '1.6.14',
     date: '01/06/2026',
