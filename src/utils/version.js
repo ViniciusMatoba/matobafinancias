@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.8';
+export const APP_VERSION = '1.6.9';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.9',
+    date: '01/06/2026',
+    changes: [
+      'Fix: duplicação de itens parcelados no orçamento do mês',
+      'Fix: número da parcela incorreto em faturas anteriores',
+      'Fix: descrição "(Parcelas restantes)" sendo salva como transação real',
+    ],
+  },
   {
     version: '1.6.8',
     date: '01/06/2026',

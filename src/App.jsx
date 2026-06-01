@@ -331,16 +331,18 @@ export default function App() {
         if (!exclusoes.includes(editingOccDate)) exclusoes.push(editingOccDate);
         await update(parentId, { exclusoes });
 
-        // 2. Cria a nova fatura real com os valores modificados
+        // 2. Cria a nova fatura real com os valores modificados.
+        // Usa dados do parentTx para não herdar descrição/cartaoId de tx virtual.
         await add({
           ...cleanData,
           tipo: 'cartao',
           frequencia: 'unico',
           dataInicio: editingOccDate,
+          descricao: cleanData.descricao?.replace(/\s*\(Parcelas restantes\)/i, '').trim() || parentTx.descricao,
           categoria: null,
           dataFim: null,
           itens: cleanData.itens || editing.itens || [],
-          cartaoId: editing.cartaoId || null
+          cartaoId: parentTx.cartaoId || editing.cartaoId || null,
         });
         showToast('Fatura editada separadamente!');
       }

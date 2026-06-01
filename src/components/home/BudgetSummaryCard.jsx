@@ -55,29 +55,19 @@ export default function BudgetSummaryCard({
           const valor = Number(item.valor) || 0;
 
           if (item.isParcelado) {
-            const startParc = item.parcelaAtual || 1;
-            const remaining = (item.totalParcelas || 1) - startParc + 1;
-
-            for (let i = 0; i < remaining; i++) {
-              const [y2, m2] = item.dataCompra.split('-').map(Number);
-              const pd = new Date(y2, m2 - 1 + i, 1);
-              const pMonthStr = `${pd.getFullYear()}-${String(pd.getMonth() + 1).padStart(2, '0')}`;
-              if (pMonthStr !== currentMonth) continue;
-
-              // Data aproximada: usa o mesmo dia da compra, no mês da parcela
-              const dayPart = item.dataCompra.slice(8, 10);
-              const date = `${pMonthStr}-${dayPart}`;
-              totals[cat] += valor;
-              details[cat].push({
-                descricao:   item.descricao || tx.descricao || 'Item parcelado',
-                date,
-                valor,
-                source:      'cartao',
-                cartaoNome,
-                parcela:     `${startParc + i}/${item.totalParcelas}`,
-                isFuture:    date > today,
-              });
-            }
+            // Conta apenas se a FATURA (tx.dataInicio) é do mês atual.
+            // Não itera meses futuros: parcelas de outros meses têm faturas próprias.
+            if (!tx.dataInicio?.startsWith(currentMonth)) return;
+            totals[cat] += valor;
+            details[cat].push({
+              descricao:  item.descricao || tx.descricao || 'Item parcelado',
+              date:       tx.dataInicio,
+              valor,
+              source:     'cartao',
+              cartaoNome,
+              parcela:    `${item.parcelaAtual || 1}/${item.totalParcelas}`,
+              isFuture:   tx.dataInicio > today,
+            });
           } else {
             if (!item.dataCompra?.startsWith(currentMonth)) return;
             totals[cat] += valor;
