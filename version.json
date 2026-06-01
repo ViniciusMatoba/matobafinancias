@@ -1,0 +1,9 @@
+{
+  "version": "1.6.6",
+  "date": "01/06/2026",
+  "notes": [
+    "Fix crítico: atualização automática do PWA para todos os usuários",
+    "Orçamento: drill-down por categoria com lista detalhada de lançamentos",
+    "Sistema de versão e changelog implementado"
+  ]
+}
