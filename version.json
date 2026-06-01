@@ -1,9 +1,10 @@
 {
-  "version": "1.6.20",
+  "version": "1.6.21",
   "date": "01/06/2026",
   "notes": [
-    "Push e Telegram agora têm alertas completamente independentes",
-    "Bot do Telegram: toggles N1–N17 exclusivos na aba de configuração",
-    "Cloud Function: push usa prefs.tipos, Telegram usa prefs.telegramTipos"
+    "Bot Telegram: menu /configurar com botões inline para ativar/desativar cada alerta",
+    "Botões: toggle individual, \"Ativar todos\", \"Desativar todos\" e \"Pronto\"",
+    "Menu atualiza em tempo real ao toque — sem precisar abrir o app",
+    "Webhook atualizado para processar callback_query dos botões inline"
   ]
 }
