@@ -1,8 +1,9 @@
 {
-  "version": "1.6.14",
+  "version": "1.6.15",
   "date": "01/06/2026",
   "notes": [
-    "Fix: banner de nova versão agora aparece para todos os usuários (logados ou não)",
-    "Banner movido para nível global do app — não fica mais preso na tela de login"
+    "Fix crítico: tela preta ao abrir o app corrigida",
+    "Safeguard de 8s: se autoUpdate travar, força reload automaticamente",
+    "Removido polling periódico de atualização (verificação apenas na abertura)"
   ]
 }

@@ -1,37 +1,33 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Service Worker único: PWA caching (Workbox CDN) + Firebase Cloud Messaging
-//
-// Estratégia injectManifest do vite-plugin-pwa:
-//   - self.__WB_MANIFEST é substituído pelo manifesto de precache no build
-//   - Elimina o conflito de escopo com o sw.js gerado automaticamente
+// Service Worker — Matoba Finanças
+// Usa imports ES module (bundlados pelo Vite) — sem dependência de CDN externo.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { registerRoute } from 'workbox-routing';
+import { NetworkFirst, CacheFirst } from 'workbox-strategies';
+import { initializeApp } from 'firebase/app';
+import { getMessaging } from 'firebase/messaging/sw';
+
 // ─── Workbox Precaching ───────────────────────────────────────────────────────
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/7.3.4/workbox-sw.js');
+precacheAndRoute(self.__WB_MANIFEST || []);
+cleanupOutdatedCaches();
 
-if (typeof workbox !== 'undefined') {
-  workbox.setConfig({ modulePathPrefix: 'https://storage.googleapis.com/workbox-cdn/releases/7.3.4/' });
-  workbox.precaching.precacheAndRoute(self.__WB_MANIFEST || []);
-  workbox.precaching.cleanupOutdatedCaches();
+// NetworkFirst para version.json — sempre busca a versão mais recente
+registerRoute(
+  ({ url }) => url.pathname.endsWith('version.json'),
+  new NetworkFirst({ cacheName: 'version-check', networkTimeoutSeconds: 3 })
+);
 
-  // NetworkFirst para version.json — garante sempre a versão mais recente
-  workbox.routing.registerRoute(
-    ({ url }) => url.pathname.endsWith('version.json'),
-    new workbox.strategies.NetworkFirst({ cacheName: 'version-check', networkTimeoutSeconds: 3 })
-  );
+// CacheFirst para imagens
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new CacheFirst({ cacheName: 'images-v1' })
+);
 
-  // Cache-first para assets estáticos
-  workbox.routing.registerRoute(
-    ({ request }) => request.destination === 'image',
-    new workbox.strategies.CacheFirst({ cacheName: 'images-v1' })
-  );
-}
-
-// Listener de SKIP_WAITING enviado pelo vite-plugin-pwa (autoUpdate)
+// ─── Ciclo de vida do SW ──────────────────────────────────────────────────────
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) =>
@@ -39,10 +35,10 @@ self.addEventListener('activate', (event) =>
 );
 
 // ─── Firebase Cloud Messaging ─────────────────────────────────────────────────
-importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js');
-
-firebase.initializeApp({
+// Usa a API modular firebase/messaging/sw (projetada para uso em SW).
+// O campo "notification" enviado pelo Cloud Function faz o SDK
+// exibir a notificação automaticamente em background.
+const app = initializeApp({
   apiKey:            'AIzaSyC_R8dD1SFnCy0aJhsM1zafJK_9AVLo5LM',
   authDomain:        'matobafinancas.firebaseapp.com',
   projectId:         'matobafinancas',
@@ -51,16 +47,12 @@ firebase.initializeApp({
   appId:             '1:225695230271:web:a0d66a56b1515738810b8a',
 });
 
-// Inicializa o Firebase Messaging no SW.
-// O campo "notification" enviado pelo Cloud Function faz o SDK
-// exibir a notificação automaticamente em background — sem handler extra.
-firebase.messaging();
+getMessaging(app);
 
 // ─── Clique na notificação ────────────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || '/';
-
+  const url = event.notification.data?.url || './';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
       const existing = wins.find((w) => w.url.includes(self.location.origin));

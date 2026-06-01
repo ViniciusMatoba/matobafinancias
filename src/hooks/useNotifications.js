@@ -108,10 +108,20 @@ export function useNotifications(user) {
 
   const registerMessagingSw = useCallback(async () => {
     if (!canUsePush()) return null;
-    // O firebase-messaging-sw.js já é registrado pelo vite-plugin-pwa como
-    // SW único (injectManifest). Não registramos um segundo SW — apenas
-    // aguardamos o SW ativo, eliminando o conflito de escopo que bloqueava push.
-    return navigator.serviceWorker.ready;
+
+    // 1ª tentativa: SW já ativo imediatamente (caso mais comum)
+    const existing = await navigator.serviceWorker.getRegistration();
+    if (existing?.active) return existing;
+
+    // 2ª tentativa: aguarda ativação com timeout de 10s
+    return withTimeout(
+      navigator.serviceWorker.ready,
+      10_000,
+      'Service Worker demorou para ativar. Reinicie o app e tente novamente.'
+    ).catch((err) => {
+      console.warn('[FCM] SW ready timeout:', err.message);
+      return null; // prossegue sem SW — Firebase tenta resolver sozinho
+    });
   }, [canUsePush]);
 
   const syncToken = useCallback(async ({ save = false, forceRefresh = false } = {}) => {
@@ -122,33 +132,33 @@ export function useNotifications(user) {
     const swReg = await registerMessagingSw();
     const swUrl = swReg?.active?.scriptURL || '';
 
-    // forceRefresh: deleta apenas se já há token válido para evitar
-    // deixar o SW em estado inconsistente durante a nova assinatura
+    // forceRefresh: deleta token existente antes de obter novo
     if (forceRefresh) {
-      try { await deleteToken(messaging); } catch { /* ignora — token pode não existir */ }
-      // Pausa para o SW estabilizar após o deleteToken
-      await new Promise(r => setTimeout(r, 500));
+      try { await deleteToken(messaging); } catch { /* ignora */ }
+      await new Promise(r => setTimeout(r, 300));
     }
 
-    const tokenOptions = { serviceWorkerRegistration: swReg };
-    if (VAPID_KEY) tokenOptions.vapidKey = VAPID_KEY;
+    const TIMEOUT_MS  = 15_000;
+    const TIMEOUT_MSG = 'Tempo esgotado. Verifique sua conexão e tente novamente.';
 
-    const TIMEOUT_MS  = 20_000;
-    const TIMEOUT_MSG = 'Tempo esgotado ao registrar push. Verifique sua conexão e tente novamente.';
+    // Monta opções: com SW registration se disponível, sem se não houver
+    const makeOpts = (withSw) => {
+      const opts = {};
+      if (withSw && swReg) opts.serviceWorkerRegistration = swReg;
+      if (VAPID_KEY) opts.vapidKey = VAPID_KEY;
+      return opts;
+    };
 
     let token = null;
     try {
-      token = await withTimeout(getToken(messaging, tokenOptions), TIMEOUT_MS, TIMEOUT_MSG);
+      token = await withTimeout(getToken(messaging, makeOpts(true)), TIMEOUT_MS, TIMEOUT_MSG);
     } catch (err) {
-      // Fallback: tenta sem serviceWorkerRegistration explícito
-      console.warn('[FCM] getToken com swReg falhou, tentando sem swReg:', err.message);
+      console.warn('[FCM] tentativa 1 falhou:', err.message, '— tentando sem SW explícito');
       try {
-        const fallbackOpts = {};
-        if (VAPID_KEY) fallbackOpts.vapidKey = VAPID_KEY;
-        token = await withTimeout(getToken(messaging, fallbackOpts), TIMEOUT_MS, TIMEOUT_MSG);
+        token = await withTimeout(getToken(messaging, makeOpts(false)), TIMEOUT_MS, TIMEOUT_MSG);
       } catch (err2) {
-        console.error('[FCM] getToken falhou completamente:', err2.message);
-        throw err2;
+        console.error('[FCM] todas as tentativas falharam:', err2.message);
+        throw new Error(`Não foi possível registrar push: ${err2.message}`);
       }
     }
 

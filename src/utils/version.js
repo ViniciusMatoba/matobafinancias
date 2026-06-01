@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.15';
+export const APP_VERSION = '1.6.16';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.16',
+    date: '01/06/2026',
+    changes: [
+      'Fix crítico: Service Worker reescrito sem dependência de CDN externo',
+      'Firebase e Workbox agora embutidos no SW — funciona offline e em redes lentas',
+      'Timeout de 10s em navigator.serviceWorker.ready — nunca trava em "Ativando"',
+      'Fallback automático se SW não responder na hora do registro do token',
+    ],
+  },
   {
     version: '1.6.15',
     date: '01/06/2026',
