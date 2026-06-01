@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.6';
+export const APP_VERSION = '1.6.7';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.7',
+    date: '01/06/2026',
+    changes: [
+      'Banner de nova versão na tela de login com notificação push automática',
+      'Versão sempre atualizada via version.json com NetworkFirst no SW',
+      'Botão "Atualizar" visível para todos os usuários ao abrir o app',
+    ],
+  },
   {
     version: '1.6.6',
     date: '01/06/2026',

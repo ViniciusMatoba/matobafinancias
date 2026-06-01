@@ -19,6 +19,19 @@ const commitMsg = desc
   ? `release: v${version} — ${desc}`
   : `release: v${version}`;
 
+// Lê o changelog do version.js para extrair as notes da versão atual
+function getVersionNotes() {
+  try {
+    const versionSrc = fs.readFileSync(path.join(root, 'src/utils/version.js'), 'utf8');
+    const match = versionSrc.match(/version:\s*['"]([^'"]+)['"]\s*,[\s\S]*?changes:\s*\[([^\]]+)\]/);
+    if (!match || match[1] !== version) return [];
+    return match[2]
+      .split('\n')
+      .map(l => l.trim().replace(/^['"]|['"],?$/g, ''))
+      .filter(Boolean);
+  } catch { return []; }
+}
+
 console.log(`\n🚀 Matoba Finanças — Release v${version}\n`);
 
 try {
@@ -40,11 +53,24 @@ try {
   console.log('📤 Enviando para GitHub...');
   run('git push origin main');
 
-  // 4. Build de produção
+  // 4. Atualiza public/version.json (lido pelo app para notificar usuários)
+  console.log('📋 Atualizando version.json...');
+  const versionJson = {
+    version,
+    date: new Date().toLocaleDateString('pt-BR'),
+    notes: getVersionNotes(),
+  };
+  fs.writeFileSync(
+    path.join(root, 'public/version.json'),
+    JSON.stringify(versionJson, null, 2) + '\n',
+    'utf8'
+  );
+
+  // 5. Build de produção
   console.log('🔨 Gerando build de produção...');
   run('npm run build');
 
-  // 5. Deploy no GitHub Pages
+  // 6. Deploy no GitHub Pages
   console.log('🌐 Publicando no GitHub Pages...');
   run('npm run deploy');
 

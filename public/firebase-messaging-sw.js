@@ -14,6 +14,12 @@ if (typeof workbox !== 'undefined') {
   workbox.precaching.precacheAndRoute(self.__WB_MANIFEST || []);
   workbox.precaching.cleanupOutdatedCaches();
 
+  // NetworkFirst para version.json — garante sempre a versão mais recente
+  workbox.routing.registerRoute(
+    ({ url }) => url.pathname.endsWith('version.json'),
+    new workbox.strategies.NetworkFirst({ cacheName: 'version-check', networkTimeoutSeconds: 3 })
+  );
+
   // Cache-first para assets estáticos
   workbox.routing.registerRoute(
     ({ request }) => request.destination === 'image',

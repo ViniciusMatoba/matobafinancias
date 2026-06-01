@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { isConfigured } from './firebase';
 import { useAuth } from './hooks/useAuth';
+import { useVersionCheck } from './hooks/useVersionCheck';
 import { useTransactions } from './hooks/useTransactions';
 import { useCards } from './hooks/useCards';
 import { useWallets } from './hooks/useWallets';
@@ -32,6 +33,7 @@ export default function App() {
   const { goals, add: addGoal, update: updateGoal, remove: removeGoal } = useGoals(user?.uid);
   const { config, configLoading, saveConfig } = useConfig(user?.uid);
   const { showToast, ToastNode } = useToast();
+  const { updateAvailable, latestVersion, latestNotes } = useVersionCheck();
 
   const [view, setView] = useState('home');
   const [formOpen, setFormOpen] = useState(false);
@@ -97,7 +99,7 @@ export default function App() {
 
     if (!user || !authConfirmed) {
       return (
-        <AuthScreen 
+        <AuthScreen
           user={user}
           redirectError={redirectError}
           onLogin={async (e, p) => { await login(e, p); setAuthConfirmed(true); }}
@@ -105,6 +107,10 @@ export default function App() {
           onLoginWithGoogle={async () => { await loginWithGoogle(); }}
           onConfirm={() => setAuthConfirmed(true)}
           onLogout={async () => { await logout(); setAuthConfirmed(false); }}
+          updateAvailable={updateAvailable}
+          latestVersion={latestVersion}
+          latestNotes={latestNotes}
+          onUpdate={() => window.location.reload()}
         />
       );
     }

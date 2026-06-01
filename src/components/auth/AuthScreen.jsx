@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, RefreshCw } from 'lucide-react';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
+import { APP_VERSION } from '../../utils/version';
 
 function GoogleIcon() {
   return (
@@ -149,7 +150,7 @@ const CHANGELOG_DATA = [
   }
 ];
 
-export default function AuthScreen({ user, redirectError, onLogin, onRegister, onLoginWithGoogle, onConfirm, onLogout }) {
+export default function AuthScreen({ user, redirectError, onLogin, onRegister, onLoginWithGoogle, onConfirm, onLogout, updateAvailable, latestVersion, latestNotes, onUpdate }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -241,6 +242,47 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       padding: '32px 24px',
       background: 'linear-gradient(160deg, #0f172a 0%, #0a0f1e 100%)',
     }}>
+
+      {/* Banner de nova versão disponível */}
+      {updateAvailable && latestVersion && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9000,
+          background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+          padding: '12px 20px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          boxShadow: '0 4px 20px rgba(99,102,241,0.45)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 18, flexShrink: 0 }}>🆕</span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                Versão {latestVersion} disponível!
+              </p>
+              {latestNotes?.[0] && (
+                <p style={{
+                  margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.8)',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {latestNotes[0]}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={onUpdate}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#fff', color: '#6366f1',
+              padding: '7px 14px', borderRadius: 8,
+              fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
+              flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            }}
+          >
+            <RefreshCw size={13} /> Atualizar
+          </button>
+        </div>
+      )}
+
       {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: 40 }}>
         <div style={{
@@ -515,7 +557,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       {/* Rótulo de versão com notas de atualização */}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Versão v1.6.4
+          Versão v{APP_VERSION}
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
         <button
