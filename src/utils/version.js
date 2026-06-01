@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.7';
+export const APP_VERSION = '1.6.8';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.8',
+    date: '01/06/2026',
+    changes: [
+      'Verificação de versão apenas na abertura do app ou ao voltar ao foco',
+    ],
+  },
   {
     version: '1.6.7',
     date: '01/06/2026',

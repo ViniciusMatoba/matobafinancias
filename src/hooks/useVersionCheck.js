@@ -51,11 +51,9 @@ export function useVersionCheck() {
       if (document.visibilityState === 'visible') check();
     };
     document.addEventListener('visibilitychange', handleVisibility);
-    const interval = setInterval(check, 5 * 60 * 1000); // a cada 5 min
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
-      clearInterval(interval);
     };
   }, [check]);
 
