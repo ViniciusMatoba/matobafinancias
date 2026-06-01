@@ -88,7 +88,7 @@ try {
   if (functionsChanged()) {
     console.log('☁️  Detectadas alterações em functions/ — fazendo deploy...');
     try {
-      run('firebase deploy --only functions', { cwd: root });
+      run('npx firebase deploy --only functions', { cwd: root });
       console.log('   ✅ Cloud Functions atualizadas.');
     } catch (fnErr) {
       console.warn('   ⚠️  Deploy das functions falhou:', fnErr.message);
