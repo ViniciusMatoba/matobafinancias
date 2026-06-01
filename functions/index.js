@@ -201,8 +201,8 @@ function computeSpentByCategory(transactions, currentMonth) {
   return totals;
 }
 
-// ─── Verificações de notificação (N1-N7) ────────────────────────────────────
-function checkNotifications(cards, transactions, config, prefs) {
+// ─── Verificações de notificação (N1-N17) ───────────────────────────────────
+function checkNotifications(cards, transactions, config, prefs, goals = []) {
   const msgs  = [];
   const tipos = prefs?.tipos ?? {};
   const hoje  = getNowBrasilia();
@@ -599,6 +599,90 @@ function checkNotifications(cards, transactions, config, prefs) {
       }
     } else if (spentPassado > 0) {
       msgs.push(`📊 *Relatório do Mês Anterior (${nomeMesPassado.toUpperCase()})*\nGastos totais no mês recém-encerrado: *${formatBRL(spentPassado)}*.`);
+    }
+  }
+
+  // ── N13 — Fatura fecha AMANHÃ ────────────────────────────────────────────────
+  if (tipos.n13 !== false) {
+    const d1 = new Date(hoje); d1.setDate(d1.getDate() + 1);
+    for (const card of cards) {
+      if (card.diaFechamento === d1.getDate()) {
+        msgs.push(
+          `⚠️ *Fatura fecha AMANHÃ!*\n${card.nome} — últimas horas para lançar compras nesta fatura!`
+        );
+      }
+    }
+  }
+
+  // ── N14 — Última parcela paga hoje ───────────────────────────────────────────
+  if (tipos.n14 !== false) {
+    for (const tx of transactions) {
+      if (tx.frequencia !== 'parcelado') continue;
+      const parcAtual = tx.parcelaAtual || 1;
+      const parcTotal = tx.totalParcelas || 1;
+      if (parcAtual !== parcTotal) continue;          // não é a última
+      if (!tx.dataInicio?.startsWith(todayStr)) continue; // não vence hoje
+      msgs.push(
+        `🎉 *Última parcela!*\n${tx.descricao || 'Lançamento parcelado'} — a partir do próximo mês *${formatBRL(tx.valor)}* serão liberados no seu orçamento!`
+      );
+    }
+  }
+
+  // ── N15 — Saldo abaixo do mínimo configurado ─────────────────────────────────
+  if (tipos.n15 !== false) {
+    const saldoMinimo = Number(config.saldoMinimoAlerta ?? 200);
+    if (saldoMinimo > 0) {
+      const saldoAtual = calcSaldoSimples(transactions, todayStr);
+      if (saldoAtual < saldoMinimo) {
+        msgs.push(
+          `🚨 *Saldo baixo!*\nSeu saldo atual é *${formatBRL(saldoAtual)}* — abaixo do mínimo de *${formatBRL(saldoMinimo)}*. Atenção ao caixa!`
+        );
+      }
+    }
+  }
+
+  // ── N16 — Resumo das metas/caixinhas (dia 1 do mês) ─────────────────────────
+  if (tipos.n16 !== false && day === 1 && goals.length > 0) {
+    const metasComMeta = goals.filter(g => g.metaFinal > 0);
+    if (metasComMeta.length > 0) {
+      let texto = `🎯 *Resumo das Caixinhas — ${hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' }).toUpperCase()}*\n\n`;
+      for (const goal of metasComMeta) {
+        const saldoMeta = transactions
+          .filter(t => t.metaId === goal.id)
+          .reduce((acc, t) => t.tipo === 'saida' ? acc - (Number(t.valor)||0) : acc + (Number(t.valor)||0), 0);
+        const pct = Math.min(Math.round((saldoMeta / goal.metaFinal) * 100), 100);
+        const { bar } = barra(saldoMeta, goal.metaFinal);
+        const status = pct >= 100 ? '✅ Concluída!' : pct >= 75 ? '🔥 Quase lá!' : pct >= 50 ? '💪 Na metade!' : '🌱 Em andamento';
+        texto += `*${goal.nome}*\n\`[${bar}] ${pct}%\` — ${formatBRL(saldoMeta)} de ${formatBRL(goal.metaFinal)} ${status}\n\n`;
+      }
+      texto += `_Acesse o app para aportar nas caixinhas!_`;
+      msgs.push(texto.trim());
+    }
+  }
+
+  // ── N17 — Balanço da metade do mês (dia 15) ──────────────────────────────────
+  if (tipos.n17 !== false && day === 15) {
+    const rendaMensal = config?.rendaMensal || 0;
+    if (rendaMensal > 0) {
+      const spent = computeSpentByCategory(transactions, currentMonth);
+      const totalGasto = Object.values(spent).reduce((a, b) => a + b, 0);
+      const pct        = Math.round((totalGasto / rendaMensal) * 100);
+      // Projeção linear: gasto dos 15 dias × 2
+      const projecao   = totalGasto * 2;
+      const saldoProj  = rendaMensal - projecao;
+      const nomeMes    = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+      const { bar }    = barra(totalGasto, rendaMensal);
+
+      let msg = `📊 *Metade de ${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}!*\n\n`;
+      msg += `Gasto até agora: *${formatBRL(totalGasto)}* de *${formatBRL(rendaMensal)}*\n`;
+      msg += `\`[${bar}] ${pct}%\`\n\n`;
+      msg += `Projeção de fechamento: *${formatBRL(projecao)}*\n`;
+      if (saldoProj >= 0) {
+        msg += `✅ Projetando *${formatBRL(saldoProj)} de sobra* — bom ritmo!`;
+      } else {
+        msg += `⚠️ Projetando *extrapolar em ${formatBRL(-saldoProj)}* — atenção aos gastos!`;
+      }
+      msgs.push(msg);
     }
   }
 
@@ -1659,11 +1743,15 @@ exports.dailyNotifications = onSchedule(
         const cards     = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         // Lê transações
-        const txSnap     = await db.collection('transactions').doc(uid).collection('entries').get();
+        const txSnap       = await db.collection('transactions').doc(uid).collection('entries').get();
         const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
+        // Lê metas/caixinhas (necessário para N16)
+        const goalsSnap = await db.collection('goals').where('userId', '==', uid).get();
+        const goals     = goalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
         // Verifica alertas
-        const msgs = checkNotifications(cards, transactions, config, prefs);
+        const msgs = checkNotifications(cards, transactions, config, prefs, goals);
 
         // Envia mensagens pelos canais habilitados
         for (const msg of msgs) {

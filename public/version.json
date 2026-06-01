@@ -1,10 +1,8 @@
 {
-  "version": "1.6.16",
+  "version": "1.6.17",
   "date": "01/06/2026",
   "notes": [
-    "Fix crítico: Service Worker reescrito sem dependência de CDN externo",
-    "Firebase e Workbox agora embutidos no SW — funciona offline e em redes lentas",
-    "Timeout de 10s em navigator.serviceWorker.ready — nunca trava em \"Ativando\"",
-    "Fallback automático se SW não responder na hora do registro do token"
+    "Fix: banner de atualização só aparece quando versão remota é MAIOR que a instalada",
+    "Comparação semântica de versão evita falso positivo por cache do CDN"
   ]
 }

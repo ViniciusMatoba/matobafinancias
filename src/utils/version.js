@@ -1,7 +1,18 @@
-export const APP_VERSION = '1.6.17';
+export const APP_VERSION = '1.6.18';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.18',
+    date: '01/06/2026',
+    changes: [
+      'N13: Alerta de fatura fechando amanhã (aviso final)',
+      'N14: Notificação de última parcela paga — valor liberado no orçamento',
+      'N15: Alerta de saldo abaixo do mínimo configurável',
+      'N16: Resumo visual das caixinhas/metas todo dia 1 do mês',
+      'N17: Balanço da metade do mês com projeção de fechamento (dia 15)',
+    ],
+  },
   {
     version: '1.6.17',
     date: '01/06/2026',
