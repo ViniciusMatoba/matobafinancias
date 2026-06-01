@@ -494,6 +494,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       <div style={{ padding: '16px 20px 0' }}>
         <BudgetSummaryCard
           transactions={transactions}
+          cards={cards}
           rendaMensal={config?.rendaMensal || 0}
           budgetPcts={config?.budgetPcts}
           currentMonth={today.slice(0, 7)}
