@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.13';
+export const APP_VERSION = '1.6.14';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.14',
+    date: '01/06/2026',
+    changes: [
+      'Fix: banner de nova versão agora aparece para todos os usuários (logados ou não)',
+      'Banner movido para nível global do app — não fica mais preso na tela de login',
+    ],
+  },
   {
     version: '1.6.13',
     date: '01/06/2026',

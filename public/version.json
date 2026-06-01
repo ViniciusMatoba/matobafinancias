@@ -1,10 +1,9 @@
 {
-  "version": "1.6.12",
+  "version": "1.6.13",
   "date": "01/06/2026",
   "notes": [
-    "Fix: diagnóstico de notificações sempre mostrava Service Worker como inativo",
-    "Fix: token FCM com fallback automático se primeira tentativa falhar",
-    "Fix: SW simplificado — Firebase SDK exibe notificações automaticamente",
-    "Erro exato do Firebase agora visível no painel de diagnóstico"
+    "Fix: botão \"Ativar Notificações\" não travava mais em \"Ativando...\"",
+    "Timeout de 20s no registro do token FCM com mensagem de erro clara",
+    "Primeira ativação não apaga token existente antes de criar novo"
   ]
 }
