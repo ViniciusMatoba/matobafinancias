@@ -51,28 +51,10 @@ firebase.initializeApp({
   appId:             '1:225695230271:web:a0d66a56b1515738810b8a',
 });
 
-const messaging = firebase.messaging();
-
-// ─── Background message handler ───────────────────────────────────────────────
-// Substitui o handler push manual — o SDK do FCM entrega a mensagem aqui
-// quando o app está em background, evitando conflito entre dois handlers.
-// Com o campo "notification" no payload (Cloud Function), o SDK cuida
-// automaticamente de exibir a notificação; este handler é o fallback.
-messaging.onBackgroundMessage((payload) => {
-  const n = payload.notification || {};
-  const d = payload.data         || {};
-  const title   = n.title || d.title || 'Matoba Finanças';
-  const options = {
-    body:               n.body   || d.body  || '',
-    icon:               './icons/icon-192.png',
-    badge:              './icons/icon-192.png',
-    tag:                d.tag    || `matoba-${Date.now()}`,
-    data:               { url: d.url || './' },
-    vibrate:            [200, 100, 200],
-    requireInteraction: false,
-  };
-  return self.registration.showNotification(title, options);
-});
+// Inicializa o Firebase Messaging no SW.
+// O campo "notification" enviado pelo Cloud Function faz o SDK
+// exibir a notificação automaticamente em background — sem handler extra.
+firebase.messaging();
 
 // ─── Clique na notificação ────────────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {

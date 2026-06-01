@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.11';
+export const APP_VERSION = '1.6.12';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.12',
+    date: '01/06/2026',
+    changes: [
+      'Fix: diagnóstico de notificações sempre mostrava Service Worker como inativo',
+      'Fix: token FCM com fallback automático se primeira tentativa falhar',
+      'Fix: SW simplificado — Firebase SDK exibe notificações automaticamente',
+      'Erro exato do Firebase agora visível no painel de diagnóstico',
+    ],
+  },
   {
     version: '1.6.11',
     date: '01/06/2026',

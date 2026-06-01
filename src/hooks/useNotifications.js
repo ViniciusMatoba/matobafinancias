@@ -106,17 +106,35 @@ export function useNotifications(user) {
       return null;
     }
 
-    const swReg  = await registerMessagingSw();
-    const swUrl  = swReg?.active?.scriptURL || '';
+    const swReg = await registerMessagingSw();
+    const swUrl = swReg?.active?.scriptURL || '';
 
+    // forceRefresh: deleta apenas se já há token válido para evitar
+    // deixar o SW em estado inconsistente durante a nova assinatura
     if (forceRefresh) {
-      try { await deleteToken(messaging); } catch { /* token pode ainda não existir */ }
+      try { await deleteToken(messaging); } catch { /* ignora — token pode não existir */ }
+      // Pequena pausa para o SW estabilizar após o deleteToken
+      await new Promise(r => setTimeout(r, 300));
     }
 
     const tokenOptions = { serviceWorkerRegistration: swReg };
     if (VAPID_KEY) tokenOptions.vapidKey = VAPID_KEY;
 
-    const token = await getToken(messaging, tokenOptions);
+    let token = null;
+    try {
+      token = await getToken(messaging, tokenOptions);
+    } catch (err) {
+      // Fallback: tenta sem serviceWorkerRegistration (Firebase encontra o SW automaticamente)
+      console.warn('[FCM] getToken com swReg falhou, tentando sem swReg:', err.message);
+      try {
+        const fallbackOpts = {};
+        if (VAPID_KEY) fallbackOpts.vapidKey = VAPID_KEY;
+        token = await getToken(messaging, fallbackOpts);
+      } catch (err2) {
+        console.error('[FCM] getToken falhou completamente:', err2.message);
+        throw err2;
+      }
+    }
 
     if (token) {
       setFcmToken(token);
@@ -141,8 +159,10 @@ export function useNotifications(user) {
       let serviceWorkerReady = false;
 
       if (pushSupported) {
-        const reg = await navigator.serviceWorker.getRegistration(getMessagingSwUrl());
-        serviceWorkerReady = !!reg;
+        // getRegistration() sem argumento retorna o SW ativo para a página atual.
+        // Passar a URL do script era incorreto (API espera URL de escopo, não do script).
+        const reg = await navigator.serviceWorker.getRegistration();
+        serviceWorkerReady = !!(reg?.active);
       }
 
       if (db && user) {
@@ -155,7 +175,16 @@ export function useNotifications(user) {
       if (pushSupported && currentPermission === 'granted') {
         // Contramedida: força refresh se versão do app ou VAPID mudou
         const needsRefresh = shouldForceTokenRefresh(savedVapidKey);
-        token = await syncToken({ save: true, forceRefresh: needsRefresh });
+        try {
+          token = await syncToken({ save: true, forceRefresh: needsRefresh });
+        } catch (tokenErr) {
+          // Captura erro do getToken e expõe no diagnóstico sem derrubar o resto
+          console.error('[FCM] Erro ao obter token:', tokenErr);
+          setDiagnostics(prev => ({
+            ...prev,
+            lastError: `Erro ao gerar token FCM: ${tokenErr.message}`,
+          }));
+        }
         serviceWorkerReady = true;
 
         if (db && user) {
