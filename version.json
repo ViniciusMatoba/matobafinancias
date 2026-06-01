@@ -1,9 +1,8 @@
 {
-  "version": "1.6.9",
+  "version": "1.6.10",
   "date": "01/06/2026",
   "notes": [
-    "Fix: duplicação de itens parcelados no orçamento do mês",
-    "Fix: número da parcela incorreto em faturas anteriores",
-    "Fix: descrição \"(Parcelas restantes)\" sendo salva como transação real"
+    "Configurações: notas de atualização agora exibem a versão atual automaticamente",
+    "Versão e histórico sempre sincronizados com version.js"
   ]
 }
