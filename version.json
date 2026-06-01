@@ -1,8 +1,9 @@
 {
-  "version": "1.6.14",
+  "version": "1.6.13",
   "date": "01/06/2026",
   "notes": [
-    "Fix: banner de nova versão agora aparece para todos os usuários (logados ou não)",
-    "Banner movido para nível global do app — não fica mais preso na tela de login"
+    "Fix: botão \"Ativar Notificações\" não travava mais em \"Ativando...\"",
+    "Timeout de 20s no registro do token FCM com mensagem de erro clara",
+    "Primeira ativação não apaga token existente antes de criar novo"
   ]
 }
