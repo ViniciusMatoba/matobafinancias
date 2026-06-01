@@ -14,6 +14,15 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.6.4 (01/06/2026)',
+    title: 'Orçamento Corrigido, Parcelas Inteligentes & CSV Expandido 📊',
+    items: [
+      'Correção do Orçamento do Mês: o painel de divisão percentual agora sempre exibe o mês real corrente, independente do dia selecionado na navegação diária da Home.',
+      'Parcelas com data final calculada: ao registrar um lançamento parcelado, a data da última parcela é exibida em tempo real e o campo dataFim é preenchido automaticamente.',
+      'CSV Expandido por Período: a exportação de planilha agora expande todas as ocorrências reais (mensalidades, parcelas, recorrências) — uma linha por evento com data efetiva, dia da semana e status de conferência.',
+    ]
+  },
+  {
     version: 'v1.6.2 (29/05/2026)',
     title: 'Self-Healing do PWA, Projeções de Fluxo de Caixa e Limpeza da Home 🛠️',
     items: [
@@ -601,7 +610,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Notas de Atualização
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Versão v1.6.2 ativa
+                  Versão v1.6.4 ativa
                 </span>
               </div>
             </div>

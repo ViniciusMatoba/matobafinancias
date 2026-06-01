@@ -27,6 +27,15 @@ const ERROR_MSGS = {
 
 const CHANGELOG_DATA = [
   {
+    version: 'v1.6.4 (01/06/2026)',
+    title: 'Orçamento Corrigido, Parcelas Inteligentes & CSV Expandido 📊',
+    items: [
+      'Correção do Orçamento do Mês: o painel de divisão percentual agora sempre exibe o mês real corrente, independente do dia selecionado na navegação diária da Home. Navegar para março não exibia mais o orçamento de junho — bug corrigido.',
+      'Parcelas com data final calculada: ao registrar um lançamento parcelado, a data da última parcela é calculada e exibida em tempo real enquanto você preenche o número de parcelas. O campo dataFim é preenchido automaticamente, garantindo que a projeção encerre o parcelamento na data correta.',
+      'CSV Expandido por Período: a exportação de planilha agora pergunta o período desejado (de/até) e expande todas as ocorrências reais — mensalidades, parcelas, recorrências semanais — gerando uma linha por evento efetivo com data real, dia da semana e status de conferência. Compatível com BOM UTF-8 para Excel.',
+    ]
+  },
+  {
     version: 'v1.6.3 (30/05/2026)',
     title: 'Ajuste Manual do Saldo Global ⚖️',
     items: [
@@ -506,7 +515,7 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
       {/* Rótulo de versão com notas de atualização */}
       <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Versão v1.6.3
+          Versão v1.6.4
         </span>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>•</span>
         <button
