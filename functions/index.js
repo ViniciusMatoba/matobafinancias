@@ -1750,22 +1750,15 @@ exports.dailyNotifications = onSchedule(
         const goalsSnap = await db.collection('goals').where('userId', '==', uid).get();
         const goals     = goalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // Verifica alertas
-        const msgs = checkNotifications(cards, transactions, config, prefs, goals);
-
-        // Envia mensagens pelos canais habilitados
-        for (const msg of msgs) {
-          if (telegramEnabled) {
-            await sendMessage(chatId, msg);
-            // Pausa pequena para não estourar rate limit do Telegram
-            await new Promise(r => setTimeout(r, 100));
-          }
-
-          if (pushEnabled) {
+        // ── Push: usa prefs.tipos (configurado em Notificações Push) ──────────
+        if (pushEnabled) {
+          const pushPrefs = { ...prefs, tipos: prefs.tipos || {} };
+          const pushMsgs  = checkNotifications(cards, transactions, config, pushPrefs, goals);
+          for (const msg of pushMsgs) {
             try {
               await sendPushNotification(fcmToken, msg);
             } catch (pushErr) {
-              logger.error(`[NOTIF] Erro FCM uid=${uid}:`, pushErr);
+              logger.error(`[PUSH] Erro FCM uid=${uid}:`, pushErr);
               const code = pushErr?.errorInfo?.code || pushErr?.code;
               if (code === 'messaging/registration-token-not-registered' ||
                   code === 'messaging/invalid-registration-token') {
@@ -1776,14 +1769,22 @@ exports.dailyNotifications = onSchedule(
               }
             }
           }
+          if (pushMsgs.length > 0)
+            logger.info(`[PUSH] uid=${uid}: ${pushMsgs.length} alerta(s) enviado(s)`);
         }
 
-        if (msgs.length > 0) {
-          const canais = [
-            telegramEnabled ? 'telegram' : null,
-            pushEnabled ? 'push' : null,
-          ].filter(Boolean).join('+');
-          logger.info(`[NOTIF] uid=${uid}: ${msgs.length} alerta(s) enviado(s) via ${canais}`);
+        // ── Telegram: usa prefs.telegramTipos (configurado em Bot do Telegram) ─
+        if (telegramEnabled) {
+          // Fallback: se telegramTipos nunca foi configurado, usa prefs.tipos
+          const tgTipos = prefs.telegramTipos !== undefined ? prefs.telegramTipos : (prefs.tipos || {});
+          const tgPrefs = { ...prefs, tipos: tgTipos };
+          const tgMsgs  = checkNotifications(cards, transactions, config, tgPrefs, goals);
+          for (const msg of tgMsgs) {
+            await sendMessage(chatId, msg);
+            await new Promise(r => setTimeout(r, 100)); // evita rate limit
+          }
+          if (tgMsgs.length > 0)
+            logger.info(`[TELEGRAM] uid=${uid}: ${tgMsgs.length} alerta(s) enviado(s)`);
         }
       } catch (err) {
         logger.error(`[NOTIF] Erro ao processar uid=${uid}:`, err);

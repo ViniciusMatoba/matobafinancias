@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.19';
+export const APP_VERSION = '1.6.20';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.20',
+    date: '01/06/2026',
+    changes: [
+      'Push e Telegram agora têm alertas completamente independentes',
+      'Bot do Telegram: toggles N1–N17 exclusivos na aba de configuração',
+      'Cloud Function: push usa prefs.tipos, Telegram usa prefs.telegramTipos',
+    ],
+  },
   {
     version: '1.6.19',
     date: '01/06/2026',
