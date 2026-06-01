@@ -1,9 +1,10 @@
 {
-  "version": "1.6.15",
+  "version": "1.6.16",
   "date": "01/06/2026",
   "notes": [
-    "Fix crítico: tela preta ao abrir o app corrigida",
-    "Safeguard de 8s: se autoUpdate travar, força reload automaticamente",
-    "Removido polling periódico de atualização (verificação apenas na abertura)"
+    "Fix crítico: Service Worker reescrito sem dependência de CDN externo",
+    "Firebase e Workbox agora embutidos no SW — funciona offline e em redes lentas",
+    "Timeout de 10s em navigator.serviceWorker.ready — nunca trava em \"Ativando\"",
+    "Fallback automático se SW não responder na hora do registro do token"
   ]
 }
