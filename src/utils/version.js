@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.5';
+export const APP_VERSION = '1.6.6';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.6',
+    date: '01/06/2026',
+    changes: [
+      'Fix crítico: atualização automática do PWA para todos os usuários',
+      'Migrado para registerType autoUpdate — novo SW ativa sem interação',
+      'Tela de loading exibida automaticamente durante a atualização',
+    ],
+  },
   {
     version: '1.6.5',
     date: '01/06/2026',

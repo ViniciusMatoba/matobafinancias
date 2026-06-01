@@ -1,74 +1,30 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
-import { RefreshCw, X, DollarSign } from 'lucide-react';
+import { DollarSign } from 'lucide-react';
 
-const DISMISSED_UPDATE_KEY = 'matoba:update-dismissed';
-
-export default function ReloadPrompt({ hidden = false }) {
+export default function ReloadPrompt() {
   const [updating, setUpdating] = useState(false);
-  const [dismissed, setDismissed] = useState(
-    () => localStorage.getItem(DISMISSED_UPDATE_KEY) === '1'
-  );
 
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegistered(r) {
-      if (r) {
-        const checkUpdate = () => {
-          r.update().catch(err => console.log('Erro ao checar atualizacao do SW:', err));
-        };
-
-        // Checa atualização imediatamente ao iniciar
-        checkUpdate();
-
-        // Checa sempre que o app ganha foco ou volta para o primeiro plano (essencial para PWA mobile)
-        const handleVisibilityChange = () => {
-          if (document.visibilityState === 'visible') {
-            checkUpdate();
-          }
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        // Verifica atualizações a cada 60 segundos automaticamente
-        const interval = setInterval(checkUpdate, 60000);
-
-        // Limpeza dos event listeners ao desmontar
-        r._cleanupVisibility = () => {
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-          clearInterval(interval);
-        };
-      }
+  useRegisterSW({
+    // onNeedRefresh: disparado pelo vite-plugin-pwa (autoUpdate) quando
+    // um novo SW está esperando. Mostramos a tela de loading e o
+    // vite-plugin-pwa cuida do skipWaiting + reload automaticamente.
+    onNeedRefresh() {
+      setUpdating(true);
     },
-    onRegisterError(error) {
-      console.log('SW registration error', error);
+    onRegistered(r) {
+      if (!r) return;
+      const check = () => r.update().catch(() => {});
+      check();
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') check();
+      });
+      setInterval(check, 60_000);
+    },
+    onRegisterError(err) {
+      console.log('SW registration error', err);
     },
   });
-
-  // Auto-atualização silenciosa imediata ao detectar nova versão
-  useEffect(() => {
-    if (needRefresh) {
-      setUpdating(true);
-      localStorage.removeItem(DISMISSED_UPDATE_KEY);
-      // Pequeno delay para exibir a tela de atualização e executar o skipWaiting
-      setTimeout(() => {
-        updateServiceWorker(true);
-      }, 150);
-    }
-  }, [needRefresh, updateServiceWorker]);
-
-  const handleUpdate = () => {
-    setUpdating(true);
-    localStorage.removeItem(DISMISSED_UPDATE_KEY);
-    setTimeout(() => updateServiceWorker(true), 80);
-  };
-
-  const handleDismiss = () => {
-    localStorage.setItem(DISMISSED_UPDATE_KEY, '1');
-    setDismissed(true);
-    setNeedRefresh(false);
-  };
 
   // ── Tela de loading enquanto instala a atualização ─────────────────────────
   if (updating) {
@@ -120,53 +76,5 @@ export default function ReloadPrompt({ hidden = false }) {
     );
   }
 
-  // ── Banner de atualização disponível ──────────────────────────────────────
-  if (!needRefresh || dismissed || hidden) return null;
-
-  return (
-    <div style={{
-      position: 'fixed', top: 16, left: 16, right: 16, zIndex: 9999,
-      background: 'var(--bg-surface, #1a1a2e)', border: '1px solid var(--primary, #6366f1)',
-      borderRadius: 14, padding: '14px 16px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
-      display: 'flex', alignItems: 'center', gap: 12,
-    }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: '50%',
-        background: 'rgba(99,102,241,0.18)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'var(--primary, #6366f1)', flexShrink: 0,
-      }}>
-        <RefreshCw size={17} />
-      </div>
-
-      <div style={{ flex: 1 }}>
-        <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary, #f1f1f9)' }}>
-          Nova versão disponível!
-        </p>
-        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary, #8b8fa8)' }}>
-          Toque em <strong>Atualizar</strong> para instalar.
-        </p>
-      </div>
-
-      <button
-        onClick={handleUpdate}
-        style={{
-          background: 'var(--primary, #6366f1)', color: '#fff',
-          padding: '8px 16px', borderRadius: 9,
-          fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
-          flexShrink: 0,
-        }}
-      >
-        Atualizar
-      </button>
-
-      <button
-        onClick={handleDismiss}
-        style={{ background: 'none', border: 'none', color: 'var(--text-muted, #555)', padding: 4, cursor: 'pointer', flexShrink: 0 }}
-      >
-        <X size={16} />
-      </button>
-    </div>
-  );
+  return null;
 }

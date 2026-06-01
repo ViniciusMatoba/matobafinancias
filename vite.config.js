@@ -14,7 +14,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'public',
       filename: 'firebase-messaging-sw.js',
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
       },
