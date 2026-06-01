@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
+import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 
@@ -498,7 +498,16 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
           {form.tipo === 'diario' ? 'A partir de' : form.frequencia === 'unico' ? 'Data' : 'Data de início'}
         </label>
-        <input type="date" value={form.dataInicio} onChange={e => set('dataInicio', e.target.value)}
+        <input type="date" value={form.dataInicio}
+          onChange={e => {
+            set('dataInicio', e.target.value);
+            // Recalcula dataFim se for parcelado com total já preenchido
+            if (form.frequencia === 'parcelado' && parseInt(form.totalParcelas) > 0) {
+              const pAtual = parseInt(form.parcelaAtual) || 1;
+              const total  = parseInt(form.totalParcelas);
+              set('dataFim', addMonths(e.target.value, total - pAtual));
+            }
+          }}
           required style={{ colorScheme: 'dark' }} />
       </div>
 
@@ -554,20 +563,65 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
         </div>
       )}
 
-      {form.tipo !== 'diario' && form.frequencia === 'parcelado' && (
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Parcela atual</label>
-            <input type="number" min="1" max="120" placeholder="Ex: 1" value={form.parcelaAtual}
-              onChange={e => set('parcelaAtual', e.target.value)} />
+      {form.tipo !== 'diario' && form.frequencia === 'parcelado' && (() => {
+        // Calcula data da última parcela em tempo real
+        const parcAtual  = parseInt(form.parcelaAtual) || 1;
+        const total      = parseInt(form.totalParcelas) || 0;
+        const dataInicio = form.dataInicio || todayStr();
+        const mesesRestantes = total > 0 ? total - parcAtual : 0;
+        const dataFimCalc = total > 0 ? addMonths(dataInicio, mesesRestantes) : null;
+
+        const fmtMesAno = (d) => {
+          if (!d) return '';
+          const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          const [y, m] = d.split('-').map(Number);
+          return `${MESES[m - 1]}/${y}`;
+        };
+
+        return (
+          <div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Parcela atual</label>
+                <input type="number" min="1" max="120" placeholder="Ex: 1" value={form.parcelaAtual}
+                  onChange={e => set('parcelaAtual', e.target.value)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Total de parcelas</label>
+                <input type="number" min="2" max="120" placeholder="Ex: 12" value={form.totalParcelas}
+                  onChange={e => {
+                    set('totalParcelas', e.target.value);
+                    // Auto-preenche dataFim com a data da última parcela
+                    const n = parseInt(e.target.value) || 0;
+                    if (n > 0 && form.dataInicio) {
+                      const pAtual = parseInt(form.parcelaAtual) || 1;
+                      set('dataFim', addMonths(form.dataInicio, n - pAtual));
+                    }
+                  }} required />
+              </div>
+            </div>
+            {/* Data final calculada */}
+            {dataFimCalc && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
+                padding: '7px 10px', borderRadius: 8,
+                background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+              }}>
+                <span style={{ fontSize: 14 }}>📅</span>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  Última parcela em{' '}
+                  <strong style={{ color: 'var(--primary)' }}>{fmtMesAno(dataFimCalc)}</strong>
+                  {total > 0 && (
+                    <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>
+                      · parcela {parcAtual} de {total}
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
-          <div style={{ flex: 1 }}>
-            <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Total de parcelas</label>
-            <input type="number" min="2" max="120" placeholder="Ex: 12" value={form.totalParcelas}
-              onChange={e => set('totalParcelas', e.target.value)} required />
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {form.tipo !== 'diario' && ['diario', 'semanal', 'mensal'].includes(form.frequencia) && (
         <div>

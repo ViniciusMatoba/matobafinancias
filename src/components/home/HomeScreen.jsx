@@ -489,13 +489,14 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         </div>
       )}
 
-      {/* Orçamento por Divisão Percentual (mensal do mês selecionado) */}
+      {/* Orçamento por Divisão Percentual — sempre exibe o mês corrente,
+           independente do dia selecionado na navegação diária */}
       <div style={{ padding: '16px 20px 0' }}>
         <BudgetSummaryCard
           transactions={transactions}
           rendaMensal={config?.rendaMensal || 0}
           budgetPcts={config?.budgetPcts}
-          currentMonth={currentMonth}
+          currentMonth={today.slice(0, 7)}
           onNavigateSettings={() => onNavigate('settings')}
         />
       </div>

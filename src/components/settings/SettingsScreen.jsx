@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { LogOut, User, Shield, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { LogOut, User, Shield, ChevronDown, ChevronUp, Download, Calendar } from 'lucide-react';
 import { useToast } from '../shared/Toast';
 import { doc, collection, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { expandOccurrences } from '../../utils/projectionCalc';
+import { TYPE_CONFIG } from '../../utils/formatters';
 import CardManager from './CardManager';
 import WalletManager from './WalletManager';
 import BudgetSettings from './BudgetSettings';
@@ -135,6 +137,15 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
   const [backupOpen, setBackupOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState('');
+  const [csvModal, setCsvModal] = useState(false);
+  // Período padrão do CSV: mês atual completo
+  const _nowIso = new Date().toISOString().slice(0, 7);
+  const [csvFrom, setCsvFrom] = useState(`${_nowIso}-01`);
+  const [csvTo, setCsvTo] = useState(() => {
+    const [y, m] = _nowIso.split('-').map(Number);
+    const last = new Date(y, m, 0).getDate();
+    return `${_nowIso}-${String(last).padStart(2, '0')}`;
+  });
   const { prompt: deferredPrompt, handleInstall } = useInstallPrompt();
   const { showToast, ToastNode } = useToast();
 
@@ -273,35 +284,94 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
     }
   };
 
+  // ── Exportar CSV com ocorrências expandidas por período ──────────────────────
   const handleExportCSV = () => {
-    let csv = 'Data,Tipo,Categoria,Descricao,Valor,Frequencia,Parcela,CartaoCredito\n';
+    if (!csvFrom || !csvTo || csvFrom > csvTo) {
+      showToast('Período inválido. Verifique as datas.', 'error');
+      return;
+    }
+
+    const DAY_NAMES = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+    const escape = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
+
+    const rows = [
+      'Data,DiaSemana,Tipo,Descricao,Categoria,Valor,FrequenciaOriginal,Conferido',
+    ];
 
     transactions.forEach(tx => {
-      if (tx.tipo === 'cartao' && tx.itens && tx.itens.length > 0) {
+      // Cartão com itens individuais — expande cada item
+      if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
         tx.itens.forEach(item => {
-           const data = item.dataCompra || tx.dataInicio;
-           const valor = (Number(item.valor) || 0).toFixed(2);
-           const parc = item.isParcelado ? `${item.parcelaAtual}/${item.totalParcelas}` : '-';
-           const desc = `"${(item.descricao || tx.descricao || '').replace(/"/g, '""')}"`;
-           csv += `${data},${tx.tipo},${item.categoria || tx.categoria || ''},${desc},${valor},${tx.frequencia},${parc},Sim\n`;
+          // Determina em quais meses do período o item cai
+          if (item.isParcelado) {
+            const startParc = item.parcelaAtual || 1;
+            const remaining = (item.totalParcelas || 1) - startParc + 1;
+            for (let i = 0; i < remaining; i++) {
+              const [y, m] = item.dataCompra.split('-').map(Number);
+              const pd = new Date(y, m - 1 + i, 15); // dia 15 do mês da parcela
+              const dateStr = pd.toISOString().slice(0, 10);
+              if (dateStr < csvFrom || dateStr > csvTo) continue;
+              const dow = DAY_NAMES[pd.getDay()];
+              const valor = (Number(item.valor) || 0).toFixed(2);
+              rows.push([
+                dateStr, dow, 'cartao',
+                escape(item.descricao || tx.descricao),
+                item.categoria || tx.categoria || '',
+                valor, 'parcelado', tx.conferido ? 'sim' : 'nao',
+              ].join(','));
+            }
+          } else {
+            const dateStr = item.dataCompra || tx.dataInicio;
+            if (!dateStr || dateStr < csvFrom || dateStr > csvTo) return;
+            const pd = new Date(dateStr + 'T12:00:00');
+            const dow = DAY_NAMES[pd.getDay()];
+            const valor = (Number(item.valor) || 0).toFixed(2);
+            rows.push([
+              dateStr, dow, 'cartao',
+              escape(item.descricao || tx.descricao),
+              item.categoria || tx.categoria || '',
+              valor, 'unico', tx.conferido ? 'sim' : 'nao',
+            ].join(','));
+          }
         });
-      } else {
-         const data = tx.dataInicio || '';
-         const valor = (Number(tx.valor) || 0).toFixed(2);
-         const parc = tx.frequencia === 'parcelado' ? `${tx.parcelaAtual}/${tx.totalParcelas}` : '-';
-         const desc = `"${(tx.descricao || '').replace(/"/g, '""')}"`;
-         csv += `${data},${tx.tipo},${tx.categoria || ''},${desc},${valor},${tx.frequencia},${parc},Nao\n`;
+        return; // itens do cartão já processados acima
       }
+
+      // Demais transações — expande ocorrências no período
+      const occs = expandOccurrences(tx, csvFrom, csvTo);
+      occs.forEach(occ => {
+        const pd  = new Date(occ.date + 'T12:00:00');
+        const dow = DAY_NAMES[pd.getDay()];
+        const cfg = TYPE_CONFIG[tx.tipo];
+        const valor = (occ.valor || 0).toFixed(2);
+        const conferido = tx.frequencia === 'unico'
+          ? (tx.conferido ? 'sim' : 'nao')
+          : (tx.conferidos?.includes(occ.date) ? 'sim' : 'nao');
+        rows.push([
+          occ.date, dow,
+          tx.tipo,
+          escape(tx.descricao || cfg?.label || ''),
+          tx.categoria || '',
+          valor,
+          tx.frequencia || 'unico',
+          conferido,
+        ].join(','));
+      });
     });
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
+    // BOM para Excel abrir com acentos corretamente
+    const bom = '﻿';
+    const blob = new Blob([bom + rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `matoba_financas_export_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute('download', `matoba_${csvFrom}_a_${csvTo}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setCsvModal(false);
+    showToast(`CSV exportado: ${rows.length - 1} registros`);
   };
 
   return (
@@ -723,10 +793,10 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   />
                 </label>
 
-                {/* Exportar CSV */}
+                {/* Exportar CSV — abre modal de período */}
                 <button
                   type="button"
-                  onClick={handleExportCSV}
+                  onClick={() => setCsvModal(true)}
                   style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                     padding: '12px', borderRadius: 10,
@@ -810,6 +880,103 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
           `}</style>
         </div>
       )}
+      {/* Modal de seleção de período para exportar CSV */}
+      {csvModal && (
+        <div
+          onClick={e => { if (e.target === e.currentTarget) setCsvModal(false); }}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(2px)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          }}
+        >
+          <div style={{
+            width: '100%', maxWidth: 480,
+            background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
+            padding: '20px 20px 40px',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.5)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
+              <span style={{ fontSize: 22 }}>📊</span>
+              <div>
+                <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Exportar Planilha (CSV)
+                </p>
+                <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                  Ocorrências reais expandidas por período
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>
+                  Data início
+                </label>
+                <input
+                  type="date"
+                  value={csvFrom}
+                  onChange={e => setCsvFrom(e.target.value)}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                    borderRadius: 10, padding: '10px 12px',
+                    fontSize: 14, color: 'var(--text-primary)', colorScheme: 'dark',
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6, textTransform: 'uppercase' }}>
+                  Data fim
+                </label>
+                <input
+                  type="date"
+                  value={csvTo}
+                  onChange={e => setCsvTo(e.target.value)}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                    borderRadius: 10, padding: '10px 12px',
+                    fontSize: 14, color: 'var(--text-primary)', colorScheme: 'dark',
+                  }}
+                />
+              </div>
+            </div>
+
+            <p style={{ margin: '0 0 16px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              O CSV incluirá <strong>todas as ocorrências reais</strong> (mensalidades, parcelas, etc.)
+              dentro do período selecionado — uma linha por ocorrência, com data efetiva.
+            </p>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => setCsvModal(false)}
+                style={{
+                  flex: 1, padding: '12px', borderRadius: 12,
+                  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleExportCSV}
+                style={{
+                  flex: 2, padding: '12px', borderRadius: 12, border: 'none',
+                  background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+                  color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                }}
+              >
+                <Download size={16} /> Baixar CSV
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {ToastNode}
     </div>
   );
