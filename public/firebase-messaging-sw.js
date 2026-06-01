@@ -51,43 +51,27 @@ firebase.initializeApp({
   appId:             '1:225695230271:web:a0d66a56b1515738810b8a',
 });
 
-firebase.messaging();
+const messaging = firebase.messaging();
 
-// ─── Helpers de payload ───────────────────────────────────────────────────────
-function getPayload(event) {
-  if (!event.data) return {};
-  try { return event.data.json(); }
-  catch (_) {
-    try { return JSON.parse(event.data.text()); }
-    catch (_) { return {}; }
-  }
-}
-
-function notificationFromPayload(payload) {
-  const n = payload.notification || payload.webpush?.notification || {};
-  const d = payload.data || {};
-  return {
-    title: n.title || d.title || 'Matoba Finanças',
-    options: {
-      body:               n.body   || d.body  || '',
-      icon:               n.icon   || '/icons/icon-192.png',
-      badge:                         '/icons/icon-192.png',
-      tag:                d.tag    || n.tag   || `matoba-${Date.now()}`,
-      data:               { url: d.url || n.data?.url || '/' },
-      vibrate:            [200, 100, 200],
-      requireInteraction: false,
-    },
+// ─── Background message handler ───────────────────────────────────────────────
+// Substitui o handler push manual — o SDK do FCM entrega a mensagem aqui
+// quando o app está em background, evitando conflito entre dois handlers.
+// Com o campo "notification" no payload (Cloud Function), o SDK cuida
+// automaticamente de exibir a notificação; este handler é o fallback.
+messaging.onBackgroundMessage((payload) => {
+  const n = payload.notification || {};
+  const d = payload.data         || {};
+  const title   = n.title || d.title || 'Matoba Finanças';
+  const options = {
+    body:               n.body   || d.body  || '',
+    icon:               './icons/icon-192.png',
+    badge:              './icons/icon-192.png',
+    tag:                d.tag    || `matoba-${Date.now()}`,
+    data:               { url: d.url || './' },
+    vibrate:            [200, 100, 200],
+    requireInteraction: false,
   };
-}
-
-// ─── Handler de push (fallback raw — cobre mensagens data-only) ───────────────
-// Firebase messaging compat registra seu próprio handler para mensagens com
-// campo "notification". Este handler cobre mensagens data-only que o SDK
-// ignora por padrão quando não há onBackgroundMessage configurado.
-self.addEventListener('push', (event) => {
-  const payload = getPayload(event);
-  const { title, options } = notificationFromPayload(payload);
-  event.waitUntil(self.registration.showNotification(title, options));
+  return self.registration.showNotification(title, options);
 });
 
 // ─── Clique na notificação ────────────────────────────────────────────────────

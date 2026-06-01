@@ -3,9 +3,28 @@ import { deleteToken, getToken, onMessage } from 'firebase/messaging';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { messaging, db, functions } from '../firebase';
+import { APP_VERSION } from '../utils/version';
 
 const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
-const VAPID_ID = VAPID_KEY || 'firebase-default';
+const VAPID_ID  = VAPID_KEY || 'firebase-default';
+
+// ── Contramedida: detecta mudança de versão do app ou de SW ──────────────────
+// Retorna true se o token FCM precisa ser renovado.
+function shouldForceTokenRefresh(savedVapidKey) {
+  const storedVersion = localStorage.getItem('matoba:fcm-app-version');
+  const storedSwUrl   = localStorage.getItem('matoba:fcm-sw-url');
+
+  const versionChanged = storedVersion && storedVersion !== APP_VERSION;
+  const vapidChanged   = !!savedVapidKey && savedVapidKey !== VAPID_ID;
+
+  return !!(versionChanged || vapidChanged || !storedVersion);
+}
+
+// Salva marcadores para detectar mudanças futuras
+function saveTokenMarkers(swUrl) {
+  localStorage.setItem('matoba:fcm-app-version', APP_VERSION);
+  if (swUrl) localStorage.setItem('matoba:fcm-sw-url', swUrl);
+}
 
 function getNotificationPermission() {
   return typeof Notification !== 'undefined' ? Notification.permission : 'default';
@@ -62,14 +81,16 @@ export function useNotifications(user) {
     !!messaging
   ), []);
 
-  const saveToken = useCallback(async (token) => {
+  const saveToken = useCallback(async (token, swUrl = '') => {
     if (!db || !user || !token) return;
     await setDoc(doc(db, 'users', user.uid), {
-      fcmToken: token,
+      fcmToken:    token,
       fcmVapidKey: VAPID_ID,
+      fcmAppVersion: APP_VERSION,
       fcmUpdatedAt: new Date().toISOString(),
       email: user.email || '',
     }, { merge: true });
+    saveTokenMarkers(swUrl);
   }, [user]);
 
   const registerMessagingSw = useCallback(async () => {
@@ -85,21 +106,21 @@ export function useNotifications(user) {
       return null;
     }
 
-    const swReg = await registerMessagingSw();
+    const swReg  = await registerMessagingSw();
+    const swUrl  = swReg?.active?.scriptURL || '';
+
     if (forceRefresh) {
       try { await deleteToken(messaging); } catch { /* token pode ainda não existir */ }
     }
 
-    const tokenOptions = {
-      serviceWorkerRegistration: swReg,
-    };
+    const tokenOptions = { serviceWorkerRegistration: swReg };
     if (VAPID_KEY) tokenOptions.vapidKey = VAPID_KEY;
 
     const token = await getToken(messaging, tokenOptions);
 
     if (token) {
       setFcmToken(token);
-      if (save) await saveToken(token);
+      if (save) await saveToken(token, swUrl);
     }
 
     return token;
@@ -132,7 +153,9 @@ export function useNotifications(user) {
       }
 
       if (pushSupported && currentPermission === 'granted') {
-        token = await syncToken({ save: true, forceRefresh: !!savedVapidKey && savedVapidKey !== VAPID_ID });
+        // Contramedida: força refresh se versão do app ou VAPID mudou
+        const needsRefresh = shouldForceTokenRefresh(savedVapidKey);
+        token = await syncToken({ save: true, forceRefresh: needsRefresh });
         serviceWorkerReady = true;
 
         if (db && user) {

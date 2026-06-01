@@ -63,18 +63,24 @@ async function sendPushNotification(token, markdownText) {
   const { title, body } = notificationParts(markdownText);
   return admin.messaging().send({
     token,
-    data: {
-      title,
-      body,
-      url: APP_URL,
-      tag: 'matoba-financas',
-    },
+    // Campo notification obrigatório para iOS e para resolver conflito no SW
+    notification: { title, body },
+    data: { title, body, url: APP_URL, tag: 'matoba-financas' },
     webpush: {
-      headers: {
-        TTL: '300',
-        Urgency: 'high',
+      notification: {
+        title,
+        body,
+        icon:               '/icons/icon-192.png',
+        badge:              '/icons/icon-192.png',
+        tag:                'matoba-financas',
+        requireInteraction: false,
+        data:               { url: APP_URL },
       },
+      headers:    { TTL: '300', Urgency: 'high' },
       fcmOptions: { link: APP_URL },
+    },
+    apns: {
+      payload: { aps: { alert: { title, body }, sound: 'default', badge: 1 } },
     },
   });
 }
@@ -176,13 +182,10 @@ function computeSpentByCategory(transactions, currentMonth) {
         const cat = item.categoria;
         if (!cat || !(cat in totals)) continue;
         if (item.isParcelado) {
-          const start   = item.parcelaAtual || 1;
-          const remaining = (item.totalParcelas || 1) - start + 1;
-          for (let i = 0; i < remaining; i++) {
-            const [y, m] = item.dataCompra.split('-').map(Number);
-            const pd     = new Date(y, m - 1 + i, 1);
-            const pMonth = `${pd.getFullYear()}-${String(pd.getMonth()+1).padStart(2,'0')}`;
-            if (pMonth === currentMonth) totals[cat] += Number(item.valor) || 0;
+          // Conta apenas se a FATURA (tx.dataInicio) é do mês atual.
+          // Não itera meses futuros — cada mês tem sua própria fatura.
+          if (tx.dataInicio?.startsWith(currentMonth)) {
+            totals[cat] += Number(item.valor) || 0;
           }
         } else if (item.dataCompra?.startsWith(currentMonth)) {
           totals[cat] += Number(item.valor) || 0;
@@ -367,7 +370,7 @@ function checkNotifications(cards, transactions, config, prefs) {
   }
 
   // N8 — Resumo diário matinal (dias configuráveis: todos / uteis / fds)
-  if (tipos.n8 === true) {
+  if (tipos.n8 !== false) {
     const diasDiario = prefs.diasResumoDiario || 'todos';
     const enviarN8 =
       diasDiario === 'todos' ||

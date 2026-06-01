@@ -1,7 +1,20 @@
-export const APP_VERSION = '1.6.10';
+export const APP_VERSION = '1.6.11';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.11',
+    date: '01/06/2026',
+    changes: [
+      'Fix crítico: notificações push voltam a funcionar após atualização do app',
+      'Token FCM renovado automaticamente quando a versão do app muda',
+      'Fix: handler de push no SW substituído por onBackgroundMessage (sem conflito)',
+      'Fix: notificações agora funcionam em iOS (campo notification adicionado ao FCM)',
+      'Fix: resumo diário (N8) não era enviado por erro de comparação estrita',
+      'Fix: cálculo de parcelados nos alertas de orçamento (N4/N5/N9) corrigido',
+      'Release script agora faz deploy automático das Cloud Functions quando alteradas',
+    ],
+  },
   {
     version: '1.6.10',
     date: '01/06/2026',

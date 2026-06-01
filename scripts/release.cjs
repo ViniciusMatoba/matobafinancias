@@ -10,6 +10,16 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const run = (cmd, opts = {}) => execSync(cmd, { cwd: root, stdio: 'inherit', ...opts });
 
+// Verifica se functions/index.js foi alterado desde o último commit das functions
+function functionsChanged() {
+  try {
+    const out = execSync('git diff HEAD~1 HEAD --name-only', { cwd: root }).toString();
+    return out.includes('functions/');
+  } catch {
+    return true; // em caso de dúvida, faz o deploy
+  }
+}
+
 // Lê versão atual do package.json
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const version = pkg.version;
@@ -73,6 +83,20 @@ try {
   // 6. Deploy no GitHub Pages
   console.log('🌐 Publicando no GitHub Pages...');
   run('npm run deploy');
+
+  // 7. Deploy das Cloud Functions (se alteradas)
+  if (functionsChanged()) {
+    console.log('☁️  Detectadas alterações em functions/ — fazendo deploy...');
+    try {
+      run('firebase deploy --only functions', { cwd: root });
+      console.log('   ✅ Cloud Functions atualizadas.');
+    } catch (fnErr) {
+      console.warn('   ⚠️  Deploy das functions falhou:', fnErr.message);
+      console.warn('   Execute manualmente: firebase deploy --only functions');
+    }
+  } else {
+    console.log('☁️  Nenhuma alteração em functions/ — deploy ignorado.');
+  }
 
   console.log(`\n✅ Release v${version} publicado com sucesso!\n`);
 } catch (err) {
