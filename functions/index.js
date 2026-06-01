@@ -1188,12 +1188,166 @@ async function handleFatura(chatId, uid) {
   return sendMessage(chatId, text.trim());
 }
 
+// ─── Configuração de alertas via bot (menu interativo inline) ─────────────────
+
+const DEFAULT_TG_TIPOS = {
+  n1:true,n2:true,n3:true,n4:true,n5:true,n6:true,n7:true,
+  n8:true,n9:true,n10:true,n11:true,n12:true,
+  n13:true,n14:true,n15:true,n16:true,n17:true,
+};
+
+const ALERT_LABELS = {
+  n1:'Fatura vence hoje', n2:'Vence em X dias', n3:'Fecha em 2 dias',
+  n4:'Orçamento >80%',   n5:'Orçamento estourado', n6:'Saldo negativo 7d',
+  n7:'Resumo semanal',   n8:'Resumo diário',  n9:'Limite geral gastos',
+  n10:'Contas fixas',    n11:'Cartão no limite', n12:'Rel. mensal',
+  n13:'Fecha amanhã',    n14:'Última parcela', n15:'Saldo mínimo',
+  n16:'Caixinhas (dia 1)',n17:'Metade do mês',
+};
+
+// Grupos de alertas para organizar o menu
+const ALERT_GROUPS = [
+  { emoji:'💳', title:'Cartão',        ids:['n1','n2','n3','n13'] },
+  { emoji:'💰', title:'Orçamento',     ids:['n4','n5','n9'] },
+  { emoji:'⚠️', title:'Alertas',       ids:['n6','n10','n11','n14','n15'] },
+  { emoji:'📊', title:'Resumos',       ids:['n7','n8','n12','n16','n17'] },
+];
+
+// Texto do menu de configuração
+function buildConfigText(tipos) {
+  let t = `⚙️ *Configurar Alertas do Telegram*\n`;
+  t += `_Toque em um alerta para ativar ✅ ou desativar ❌_\n\n`;
+  for (const g of ALERT_GROUPS) {
+    t += `${g.emoji} *${g.title}*\n`;
+    for (const id of g.ids) {
+      t += `${tipos[id] !== false ? '✅' : '❌'} ${ALERT_LABELS[id]}\n`;
+    }
+    t += '\n';
+  }
+  const ativos = Object.values(tipos).filter(v => v !== false).length;
+  t += `_${ativos} de ${Object.keys(ALERT_LABELS).length} alertas ativos_`;
+  return t.trim();
+}
+
+// Teclado inline com botões de toggle por grupo (2 por linha)
+function buildConfigKeyboard(tipos) {
+  const rows = [];
+  for (const g of ALERT_GROUPS) {
+    // Cabeçalho do grupo como botão desabilitado (apenas texto)
+    rows.push([{ text: `${g.emoji} ${g.title}`, callback_data: 'noop' }]);
+    // Botões de toggle, 2 por linha
+    for (let i = 0; i < g.ids.length; i += 2) {
+      const row = [];
+      for (let j = i; j < Math.min(i + 2, g.ids.length); j++) {
+        const id = g.ids[j];
+        const on = tipos[id] !== false;
+        row.push({ text: `${on ? '✅' : '❌'} ${ALERT_LABELS[id]}`, callback_data: `tgl_${id}` });
+      }
+      rows.push(row);
+    }
+  }
+  // Botões de ação globais
+  rows.push([
+    { text: '✅ Ativar todos',   callback_data: 'cfg_all_on'  },
+    { text: '❌ Desativar todos', callback_data: 'cfg_all_off' },
+  ]);
+  rows.push([{ text: '✔️ Pronto — fechar menu', callback_data: 'cfg_done' }]);
+  return { inline_keyboard: rows };
+}
+
+// Lê telegramTipos do Firestore (com defaults)
+async function getTelegramTipos(uid) {
+  const configDoc = await db.collection('config').doc(uid).get();
+  const prefs     = configDoc.exists ? (configDoc.data().notificacoes || {}) : {};
+  return { ...DEFAULT_TG_TIPOS, ...(prefs.telegramTipos ?? prefs.tipos ?? {}) };
+}
+
+// Salva telegramTipos no Firestore
+async function saveTelegramTipos(uid, tipos) {
+  const configDoc = await db.collection('config').doc(uid).get();
+  const prefs     = configDoc.exists ? (configDoc.data().notificacoes || {}) : {};
+  await db.collection('config').doc(uid).set(
+    { notificacoes: { ...prefs, telegramTipos: tipos } },
+    { merge: true }
+  );
+}
+
+async function handleConfigurar(chatId, uid) {
+  const tipos = await getTelegramTipos(uid);
+  return tgFetch('sendMessage', {
+    chat_id:      chatId,
+    text:         buildConfigText(tipos),
+    parse_mode:   'Markdown',
+    reply_markup: buildConfigKeyboard(tipos),
+  });
+}
+
+// ─── Handler de callback_query (botões inline) ────────────────────────────────
+async function handleCallbackQuery(cbq) {
+  const chatId    = cbq.message?.chat?.id;
+  const msgId     = cbq.message?.message_id;
+  const data      = cbq.data || '';
+  const cbqId     = cbq.id;
+
+  // Sempre responde para remover o spinner do botão
+  await tgFetch('answerCallbackQuery', { callback_query_id: cbqId }).catch(() => {});
+  if (!chatId) return;
+
+  // Botão de cabeçalho sem ação
+  if (data === 'noop') return;
+
+  // Verifica vínculo
+  const snap = await db.collection('users').where('telegramChatId', '==', String(chatId)).limit(1).get();
+  if (snap.empty) return;
+  const uid   = snap.docs[0].id;
+  let tipos   = await getTelegramTipos(uid);
+
+  // ── Toggle individual
+  if (data.startsWith('tgl_')) {
+    const id = data.slice(4);
+    if (id in DEFAULT_TG_TIPOS) {
+      tipos[id] = tipos[id] === false ? true : false;
+      await saveTelegramTipos(uid, tipos);
+    }
+  }
+  // ── Ativar todos
+  else if (data === 'cfg_all_on') {
+    Object.keys(DEFAULT_TG_TIPOS).forEach(id => { tipos[id] = true; });
+    await saveTelegramTipos(uid, tipos);
+    await tgFetch('answerCallbackQuery', { callback_query_id: cbqId, text: '✅ Todos os alertas ativados!' }).catch(() => {});
+  }
+  // ── Desativar todos
+  else if (data === 'cfg_all_off') {
+    Object.keys(DEFAULT_TG_TIPOS).forEach(id => { tipos[id] = false; });
+    await saveTelegramTipos(uid, tipos);
+    await tgFetch('answerCallbackQuery', { callback_query_id: cbqId, text: '❌ Todos os alertas desativados.' }).catch(() => {});
+  }
+  // ── Fechar menu
+  else if (data === 'cfg_done') {
+    await tgFetch('editMessageReplyMarkup', {
+      chat_id: chatId, message_id: msgId, reply_markup: { inline_keyboard: [] },
+    }).catch(() => {});
+    return sendMessage(chatId, '✅ Configurações salvas! Use /configurar para ajustar novamente.');
+  }
+
+  // Atualiza a mensagem com o novo estado (exceto no fechar)
+  if (data !== 'cfg_done') {
+    await tgFetch('editMessageText', {
+      chat_id:      chatId,
+      message_id:   msgId,
+      text:         buildConfigText(tipos),
+      parse_mode:   'Markdown',
+      reply_markup: buildConfigKeyboard(tipos),
+    }).catch(() => {}); // ignora erro se mensagem não mudou
+  }
+}
+
 async function handleAjuda(chatId) {
   const MAIN_KEYBOARD = {
     keyboard: [
-      [{ text: '💰 Saldo' }, { text: '💳 Cartões' }, { text: '🧾 Fatura' }],
-      [{ text: '📊 Categorias' }, { text: '🎯 Metas' }, { text: '📈 Projeção' }],
-      [{ text: '💡 Insight' }, { text: '❓ Ajuda' }]
+      [{ text: '💰 Saldo' },     { text: '💳 Cartões' },  { text: '🧾 Fatura' }],
+      [{ text: '📊 Categorias' },{ text: '🎯 Metas' },    { text: '📈 Projeção' }],
+      [{ text: '💡 Insight' },   { text: '⚙️ Configurar' },{ text: '❓ Ajuda' }],
     ],
     resize_keyboard: true,
   };
@@ -1219,6 +1373,9 @@ async function handleAjuda(chatId) {
 
     `*📈 Projeção*\n` +
     `/projecao — Saldo projetado nos próximos 7 dias\n\n` +
+
+    `*⚙️ Configurações*\n` +
+    `/configurar — Ativar/desativar alertas diretamente aqui no Telegram\n\n` +
 
     `📱 *Para adicionar ou editar lançamentos use o app:*\n` +
     `👉 ${APP_URL}\n\n` +
@@ -1601,6 +1758,11 @@ async function handleOnboardingStep(chatId, uid, onboarding, text) {
 
 // ─── Processamento do update Telegram ────────────────────────────────────────
 async function processUpdate(update) {
+  // callback_query = botões inline pressionados
+  if (update.callback_query) {
+    return handleCallbackQuery(update.callback_query);
+  }
+
   const msg = update.message || update.edited_message;
   if (!msg || !msg.text) return;
 
@@ -1626,6 +1788,7 @@ async function processUpdate(update) {
   else if (cmd.includes('fatur')) cmd = '/fatura';
   else if (cmd.includes('proje') || cmd.includes('projeção')) cmd = '/projecao';
   else if (cmd.includes('categor')) cmd = '/categoria';
+  else if (cmd.includes('configur') || cmd.includes('alerta') || cmd.includes('⚙️')) cmd = '/configurar';
   else if (cmd.includes('meta')) cmd = '/meta';
   else if (cmd.includes('insig') || cmd.includes('dica') || cmd.includes('insight')) cmd = '/insight';
   else if (cmd.includes('ajuda') || cmd.includes('help')) cmd = '/ajuda';
@@ -1677,7 +1840,9 @@ async function processUpdate(update) {
     case '/cartoes':   return handleCartoes(chatId, uid);
     case '/fatura':    return handleFatura(chatId, uid);
     case '/projecao':  return handleProjecao(chatId, uid);
-    case '/insight':   return handleInsight(chatId, uid);
+    case '/insight':    return handleInsight(chatId, uid);
+    case '/configurar':
+    case '/alertas':   return handleConfigurar(chatId, uid);
     case '/ajuda':
     case '/help':      return handleAjuda(chatId);
     default:
@@ -1853,19 +2018,20 @@ exports.sendTestPush = onCall(
 // POST → registra a URL passada no body { url: "https://..." }
 // Lista de comandos exibidos no menu do BotFather
 const BOT_COMMANDS = [
-  { command: 'saldo',     description: 'Saldo atual da conta' },
-  { command: 'hoje',      description: 'Lancamentos registrados hoje' },
-  { command: 'historico', description: 'Ultimos 10 lancamentos' },
-  { command: 'semana',    description: 'Grafico de saidas dos ultimos 7 dias' },
-  { command: 'mes',       description: 'Resumo do mes (ex: /mes 4 para abril)' },
-  { command: 'resumo',    description: 'Entradas, saidas e saldo do mes corrente' },
-  { command: 'categoria', description: 'Orcamento por categoria com barras de progresso' },
-  { command: 'meta',      description: 'Status das metas da Divisao Percentual' },
-  { command: 'insight',   description: 'Dicas e analises inteligentes de gastos' },
-  { command: 'cartoes',   description: 'Cartoes cadastrados e vencimentos' },
-  { command: 'fatura',    description: 'Itens e total acumulado na fatura atual' },
-  { command: 'projecao',  description: 'Saldo projetado para os proximos 7 dias' },
-  { command: 'ajuda',     description: 'Lista completa de comandos' },
+  { command: 'saldo',      description: 'Saldo atual da conta' },
+  { command: 'hoje',       description: 'Lancamentos registrados hoje' },
+  { command: 'historico',  description: 'Ultimos 10 lancamentos' },
+  { command: 'semana',     description: 'Grafico de saidas dos ultimos 7 dias' },
+  { command: 'mes',        description: 'Resumo do mes (ex: /mes 4 para abril)' },
+  { command: 'resumo',     description: 'Entradas, saidas e saldo do mes corrente' },
+  { command: 'categoria',  description: 'Orcamento por categoria com barras de progresso' },
+  { command: 'meta',       description: 'Status das metas da Divisao Percentual' },
+  { command: 'insight',    description: 'Dicas e analises inteligentes de gastos' },
+  { command: 'cartoes',    description: 'Cartoes cadastrados e vencimentos' },
+  { command: 'fatura',     description: 'Itens e total acumulado na fatura atual' },
+  { command: 'projecao',   description: 'Saldo projetado para os proximos 7 dias' },
+  { command: 'configurar', description: 'Ativar ou desativar alertas automaticos pelo bot' },
+  { command: 'ajuda',      description: 'Lista completa de comandos' },
 ];
 
 exports.setTelegramWebhook = onRequest(
@@ -1874,7 +2040,7 @@ exports.setTelegramWebhook = onRequest(
     if (req.method === 'POST' && req.body?.url) {
       const webhookResult = await tgFetch('setWebhook', {
         url:             req.body.url,
-        allowed_updates: ['message'],
+        allowed_updates: ['message', 'callback_query'],
       });
       // Registra comandos no BotFather junto com o webhook
       const cmdsResult = await tgFetch('setMyCommands', { commands: BOT_COMMANDS });

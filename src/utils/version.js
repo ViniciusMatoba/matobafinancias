@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.20';
+export const APP_VERSION = '1.6.21';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.21',
+    date: '01/06/2026',
+    changes: [
+      'Bot Telegram: menu /configurar com botões inline para ativar/desativar cada alerta',
+      'Botões: toggle individual, "Ativar todos", "Desativar todos" e "Pronto"',
+      'Menu atualiza em tempo real ao toque — sem precisar abrir o app',
+      'Webhook atualizado para processar callback_query dos botões inline',
+    ],
+  },
   {
     version: '1.6.20',
     date: '01/06/2026',

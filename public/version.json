@@ -1,9 +1,9 @@
 {
-  "version": "1.6.19",
+  "version": "1.6.20",
   "date": "01/06/2026",
   "notes": [
-    "Fix crítico: botão Atualizar agora ativa o novo SW corretamente antes de recarregar",
-    "Fluxo: SKIP_WAITING → aguarda controllerchange → reload (sem servir cache antigo)",
-    "Fallback automático: limpa caches se SW não responder"
+    "Push e Telegram agora têm alertas completamente independentes",
+    "Bot do Telegram: toggles N1–N17 exclusivos na aba de configuração",
+    "Cloud Function: push usa prefs.tipos, Telegram usa prefs.telegramTipos"
   ]
 }
