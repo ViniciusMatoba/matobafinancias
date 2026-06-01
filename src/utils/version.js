@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.16';
+export const APP_VERSION = '1.6.17';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.17',
+    date: '01/06/2026',
+    changes: [
+      'Fix: banner de atualização só aparece quando versão remota é MAIOR que a instalada',
+      'Comparação semântica de versão evita falso positivo por cache do CDN',
+    ],
+  },
   {
     version: '1.6.16',
     date: '01/06/2026',
