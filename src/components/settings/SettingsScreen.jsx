@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { LogOut, User, Shield, ChevronDown, ChevronUp, Download, Calendar } from 'lucide-react';
 import { useToast } from '../shared/Toast';
+import { triggerUpdate } from '../../hooks/useVersionCheck';
 import { doc, collection, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { expandOccurrences } from '../../utils/projectionCalc';
@@ -622,74 +623,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
               {/* Botão de Forçar Atualização */}
               <button
                 type="button"
-                onClick={async () => {
-                  if (!('serviceWorker' in navigator)) {
-                    showToast('Seu navegador não oferece suporte a Service Workers.', 'error');
-                    return;
-                  }
-
-                  // Limpa dismissed para reativar a exibição do banner global
-                  localStorage.removeItem('matoba:update-dismissed');
-
-                  try {
-                    const regs = await navigator.serviceWorker.getRegistrations();
-                    const reg = regs?.find(r => r.active) || regs?.[0];
-                    if (!reg) {
-                      showToast('Nenhum Service Worker registrado. O aplicativo pode não estar instalado ou rodando como PWA no momento.', 'error');
-                      return;
-                    }
-
-                    // Se já existir uma atualização baixada e esperando ativação
-                    if (reg.waiting) {
-                      showToast('Nova versão pronta! Atualizando o aplicativo...', 'success');
-                      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-                      return;
-                    }
-
-                    // Se já estiver baixando uma atualização
-                    if (reg.installing) {
-                      showToast('Uma atualização já está sendo baixada. O app será reiniciado assim que concluir.', 'success');
-                      const worker = reg.installing;
-                      worker.addEventListener('statechange', () => {
-                        if (worker.state === 'installed') {
-                          worker.postMessage({ type: 'SKIP_WAITING' });
-                        }
-                      });
-                      return;
-                    }
-
-                    // Caso geral: Checar atualização no servidor
-                    let updateFound = false;
-                    const handleUpdateFound = () => {
-                      updateFound = true;
-                      const worker = reg.installing;
-                      if (worker) {
-                        showToast('Nova versão encontrada! Baixando atualização...', 'success');
-                        worker.addEventListener('statechange', () => {
-                          if (worker.state === 'installed') {
-                            worker.postMessage({ type: 'SKIP_WAITING' });
-                          }
-                        });
-                      }
-                    };
-
-                    reg.addEventListener('updatefound', handleUpdateFound);
-
-                    // Executa a busca real no servidor
-                    await reg.update();
-
-                    // Aguarda até 2 segundos para dar tempo do evento disparar
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                    reg.removeEventListener('updatefound', handleUpdateFound);
-
-                    if (!updateFound) {
-                      showToast('O aplicativo já está na versão mais recente!', 'success');
-                    }
-                  } catch (err) {
-                    console.error('Erro ao verificar SW:', err);
-                    showToast('Erro ao buscar atualizações: ' + err.message, 'error');
-                  }
-                }}
+                onClick={triggerUpdate}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   padding: '10px 14px', borderRadius: 10,
@@ -698,7 +632,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   width: '100%', marginBottom: 4, transition: 'all 0.2s'
                 }}
               >
-                🔄 Buscar Atualização do Aplicativo (PWA)
+                🔄 Atualizar Aplicativo Agora
               </button>
 
               {/* Entradas recentes — geradas automaticamente de version.js */}

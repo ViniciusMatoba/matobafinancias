@@ -1,8 +1,11 @@
 {
-  "version": "1.6.17",
+  "version": "1.6.18",
   "date": "01/06/2026",
   "notes": [
-    "Fix: banner de atualização só aparece quando versão remota é MAIOR que a instalada",
-    "Comparação semântica de versão evita falso positivo por cache do CDN"
+    "N13: Alerta de fatura fechando amanhã (aviso final)",
+    "N14: Notificação de última parcela paga — valor liberado no orçamento",
+    "N15: Alerta de saldo abaixo do mínimo configurável",
+    "N16: Resumo visual das caixinhas/metas todo dia 1 do mês",
+    "N17: Balanço da metade do mês com projeção de fechamento (dia 15)"
   ]
 }

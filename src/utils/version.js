@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.18';
+export const APP_VERSION = '1.6.19';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.19',
+    date: '01/06/2026',
+    changes: [
+      'Fix crítico: botão Atualizar agora ativa o novo SW corretamente antes de recarregar',
+      'Fluxo: SKIP_WAITING → aguarda controllerchange → reload (sem servir cache antigo)',
+      'Fallback automático: limpa caches se SW não responder',
+    ],
+  },
   {
     version: '1.6.18',
     date: '01/06/2026',

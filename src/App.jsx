@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { isConfigured } from './firebase';
 import { useAuth } from './hooks/useAuth';
-import { useVersionCheck } from './hooks/useVersionCheck';
+import { useVersionCheck, triggerUpdate } from './hooks/useVersionCheck';
 import { useTransactions } from './hooks/useTransactions';
 import { useCards } from './hooks/useCards';
 import { useWallets } from './hooks/useWallets';
@@ -559,7 +559,7 @@ export default function App() {
             </div>
           </div>
           <button
-            onClick={() => window.location.reload()}
+            onClick={triggerUpdate}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               background: '#fff', color: '#6366f1',

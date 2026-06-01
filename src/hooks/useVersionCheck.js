@@ -36,6 +36,47 @@ async function showUpdateNotification(version, notes) {
   });
 }
 
+// Ativa o novo SW corretamente antes de recarregar a página.
+// window.location.reload() simples serve o cache antigo — esta função
+// garante que o novo SW esteja ativo antes do reload.
+export async function triggerUpdate() {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+
+    // Caso 1: já há um SW novo aguardando → ativa e aguarda controllerchange
+    if (reg?.waiting) {
+      await new Promise((resolve) => {
+        navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      });
+      window.location.reload();
+      return;
+    }
+
+    // Caso 2: força verificação de atualização no servidor
+    if (reg) {
+      await reg.update().catch(() => {});
+      if (reg.waiting) {
+        await new Promise((resolve) => {
+          navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        });
+        window.location.reload();
+        return;
+      }
+    }
+
+    // Caso 3 (fallback): limpa caches do SW e recarrega
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    window.location.reload();
+  } catch {
+    window.location.reload();
+  }
+}
+
 export function useVersionCheck() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [latestVersion, setLatestVersion]     = useState(null);
