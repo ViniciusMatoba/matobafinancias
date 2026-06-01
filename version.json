@@ -1,8 +1,13 @@
 {
-  "version": "1.6.10",
+  "version": "1.6.11",
   "date": "01/06/2026",
   "notes": [
-    "Configurações: notas de atualização agora exibem a versão atual automaticamente",
-    "Versão e histórico sempre sincronizados com version.js"
+    "Fix crítico: notificações push voltam a funcionar após atualização do app",
+    "Token FCM renovado automaticamente quando a versão do app muda",
+    "Fix: handler de push no SW substituído por onBackgroundMessage (sem conflito)",
+    "Fix: notificações agora funcionam em iOS (campo notification adicionado ao FCM)",
+    "Fix: resumo diário (N8) não era enviado por erro de comparação estrita",
+    "Fix: cálculo de parcelados nos alertas de orçamento (N4/N5/N9) corrigido",
+    "Release script agora faz deploy automático das Cloud Functions quando alteradas"
   ]
 }
