@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.9';
+export const APP_VERSION = '1.6.10';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.10',
+    date: '01/06/2026',
+    changes: [
+      'Configurações: notas de atualização agora exibem a versão atual automaticamente',
+      'Versão e histórico sempre sincronizados com version.js',
+    ],
+  },
   {
     version: '1.6.9',
     date: '01/06/2026',

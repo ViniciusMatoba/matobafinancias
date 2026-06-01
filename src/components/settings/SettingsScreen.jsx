@@ -11,6 +11,7 @@ import BudgetSettings from './BudgetSettings';
 import NotificationSettings from './NotificationSettings';
 import TelegramSettings from './TelegramSettings';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
+import { APP_VERSION, CHANGELOG } from '../../utils/version';
 
 const CHANGELOG_DATA = [
   {
@@ -610,7 +611,7 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                   Notas de Atualização
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                  Versão v1.6.4 ativa
+                  Versão v{APP_VERSION} ativa
                 </span>
               </div>
             </div>
@@ -700,8 +701,25 @@ export default function SettingsScreen({ user, cards, wallets, transactions, con
                 🔄 Buscar Atualização do Aplicativo (PWA)
               </button>
 
+              {/* Entradas recentes — geradas automaticamente de version.js */}
+              {CHANGELOG.map((ch, idx) => (
+                <div key={`new-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(99,102,241,0.1)', padding: '1px 5px', borderRadius: 4 }}>
+                      v{ch.version} ({ch.date})
+                    </span>
+                  </div>
+                  <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    {ch.changes.map((it, itemIdx) => (
+                      <li key={itemIdx}>{it}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+
+              {/* Histórico anterior */}
               {CHANGELOG_DATA.map((ch, idx) => (
-                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div key={`old-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(99,102,241,0.1)', padding: '1px 5px', borderRadius: 4 }}>
                       {ch.version}

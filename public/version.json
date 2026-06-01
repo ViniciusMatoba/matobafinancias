@@ -1,7 +1,9 @@
 {
-  "version": "1.6.8",
+  "version": "1.6.9",
   "date": "01/06/2026",
   "notes": [
-    "Verificação de versão apenas na abertura do app ou ao voltar ao foco"
+    "Fix: duplicação de itens parcelados no orçamento do mês",
+    "Fix: número da parcela incorreto em faturas anteriores",
+    "Fix: descrição \"(Parcelas restantes)\" sendo salva como transação real"
   ]
 }
