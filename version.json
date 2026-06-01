@@ -1,9 +1,7 @@
 {
-  "version": "1.6.7",
+  "version": "1.6.8",
   "date": "01/06/2026",
   "notes": [
-    "Banner de nova versão na tela de login com notificação push automática",
-    "Versão sempre atualizada via version.json com NetworkFirst no SW",
-    "Botão \"Atualizar\" visível para todos os usuários ao abrir o app"
+    "Verificação de versão apenas na abertura do app ou ao voltar ao foco"
   ]
 }
