@@ -10,9 +10,17 @@ const path = require('path');
 const root = path.resolve(__dirname, '..');
 const run = (cmd, opts = {}) => execSync(cmd, { cwd: root, stdio: 'inherit', ...opts });
 
-// Verifica se functions/index.js foi alterado desde o último commit das functions
+// Verifica se a pasta functions/ foi alterada em algum dos últimos commits
+// ou tem arquivos não commitados — usa staged+unstaged como fallback seguro
 function functionsChanged() {
   try {
+    // Verifica mudanças não commitadas em functions/
+    const unstaged = execSync('git status --short functions/', { cwd: root }).toString();
+    if (unstaged.trim()) return true;
+
+    // Verifica se o último commit tocou em functions/
+    const commitCount = execSync('git rev-list --count HEAD', { cwd: root }).toString().trim();
+    if (Number(commitCount) < 2) return true; // repo com 1 commit → deploy por segurança
     const out = execSync('git diff HEAD~1 HEAD --name-only', { cwd: root }).toString();
     return out.includes('functions/');
   } catch {

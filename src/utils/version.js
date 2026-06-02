@@ -1,5 +1,5 @@
 export const APP_VERSION = '1.6.22';
-export const APP_VERSION_DATE = '01/06/2026';
+export const APP_VERSION_DATE = '02/06/2026';
 
 export const CHANGELOG = [
   {
