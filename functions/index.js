@@ -126,45 +126,76 @@ function barra(valor, maximo, largura = 10) {
 
 const APP_URL = 'https://viniciusmatoba.github.io/matobafinancias/';
 
-// ─── Cálculo de saldo simples ─────────────────────────────────────────────────
+// ─── Expansão de transações em um intervalo [from, to] ───────────────────────
+// Espelha o expandOccurrences do frontend para consistência nos cálculos.
+// Retorna array de { date, valor, tipo }
 const TYPE_SIGN = { entrada: +1, saida: -1, diario: -1, cartao: -1, investimento: -1 };
 
-function calcSaldoSimples(transactions, upTo) {
-  let saldo = 0;
+function expandRange(transactions, from, to) {
+  const occs = [];
   for (const tx of transactions) {
-    if (!tx.dataInicio || tx.dataInicio > upTo) continue;
-    const sign = TYPE_SIGN[tx.tipo] ?? -1;
-    const v    = Number(tx.valor) || 0;
+    if (!tx.dataInicio || tx.dataInicio > to) continue;
+    const v = Number(tx.valor) || 0;
+    if (!v) continue;
 
-    if (tx.frequencia === 'unico' || tx.frequencia === 'diario') {
-      // diario: valor já dividido por 30, ignoramos projeções futuras aqui
-      if (tx.dataInicio <= upTo) saldo += sign * v;
-    } else if (tx.frequencia === 'mensal') {
-      // conta todos os meses entre dataInicio e min(upTo, dataFim)
-      const end = tx.dataFim && tx.dataFim < upTo ? tx.dataFim : upTo;
-      let cur = new Date(tx.dataInicio + 'T00:00:00');
-      while (dateStrFromDate(cur) <= end) {
-        saldo += sign * v;
-        addOneMonthClamped(cur);
+    if (tx.frequencia === 'unico') {
+      if (tx.dataInicio >= from && tx.dataInicio <= to) {
+        occs.push({ date: tx.dataInicio, valor: v, tipo: tx.tipo });
       }
-    } else if (tx.frequencia === 'semanal') {
-      let cur = new Date(tx.dataInicio + 'T00:00:00');
-      const end = tx.dataFim && tx.dataFim < upTo ? tx.dataFim : upTo;
-      while (dateStrFromDate(cur) <= end) {
-        saldo += sign * v;
-        cur.setDate(cur.getDate() + 7);
-      }
+      // Parcelas futuras de cartão (tipo cartao com itens) — incluídas pela fatura
     } else if (tx.frequencia === 'parcelado') {
       const total = tx.totalParcelas || 1;
       const start = tx.parcelaAtual  || 1;
       for (let i = 0; i < total - start + 1; i++) {
         const pd = new Date(tx.dataInicio + 'T00:00:00');
         for (let j = 0; j < i; j++) addOneMonthClamped(pd);
-        if (dateStrFromDate(pd) <= upTo) saldo += sign * v;
+        const ds = dateStrFromDate(pd);
+        if (ds > to) break;
+        if (ds >= from && (!tx.dataFim || ds <= tx.dataFim)) {
+          occs.push({ date: ds, valor: v, tipo: tx.tipo });
+        }
+      }
+    } else if (tx.frequencia === 'mensal') {
+      const end = tx.dataFim && tx.dataFim < to ? tx.dataFim : to;
+      let cur = new Date(tx.dataInicio + 'T00:00:00');
+      while (dateStrFromDate(cur) <= end) {
+        const ds = dateStrFromDate(cur);
+        if (ds >= from) occs.push({ date: ds, valor: v, tipo: tx.tipo });
+        addOneMonthClamped(cur);
+      }
+    } else if (tx.frequencia === 'semanal') {
+      const end = tx.dataFim && tx.dataFim < to ? tx.dataFim : to;
+      let cur = new Date(tx.dataInicio + 'T00:00:00');
+      while (dateStrFromDate(cur) <= end) {
+        const ds = dateStrFromDate(cur);
+        if (ds >= from) occs.push({ date: ds, valor: v, tipo: tx.tipo });
+        cur.setDate(cur.getDate() + 7);
+      }
+    } else if (tx.frequencia === 'diario') {
+      // valor já é por dia (mensal / 30); gera uma ocorrência por dia
+      const start = tx.dataInicio > from ? tx.dataInicio : from;
+      const end   = tx.dataFim   && tx.dataFim < to ? tx.dataFim : to;
+      let cur = new Date(start + 'T00:00:00');
+      const endDt = new Date(end + 'T00:00:00');
+      while (cur <= endDt) {
+        occs.push({ date: dateStrFromDate(cur), valor: v, tipo: tx.tipo });
+        cur.setDate(cur.getDate() + 1);
       }
     }
   }
-  return saldo;
+  return occs;
+}
+
+// ─── Cálculo de saldo acumulado até upTo ──────────────────────────────────────
+// walletInitials: soma dos saldoInicial de todas as carteiras do usuário
+function calcSaldoSimples(transactions, upTo, walletInitials = 0) {
+  const FAR_PAST = '2020-01-01';
+  const occs = expandRange(transactions, FAR_PAST, upTo);
+  const txSaldo = occs.reduce((acc, o) => {
+    const sign = TYPE_SIGN[o.tipo] ?? -1;
+    return acc + sign * o.valor;
+  }, 0);
+  return txSaldo + walletInitials;
 }
 
 // ─── Gasto por categoria no mês corrente ─────────────────────────────────────
@@ -202,7 +233,7 @@ function computeSpentByCategory(transactions, currentMonth) {
 }
 
 // ─── Verificações de notificação (N1-N17) ───────────────────────────────────
-function checkNotifications(cards, transactions, config, prefs, goals = []) {
+function checkNotifications(cards, transactions, config, prefs, goals = [], walletInitials = 0) {
   const msgs  = [];
   const tipos = prefs?.tipos ?? {};
   const hoje  = getNowBrasilia();
@@ -270,7 +301,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = []) {
 
   // N6 — Saldo negativo projetado em 7 dias
   if (tipos.n6 !== false) {
-    const saldoAtual = calcSaldoSimples(transactions, todayStr);
+    const saldoAtual = calcSaldoSimples(transactions, todayStr, walletInitials);
     const d7 = new Date(hoje); d7.setDate(d7.getDate() + 7);
     const in7 = dateStrFromDate(d7);
 
@@ -378,7 +409,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = []) {
       (diasDiario === 'fds'   && (weekday === 0 || weekday === 6));
 
     if (enviarN8) {
-    const saldoAtual = calcSaldoSimples(transactions, todayStr);
+    const saldoAtual = calcSaldoSimples(transactions, todayStr, walletInitials);
     const lancHoje   = transactions.filter(tx =>
       tx.dataInicio === todayStr && tx.frequencia === 'unico'
     );
@@ -632,7 +663,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = []) {
   if (tipos.n15 !== false) {
     const saldoMinimo = Number(config.saldoMinimoAlerta ?? 200);
     if (saldoMinimo > 0) {
-      const saldoAtual = calcSaldoSimples(transactions, todayStr);
+      const saldoAtual = calcSaldoSimples(transactions, todayStr, walletInitials);
       if (saldoAtual < saldoMinimo) {
         msgs.push(
           `🚨 *Saldo baixo!*\nSeu saldo atual é *${formatBRL(saldoAtual)}* — abaixo do mínimo de *${formatBRL(saldoMinimo)}*. Atenção ao caixa!`
@@ -719,44 +750,63 @@ async function handleVincular(chatId, code, fromUser) {
   return startOnboarding(chatId, uid, email, fromUser);
 }
 
+async function loadUserData(uid) {
+  const [txSnap, walletSnap] = await Promise.all([
+    db.collection('transactions').doc(uid).collection('entries').get(),
+    db.collection('wallets').doc(uid).collection('list').get(),
+  ]);
+  const transactions    = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const walletInitials  = walletSnap.docs.reduce((acc, d) => acc + (Number(d.data().saldoInicial) || 0), 0);
+  return { transactions, walletInitials };
+}
+
 async function handleSaldo(chatId, uid) {
   const today = todayStrBrasilia();
-  const snap  = await db.collection('transactions').doc(uid).collection('entries').get();
-  const txs   = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  const saldo = calcSaldoSimples(txs, today);
+  const { transactions, walletInitials } = await loadUserData(uid);
+  const saldo = calcSaldoSimples(transactions, today, walletInitials);
 
-  const msg = saldo >= 0
-    ? `💰 *Saldo atual:* ${formatBRL(saldo)} ✅`
-    : `💰 *Saldo atual:* ${formatBRL(saldo)} ⚠️`;
+  // Detalhamento por tipo de saldo
+  const walletSnap = await db.collection('wallets').doc(uid).collection('list').get();
+  const wallets    = walletSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  return sendMessage(chatId, msg);
+  let msg = saldo >= 0
+    ? `💰 *Saldo Global:* ${formatBRL(saldo)} ✅`
+    : `💰 *Saldo Global:* ${formatBRL(saldo)} ⚠️`;
+
+  if (wallets.length > 0) {
+    msg += '\n\n📂 *Por carteira:*\n';
+    for (const w of wallets) {
+      const wTxs   = transactions.filter(t => t.carteiraId === w.id);
+      const wSaldo = (Number(w.saldoInicial) || 0) + calcSaldoSimples(wTxs, today, 0);
+      msg += `• ${w.nome}: *${formatBRL(wSaldo)}*\n`;
+    }
+  }
+
+  return sendMessage(chatId, msg.trim());
 }
 
 async function handleResumo(chatId, uid) {
-  const now    = getNowBrasilia();
-  const month  = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const from   = `${month}-01`;
+  const now     = getNowBrasilia();
+  const month   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const from    = `${month}-01`;
   const lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-  const to     = `${month}-${String(lastDay).padStart(2,'0')}`;
+  const to      = `${month}-${String(lastDay).padStart(2,'0')}`;
 
-  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
-  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const { transactions } = await loadUserData(uid);
+  const occs = expandRange(transactions, from, to);
 
   let entradas = 0, saidas = 0;
-  for (const tx of txs) {
-    if (!tx.dataInicio || tx.dataInicio < from || tx.dataInicio > to) continue;
-    if (tx.tipo === 'entrada') entradas += Number(tx.valor) || 0;
-    else                       saidas   += Number(tx.valor) || 0;
+  for (const o of occs) {
+    if (o.tipo === 'entrada') entradas += o.valor;
+    else                      saidas   += o.valor;
   }
 
-  const saldo  = entradas - saidas;
   const nomeMes = now.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
-
   return sendMessage(chatId,
     `📊 *Resumo de ${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}*\n\n` +
     `✅ Entradas: *${formatBRL(entradas)}*\n` +
     `❌ Saídas:   *${formatBRL(saidas)}*\n` +
-    `💰 Saldo:    *${formatBRL(saldo)}*`
+    `💰 Balanço:  *${formatBRL(entradas - saidas)}*`
   );
 }
 
@@ -793,27 +843,30 @@ function msgSomenteApp(chatId) {
 // ─── Handlers de consulta ─────────────────────────────────────────────────────
 
 async function handleHoje(chatId, uid) {
-  const hoje = todayStrBrasilia();
-  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
-  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-  const lancamentos = txs.filter(tx =>
-    tx.dataInicio === hoje && tx.frequencia === 'unico'
-  ).sort((a, b) => (a.descricao || '').localeCompare(b.descricao || ''));
+  const hoje  = todayStrBrasilia();
+  const { transactions } = await loadUserData(uid);
+  // Expande todas as ocorrências do dia (unico, recorrentes, parcelados, diario)
+  const occs  = expandRange(transactions, hoje, hoje)
+    .sort((a, b) => (a.tipo === 'entrada' ? 0 : 1) - (b.tipo === 'entrada' ? 0 : 1));
 
   const label = hoje.split('-').reverse().join('/');
   let entradas = 0, saidas = 0;
   let text = `📅 *Hoje — ${label}*\n\n`;
 
-  if (lancamentos.length === 0) {
-    text += '_Nenhum lançamento registrado hoje._\n\n';
+  if (occs.length === 0) {
+    text += '_Nenhum lançamento para hoje._\n\n';
   } else {
-    for (const tx of lancamentos) {
-      const v    = Number(tx.valor) || 0;
-      const sign = tx.tipo === 'entrada' ? '+' : '-';
-      const icon = tx.tipo === 'entrada' ? '✅' : '❌';
-      text += `${icon} ${tx.descricao || tx.tipo}: *${sign}${formatBRL(v)}*\n`;
-      if (tx.tipo === 'entrada') entradas += v; else saidas += v;
+    for (const o of occs) {
+      const sign = o.tipo === 'entrada' ? '+' : '-';
+      const icon = o.tipo === 'entrada' ? '✅' : '❌';
+      // Busca descrição na tx original
+      const tx = transactions.find(t => {
+        const v = Number(t.valor) || 0;
+        return Math.abs(v - o.valor) < 0.01 && t.tipo === o.tipo;
+      });
+      const desc = tx?.descricao || o.tipo;
+      text += `${icon} ${desc}: *${sign}${formatBRL(o.valor)}*\n`;
+      if (o.tipo === 'entrada') entradas += o.valor; else saidas += o.valor;
     }
     text += `\n─────────────────\n`;
     if (entradas > 0) text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
@@ -858,19 +911,16 @@ async function handleSemana(chatId, uid) {
   const d7      = new Date(agora); d7.setDate(agora.getDate() - 6);
   const fromStr = dateStrFromDate(d7);
 
-  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
-  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const { transactions } = await loadUserData(uid);
+  const occs = expandRange(transactions, fromStr, hoje);
 
   let entradas = 0, saidas = 0;
   const byDay = {};
 
-  for (const tx of txs) {
-    if (!tx.dataInicio || tx.dataInicio < fromStr || tx.dataInicio > hoje) continue;
-    if (tx.frequencia !== 'unico') continue;
-    const v = Number(tx.valor) || 0;
-    if (!byDay[tx.dataInicio]) byDay[tx.dataInicio] = { e: 0, s: 0 };
-    if (tx.tipo === 'entrada') { entradas += v; byDay[tx.dataInicio].e += v; }
-    else                       { saidas   += v; byDay[tx.dataInicio].s += v; }
+  for (const o of occs) {
+    if (!byDay[o.date]) byDay[o.date] = { e: 0, s: 0 };
+    if (o.tipo === 'entrada') { entradas += o.valor; byDay[o.date].e += o.valor; }
+    else                      { saidas   += o.valor; byDay[o.date].s += o.valor; }
   }
 
   const maxSaida = Math.max(...Object.values(byDay).map(d => d.s), 1);
@@ -909,15 +959,13 @@ async function handleMes(chatId, uid, args) {
   const lastDay = new Date(year, month, 0).getDate();
   const to      = `${mesStr}-${String(lastDay).padStart(2, '0')}`;
 
-  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
-  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const { transactions } = await loadUserData(uid);
+  const occs = expandRange(transactions, from, to);
 
   let entradas = 0, saidas = 0;
-  for (const tx of txs) {
-    if (!tx.dataInicio || tx.dataInicio < from || tx.dataInicio > to) continue;
-    if (tx.frequencia !== 'unico' && tx.frequencia !== 'parcelado') continue;
-    const v = Number(tx.valor) || 0;
-    if (tx.tipo === 'entrada') entradas += v; else saidas += v;
+  for (const o of occs) {
+    if (o.tipo === 'entrada') entradas += o.valor;
+    else                      saidas   += o.valor;
   }
 
   const MESES = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -1040,16 +1088,15 @@ async function handleProjecao(chatId, uid) {
   const agora = getNowBrasilia();
   const hoje  = dateStrFromDate(agora);
 
-  const snap = await db.collection('transactions').doc(uid).collection('entries').get();
-  const txs  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const { transactions: txs, walletInitials } = await loadUserData(uid);
 
-  const saldoHoje = calcSaldoSimples(txs, hoje);
+  const saldoHoje = calcSaldoSimples(txs, hoje, walletInitials);
 
   // Saldo mínimo dos próximos 7 dias (para escalar a barra)
   const saldos = [];
   for (let i = 1; i <= 7; i++) {
     const dt  = new Date(agora); dt.setDate(agora.getDate() + i);
-    saldos.push({ dt, saldo: calcSaldoSimples(txs, dateStrFromDate(dt)) });
+    saldos.push({ dt, saldo: calcSaldoSimples(txs, dateStrFromDate(dt), walletInitials) });
   }
   const minSaldo = Math.min(saldoHoje, ...saldos.map(x => x.saldo));
   const maxSaldo = Math.max(saldoHoje, ...saldos.map(x => x.saldo));
@@ -1903,22 +1950,22 @@ exports.dailyNotifications = onSchedule(
         const horaUsuario = prefs.horaAlerta ?? 7;
         if (horaUsuario !== horaAtual) continue;
 
-        // Lê cartões
-        const cardsSnap = await db.collection('cards').doc(uid).collection('list').get();
-        const cards     = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Lê transações
-        const txSnap       = await db.collection('transactions').doc(uid).collection('entries').get();
-        const transactions = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        // Lê metas/caixinhas (necessário para N16)
-        const goalsSnap = await db.collection('goals').where('userId', '==', uid).get();
-        const goals     = goalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Lê cartões, transações, carteiras e metas em paralelo
+        const [cardsSnap, txSnap, walletSnap, goalsSnap] = await Promise.all([
+          db.collection('cards').doc(uid).collection('list').get(),
+          db.collection('transactions').doc(uid).collection('entries').get(),
+          db.collection('wallets').doc(uid).collection('list').get(),
+          db.collection('goals').where('userId', '==', uid).get(),
+        ]);
+        const cards          = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const transactions   = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const walletInitials = walletSnap.docs.reduce((acc, d) => acc + (Number(d.data().saldoInicial) || 0), 0);
+        const goals          = goalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         // ── Push: usa prefs.tipos (configurado em Notificações Push) ──────────
         if (pushEnabled) {
           const pushPrefs = { ...prefs, tipos: prefs.tipos || {} };
-          const pushMsgs  = checkNotifications(cards, transactions, config, pushPrefs, goals);
+          const pushMsgs  = checkNotifications(cards, transactions, config, pushPrefs, goals, walletInitials);
           for (const msg of pushMsgs) {
             try {
               await sendPushNotification(fcmToken, msg);
@@ -1943,7 +1990,7 @@ exports.dailyNotifications = onSchedule(
           // Fallback: se telegramTipos nunca foi configurado, usa prefs.tipos
           const tgTipos = prefs.telegramTipos !== undefined ? prefs.telegramTipos : (prefs.tipos || {});
           const tgPrefs = { ...prefs, tipos: tgTipos };
-          const tgMsgs  = checkNotifications(cards, transactions, config, tgPrefs, goals);
+          const tgMsgs  = checkNotifications(cards, transactions, config, tgPrefs, goals, walletInitials);
           for (const msg of tgMsgs) {
             await sendMessage(chatId, msg);
             await new Promise(r => setTimeout(r, 100)); // evita rate limit

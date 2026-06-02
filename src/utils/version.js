@@ -1,7 +1,18 @@
-export const APP_VERSION = '1.6.21';
+export const APP_VERSION = '1.6.22';
 export const APP_VERSION_DATE = '01/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.22',
+    date: '02/06/2026',
+    changes: [
+      'Fix crítico: saldo do bot agora inclui saldoInicial das carteiras',
+      'Fix: /resumo, /mes, /semana agora expandem transações recorrentes corretamente',
+      'Fix: /hoje mostra todos os tipos de lançamento do dia (não só avulsos)',
+      'Fix: alertas N6, N8, N15 calculam saldo com carteiras incluídas',
+      'Fix: diário acumulava apenas 1 dia em vez de todos os dias do período',
+    ],
+  },
   {
     version: '1.6.21',
     date: '01/06/2026',
