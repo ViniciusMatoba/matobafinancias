@@ -1,11 +1,10 @@
 {
-  "version": "1.6.22",
-  "date": "02/06/2026",
+  "version": "1.6.21",
+  "date": "01/06/2026",
   "notes": [
-    "Fix crítico: saldo do bot agora inclui saldoInicial das carteiras",
-    "Fix: /resumo, /mes, /semana agora expandem transações recorrentes corretamente",
-    "Fix: /hoje mostra todos os tipos de lançamento do dia (não só avulsos)",
-    "Fix: alertas N6, N8, N15 calculam saldo com carteiras incluídas",
-    "Fix: diário acumulava apenas 1 dia em vez de todos os dias do período"
+    "Bot Telegram: menu /configurar com botões inline para ativar/desativar cada alerta",
+    "Botões: toggle individual, \"Ativar todos\", \"Desativar todos\" e \"Pronto\"",
+    "Menu atualiza em tempo real ao toque — sem precisar abrir o app",
+    "Webhook atualizado para processar callback_query dos botões inline"
   ]
 }
