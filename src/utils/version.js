@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.32';
+export const APP_VERSION = '1.6.33';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.33',
+    date: '03/06/2026',
+    changes: [
+      'Busca: expandida para permitir filtrar e buscar pelo nome legível das categorias no Histórico',
+      'Badges: exibição de resumo financeiro por categoria no topo do Histórico com filtros ativos em tempo real',
+      'Conciliação: novo atalho "Conciliar Visíveis" para marcar lançamentos pendentes em lote com um único clique',
+    ],
+  },
   {
     version: '1.6.32',
     date: '03/06/2026',

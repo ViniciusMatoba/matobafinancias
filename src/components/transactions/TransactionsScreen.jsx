@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp, Copy, X, RefreshCw } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp, Copy, X, RefreshCw, CheckCheck } from 'lucide-react';
 import { formatBRL, formatDateShort, TYPE_CONFIG, todayStr } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
-import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
+import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -34,6 +34,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
   const [visibleCount, setVisibleCount] = useState(50);
 
   const [expandedIds, setExpandedIds] = useState(new Set());
+  const [isConciliando, setIsConciliando] = useState(false);
 
   const toggleExpand = (id) => setExpandedIds(prev => {
     const next = new Set(prev);
@@ -112,18 +113,31 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
         if (debouncedSearch) {
           const s = debouncedSearch.toLowerCase();
           const matchDesc = o.tx.descricao?.toLowerCase().includes(s);
-          const matchCat = o.tx.categoria?.toLowerCase().includes(s);
-          const matchItems = o.tx.itens?.some(item =>
-            item.descricao?.toLowerCase().includes(s) || item.categoria?.toLowerCase().includes(s)
-          );
+          
+          const catLabel = o.tx.categoria ? (PERCENTUAL_CATEGORIES[o.tx.categoria]?.label || '') : '';
+          const matchCat = o.tx.categoria?.toLowerCase().includes(s) || catLabel.toLowerCase().includes(s);
+          
+          const matchItems = o.tx.itens?.some(item => {
+            const itemCatLabel = item.categoria ? (PERCENTUAL_CATEGORIES[item.categoria]?.label || '') : '';
+            return item.descricao?.toLowerCase().includes(s) ||
+              item.categoria?.toLowerCase().includes(s) ||
+              itemCatLabel.toLowerCase().includes(s);
+          });
+          
           if (!matchDesc && !matchCat && !matchItems) return false;
         }
 
-        // 3. Categoria da Divisão Percentual
+        // 3. Categoria da Divisão Percentual (suporta também filtro por 'outros' via badge)
         if (filterCategory) {
-          const matchMain = o.tx.categoria === filterCategory;
-          const matchItems = o.tx.itens?.some(item => item.categoria === filterCategory);
-          if (!matchMain && !matchItems) return false;
+          if (filterCategory === 'outros') {
+            const isMainOutros = !o.tx.categoria || o.tx.categoria === 'outros';
+            const hasOutrosItem = o.tx.tipo === 'cartao' && o.tx.itens?.some(item => !item.categoria || item.categoria === 'outros');
+            if (!isMainOutros && !hasOutrosItem) return false;
+          } else {
+            const matchMain = o.tx.categoria === filterCategory;
+            const matchItems = o.tx.itens?.some(item => item.categoria === filterCategory);
+            if (!matchMain && !matchItems) return false;
+          }
         }
 
         // 4. Carteira / Conta
@@ -162,6 +176,79 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
   const visibleOccs = useMemo(() => {
     return allOccs.slice(0, visibleCount);
   }, [allOccs, visibleCount]);
+
+  const categoryTotals = useMemo(() => {
+    const totals = {
+      liberdade: 0,
+      custos_fixos: 0,
+      conforto: 0,
+      metas: 0,
+      prazeres: 0,
+      conhecimento: 0,
+      outros: 0
+    };
+
+    allOccs.forEach(o => {
+      if (o.tx.tipo === 'entrada') return;
+
+      if (o.tx.tipo === 'cartao' && o.tx.itens && o.tx.itens.length > 0) {
+        o.tx.itens.forEach(item => {
+          const cat = item.categoria || 'outros';
+          if (totals[cat] !== undefined) {
+            totals[cat] += Number(item.valor) || 0;
+          } else {
+            totals.outros += Number(item.valor) || 0;
+          }
+        });
+      } else {
+        const cat = o.tx.categoria || 'outros';
+        if (totals[cat] !== undefined) {
+          totals[cat] += o.valor;
+        } else {
+          totals.outros += o.valor;
+        }
+      }
+    });
+
+    return totals;
+  }, [allOccs]);
+
+  const visibleUnreconciled = useMemo(() => {
+    return visibleOccs.filter(o => !isOccConferido(o));
+  }, [visibleOccs]);
+
+  const handleConciliarVisiveis = async () => {
+    if (!onUpdate || isConciliando || visibleUnreconciled.length === 0) return;
+    setIsConciliando(true);
+    try {
+      const updates = {};
+      const recurringConferidos = {};
+      
+      visibleUnreconciled.forEach(occ => {
+        const tx = occ.tx;
+        if (!tx) return;
+        
+        if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+          updates[tx.id] = { conferido: true };
+        } else {
+          if (!recurringConferidos[tx.id]) {
+            recurringConferidos[tx.id] = [...(tx.conferidos || [])];
+          }
+          if (!recurringConferidos[tx.id].includes(occ.date)) {
+            recurringConferidos[tx.id].push(occ.date);
+          }
+          updates[tx.id] = { conferidos: recurringConferidos[tx.id] };
+        }
+      });
+      
+      const promises = Object.entries(updates).map(([id, data]) => onUpdate(id, data));
+      await Promise.all(promises);
+    } catch (error) {
+      console.error('[handleConciliarVisiveis] Error conciliating:', error);
+    } finally {
+      setIsConciliando(false);
+    }
+  };
 
   const grouped = useMemo(() => {
     const g = {};
@@ -242,6 +329,82 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
                 {MONTH_NAMES[(() => { const [,m] = monthStr(monthOffset+1).split('-').map(Number); return m-1; })()] } ›
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Category Summary Badges */}
+        {Object.values(categoryTotals).some(val => val > 0) && (
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, marginBottom: 10, msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+            {CATEGORY_ORDER.map(catId => {
+              const cat = PERCENTUAL_CATEGORIES[catId];
+              const total = categoryTotals[catId] || 0;
+              if (total === 0) return null;
+              const isSelected = filterCategory === catId;
+              return (
+                <div
+                  key={catId}
+                  onClick={() => setFilterCategory(isSelected ? '' : catId)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 14px',
+                    borderRadius: 12,
+                    background: isSelected ? cat.color : (cat.bg || 'var(--bg-card)'),
+                    border: `1px solid ${isSelected ? cat.color : cat.color + '44'}`,
+                    color: isSelected ? '#fff' : 'var(--text-primary)',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    transition: 'all 0.2s ease',
+                    boxShadow: isSelected ? `0 4px 12px ${cat.color}33` : 'none',
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>{cat.icon}</span>
+                  <div>
+                    <span style={{ color: isSelected ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)', fontSize: 10, display: 'block', fontWeight: 400 }}>
+                      {cat.label}
+                    </span>
+                    <span style={{ fontWeight: 700, color: isSelected ? '#fff' : cat.color, fontSize: 13 }}>
+                      {formatBRL(total)}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+            {categoryTotals.outros > 0 && (
+              <div
+                key="outros"
+                onClick={() => setFilterCategory(filterCategory === 'outros' ? '' : 'outros')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '8px 14px',
+                  borderRadius: 12,
+                  background: filterCategory === 'outros' ? '#94a3b8' : 'rgba(148, 163, 184, 0.08)',
+                  border: `1px solid ${filterCategory === 'outros' ? '#94a3b8' : 'rgba(148, 163, 184, 0.2)'}`,
+                  color: filterCategory === 'outros' ? '#fff' : 'var(--text-primary)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  transition: 'all 0.2s ease',
+                  boxShadow: filterCategory === 'outros' ? '0 4px 12px rgba(148, 163, 184, 0.2)' : 'none',
+                }}
+              >
+                <span style={{ fontSize: 16 }}>❓</span>
+                <div>
+                  <span style={{ color: filterCategory === 'outros' ? 'rgba(255,255,255,0.8)' : 'var(--text-secondary)', fontSize: 10, display: 'block', fontWeight: 400 }}>
+                    Outros
+                  </span>
+                  <span style={{ fontWeight: 700, color: filterCategory === 'outros' ? '#fff' : '#94a3b8', fontSize: 13 }}>
+                    {formatBRL(categoryTotals.outros)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -417,13 +580,40 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
           </div>
         )}
 
-        <p style={{ margin: '0 0 14px', fontSize: 13, color: 'var(--text-secondary)' }}>
-          {viewMode === 'mensal' ? (
-            `${allOccs.length} lançamento${allOccs.length !== 1 ? 's' : ''} · ${MONTH_NAMES[mon-1]} ${year}`
-          ) : (
-            `${allOccs.length} lançamento${allOccs.length !== 1 ? 's' : ''} no total`
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)' }}>
+            {viewMode === 'mensal' ? (
+              `${allOccs.length} lançamento${allOccs.length !== 1 ? 's' : ''} · ${MONTH_NAMES[mon-1]} ${year}`
+            ) : (
+              `${allOccs.length} lançamento${allOccs.length !== 1 ? 's' : ''} no total`
+            )}
+          </p>
+          {visibleUnreconciled.length > 0 && onUpdate && (
+            <button
+              onClick={handleConciliarVisiveis}
+              disabled={isConciliando}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '5px 10px',
+                borderRadius: 8,
+                background: 'rgba(99, 102, 241, 0.1)',
+                border: '1px solid rgba(99, 102, 241, 0.25)',
+                color: 'var(--primary)',
+                fontSize: 11,
+                fontWeight: 600,
+                cursor: isConciliando ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                opacity: isConciliando ? 0.7 : 1
+              }}
+              title="Conciliar todos os lançamentos visíveis na lista abaixo"
+            >
+              <CheckCheck size={13} style={{ flexShrink: 0 }} />
+              {isConciliando ? 'Conciliando...' : `Conciliar Visíveis (${visibleUnreconciled.length})`}
+            </button>
           )}
-        </p>
+        </div>
 
         {grouped.length === 0 ? (
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
