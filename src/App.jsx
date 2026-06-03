@@ -593,7 +593,7 @@ export default function App() {
       }
 
       // Lançamento único ou parcela → atualiza a data diretamente e marca como pago
-      if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+      if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
         await update(tx.id, { dataInicio: paymentDate, valor, conferido: true });
         showToast('✅ Pagamento registrado!');
         return;

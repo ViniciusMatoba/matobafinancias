@@ -76,7 +76,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
     const tx = occ.tx;
     if (!tx || !onUpdate) return;
     
-    if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+    if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
       await onUpdate(tx.id, { conferido: !tx.conferido });
     } else {
       let newConferidos = [...(tx.conferidos || [])];

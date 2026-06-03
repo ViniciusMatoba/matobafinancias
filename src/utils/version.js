@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.35';
+export const APP_VERSION = '1.6.36';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.36',
+    date: '03/06/2026',
+    changes: [
+      'Conciliação: corrigido alinhamento lógico de conciliação bancária e pagamentos para transações legadas sem propriedade frequencia',
+    ],
+  },
   {
     version: '1.6.35',
     date: '03/06/2026',
