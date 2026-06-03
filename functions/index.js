@@ -752,7 +752,7 @@ async function handleVincular(chatId, code, fromUser) {
 async function loadUserData(uid) {
   const [txSnap, walletSnap] = await Promise.all([
     db.collection('transactions').doc(uid).collection('entries').get(),
-    db.collection('wallets').doc(uid).collection('list').get(),
+    db.collection('wallets').where('userId', '==', uid).get(),
   ]);
   const transactions    = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   const walletInitials  = walletSnap.docs.reduce((acc, d) => acc + (Number(d.data().saldoInicial) || 0), 0);
@@ -765,7 +765,7 @@ async function handleSaldo(chatId, uid) {
   const saldo = calcSaldoSimples(transactions, today, walletInitials);
 
   // Detalhamento por tipo de saldo
-  const walletSnap = await db.collection('wallets').doc(uid).collection('list').get();
+  const walletSnap = await db.collection('wallets').where('userId', '==', uid).get();
   const wallets    = walletSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
   let msg = saldo >= 0
@@ -1953,7 +1953,7 @@ exports.dailyNotifications = onSchedule(
         const [cardsSnap, txSnap, walletSnap, goalsSnap] = await Promise.all([
           db.collection('cards').doc(uid).collection('list').get(),
           db.collection('transactions').doc(uid).collection('entries').get(),
-          db.collection('wallets').doc(uid).collection('list').get(),
+          db.collection('wallets').where('userId', '==', uid).get(),
           db.collection('goals').where('userId', '==', uid).get(),
         ]);
         const cards          = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));

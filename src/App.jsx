@@ -481,7 +481,7 @@ export default function App() {
         // Nova série a partir da data de pagamento (mesmo padrão de frequência) com o primeiro dia pago
         // eslint-disable-next-line no-unused-vars
         const { id: _id, exclusoes: _excl, dataFim: _df, ...txBase } = tx;
-        await add({ ...txBase, dataInicio: paymentDate, valor, dataFim: null, exclusoes: [], conferidos: [paymentDate] });
+        await add({ ...txBase, dataInicio: paymentDate, valor, dataFim: null, exclusoes: [] });
         showToast('✅ Pagamento e próximas ocorrências atualizados!');
       }
     } catch (err) {

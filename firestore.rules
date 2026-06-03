@@ -14,9 +14,27 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // Perfil público + token FCM (escrito pelo próprio usuário após solicitar permissão)
+    // Carteiras — coleção flat filtrada por userId
+    match /wallets/{walletId} {
+      allow read, write: if request.auth != null && (
+        request.resource == null
+          ? resource.data.userId == request.auth.uid
+          : request.resource.data.userId == request.auth.uid
+      );
+    }
+
+    // Metas/caixinhas — coleção flat filtrada por userId
+    match /goals/{goalId} {
+      allow read, write: if request.auth != null && (
+        request.resource == null
+          ? resource.data.userId == request.auth.uid
+          : request.resource.data.userId == request.auth.uid
+      );
+    }
+
+    // Perfil do usuário — fcmToken e telegramChatId são sensíveis
     match /users/{uid} {
-      allow read:  if request.auth != null;
+      allow read:  if request.auth != null && request.auth.uid == uid;
       allow write: if request.auth != null && request.auth.uid == uid;
     }
 

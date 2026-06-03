@@ -4,7 +4,7 @@ import { addDays, addWeeks, addMonths, TYPE_CONFIG, todayStr } from './formatter
  * Expande uma transação (regra) em ocorrências dentro do intervalo [from, to].
  * Retorna array de { date, valor, sinal, tx }
  */
-export function expandOccurrences(tx, from, to) {
+export function expandOccurrences(tx, from, to, { historical = false } = {}) {
   const sign = TYPE_CONFIG[tx.tipo]?.sign ?? -1;
   const occurrences = [];
 
@@ -12,7 +12,7 @@ export function expandOccurrences(tx, from, to) {
 
   if (tx.frequencia === 'unico') {
     if (tx.dataInicio >= from && tx.dataInicio <= to) {
-      if (!(tx.tipo === 'diario' && tx.dataInicio < today)) {
+      if (historical || !(tx.tipo === 'diario' && tx.dataInicio < today)) {
         if (!tx.exclusoes?.includes(tx.dataInicio)) {
           occurrences.push({ date: tx.dataInicio, valor: tx.valor, sinal: sign, tx });
         }
@@ -77,7 +77,7 @@ export function expandOccurrences(tx, from, to) {
 
   while (current <= to && current <= limit) {
     if (current >= from) {
-      if (!(tx.tipo === 'diario' && current < today)) {
+      if (historical || !(tx.tipo === 'diario' && current < today)) {
         if (!tx.exclusoes?.includes(current)) {
           occurrences.push({ date: current, valor: tx.valor, sinal: sign, tx });
         }
@@ -124,8 +124,8 @@ export function buildDailyProjection(transactions, from, to, saldoInicial = 0) {
 /**
  * Calcula saldo a partir das transações do mês/período.
  */
-export function calcSaldo(transactions, from, to) {
-  const occs = transactions.flatMap(tx => expandOccurrences(tx, from, to));
+export function calcSaldo(transactions, from, to, { historical = false } = {}) {
+  const occs = transactions.flatMap(tx => expandOccurrences(tx, from, to, { historical }));
   return occs.reduce((acc, o) => acc + o.sinal * o.valor, 0);
 }
 
@@ -138,7 +138,7 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
   const to = addDays(from, days);
   
   const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
-  const saldoAtual = calcSaldo(transactions, '2020-01-01', addDays(from, -1)) + wInitials;
+  const saldoAtual = calcSaldo(transactions, '2020-01-01', addDays(from, -1), { historical: true }) + wInitials;
 
   const dailyProj = buildDailyProjection(transactions, from, to, saldoAtual);
   

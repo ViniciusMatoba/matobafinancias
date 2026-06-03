@@ -1,7 +1,19 @@
-export const APP_VERSION = '1.6.23';
-export const APP_VERSION_DATE = '02/06/2026';
+export const APP_VERSION = '1.6.24';
+export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.24',
+    date: '03/06/2026',
+    changes: [
+      'Fix crítico: bot Telegram agora lê carteiras corretamente (/saldo mostrava R$0)',
+      'Fix crítico: notificações diárias incluem saldo real das carteiras',
+      'Fix: campo "conferidos" inválido removido ao criar nova série de pagamento',
+      'Fix: transações diárias históricas incluídas no cálculo de sobra segura',
+      'Segurança: perfil do usuário (fcmToken, telegramChatId) protegido contra leitura por terceiros',
+      'Regras Firestore: wallets e goals com proteção explícita por userId',
+    ],
+  },
   {
     version: '1.6.23',
     date: '03/06/2026',
