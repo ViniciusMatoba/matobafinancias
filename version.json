@@ -1,7 +1,8 @@
 {
-  "version": "1.6.36",
+  "version": "1.6.37",
   "date": "03/06/2026",
   "notes": [
-    "Conciliação: corrigido alinhamento lógico de conciliação bancária e pagamentos para transações legadas sem propriedade frequencia"
+    "N18: alerta de economia do dia às 19h — parabeniza quando gastos previstos não foram registrados",
+    "Toggle N18 disponível em Notificações Push e Bot Telegram"
   ]
 }
