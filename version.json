@@ -1,9 +1,11 @@
 {
-  "version": "1.6.23",
+  "version": "1.6.24",
   "date": "03/06/2026",
   "notes": [
-    "Fix crítico: saldo do bot agora respeita exclusoes de recorrências (sem dupla contagem)",
-    "Fix: alertas de orçamento (N4/N5/N9) agora contam recorrentes mensais/semanais do mês",
-    "Fix: /categoria mostra corretamente aluguel e outras despesas mensais recorrentes"
+    "Fix crítico: bot Telegram agora lê carteiras corretamente (/saldo mostrava R$0)",
+    "Fix crítico: notificações diárias incluem saldo real das carteiras",
+    "Fix: campo inválido removido ao criar nova série de pagamento",
+    "Fix: transações diárias históricas no cálculo de sobra segura",
+    "Segurança: perfil protegido contra leitura por terceiros"
   ]
 }
