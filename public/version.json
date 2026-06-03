@@ -1,10 +1,11 @@
-﻿{
+{
   "version": "1.6.38",
   "date": "03/06/2026",
   "notes": [
-    "Fix: conciliacao preservada ao editar ocorrencia unica de recorrencia",
-    "Novo: alerta ao ultrapassar orcamento de categoria ao salvar despesa",
-    "Novo: aba Evolucao em Relatorios — comparativo 3 meses por categoria",
-    "Melhoria: CSV exporta itens de cartao separados, carteira, conferido e parcela"
+    "Fix: edição de ocorrência única agora preserva status de conciliação da recorrência original",
+    "Fix: dependência redundante removida de handleDelete (performance)",
+    "Novo: alerta proativo ao salvar despesa que ultrapassa 80% ou 100% do orçamento da categoria",
+    "Novo: aba \"Evolução\" em Relatórios — comparativo dos últimos 3 meses por categoria com tendência ↑↓",
+    "Melhoria: exportação CSV agora inclui itens individuais de cartão, carteira, conferido e parcela"
   ]
 }

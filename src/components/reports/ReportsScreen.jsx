@@ -3,7 +3,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
-import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer, BarChart2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer } from 'lucide-react';
 
 const TABS = {
   RESUMO: 'resumo',

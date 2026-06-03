@@ -14,7 +14,6 @@ export const CHANGELOG = [
     ],
   },
   {
-  {
     version: '1.6.37',
     date: '03/06/2026',
     changes: [

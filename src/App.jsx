@@ -25,7 +25,7 @@ import { DollarSign } from 'lucide-react';
 import PaymentModal from './components/projection/PaymentModal';
 import { addMonths, todayStr } from './utils/formatters';
 import { expandOccurrences } from './utils/projectionCalc';
-import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from './utils/categories';
+import { PERCENTUAL_CATEGORIES } from './utils/categories';
 
 export default function App() {
   const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
@@ -592,7 +592,7 @@ export default function App() {
       await remove(id);
       showToast('Lançamento removido.', 'error');
     }
-  }, [isVirtualTxId, update, remove, setRecurrenceAction, showToast]);
+  }, [isVirtualTxId, transactions, update, remove, setRecurrenceAction, showToast]);
 
   // ── Registrar pagamento (centralizado — usado por todas as telas) ─────────────
   const openPayModal = (item, occDate) => setPayingItem({ item, occDate });
