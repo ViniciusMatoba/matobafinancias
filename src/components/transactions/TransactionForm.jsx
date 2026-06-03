@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
+import { expandOccurrences } from '../../utils/projectionCalc';
 
 const TIPOS = Object.entries(TYPE_CONFIG).map(([id, cfg]) => ({ id, ...cfg }));
 const FREQS = Object.entries(FREQ_LABELS).map(([id, label]) => ({ id, label }));
@@ -68,7 +69,7 @@ const EMPTY = {
 
 const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '' };
 
-export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [] }) {
+export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [], config }) {
   const [form, setForm] = useState(initial ? {
     ...EMPTY, ...initial,
     // diário: stored value is valor/30, so reconstitute the monthly amount for editing
@@ -339,6 +340,102 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
 
     onSave(data);
   };
+
+  const budgetWarnings = useMemo(() => {
+    if (!config || form.tipo === 'entrada') return [];
+    
+    const income = Number(config.rendaMensal) || 0;
+    if (income <= 0) return [];
+
+    let refMonth = form.dataInicio?.slice(0, 7);
+    if (!refMonth) {
+      refMonth = new Date().toISOString().slice(0, 7);
+    }
+
+    const [year, mon] = refMonth.split('-').map(Number);
+    const from = `${refMonth}-01`;
+    const lastDay = new Date(year, mon, 0).getDate();
+    const to = `${refMonth}-${String(lastDay).padStart(2, '0')}`;
+
+    const limits = {};
+    Object.entries(config.budgetPcts || {}).forEach(([catId, pct]) => {
+      limits[catId] = (income * (Number(pct) || 0)) / 100;
+    });
+
+    const currentFormAdded = {};
+    if (form.tipo === 'cartao') {
+      itens.forEach(item => {
+        const cat = item.categoria;
+        if (!cat) return;
+        const v = parseBRLInput(item.valor) || 0;
+        if (item.isParcelado) {
+          currentFormAdded[cat] = (currentFormAdded[cat] || 0) + v;
+        } else if (item.dataCompra?.startsWith(refMonth)) {
+          currentFormAdded[cat] = (currentFormAdded[cat] || 0) + v;
+        }
+      });
+    } else {
+      const cat = form.categoria || (form.tipo === 'investimento' ? 'liberdade' : null);
+      if (cat) {
+        currentFormAdded[cat] = (currentFormAdded[cat] || 0) + (parseBRLInput(form.valor) || 0);
+      }
+    }
+
+    if (Object.keys(currentFormAdded).length === 0) return [];
+
+    const dbTotals = {};
+    transactions.forEach(tx => {
+      if (initial && tx.id === initial.id) return;
+      if (tx.tipo === 'entrada') return;
+
+      const occs = expandOccurrences(tx, from, to);
+      occs.forEach(occ => {
+        if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+          tx.itens.forEach(item => {
+            const cat = item.categoria;
+            if (!cat) return;
+            const v = Number(item.valor) || 0;
+            if (item.isParcelado) {
+              dbTotals[cat] = (dbTotals[cat] || 0) + v;
+            } else if (item.dataCompra?.startsWith(refMonth)) {
+              dbTotals[cat] = (dbTotals[cat] || 0) + v;
+            }
+          });
+        } else {
+          const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
+          if (cat) {
+            dbTotals[cat] = (dbTotals[cat] || 0) + occ.valor;
+          }
+        }
+      });
+    });
+
+    const warnings = [];
+    Object.entries(currentFormAdded).forEach(([catId, valToAdd]) => {
+      const limit = limits[catId] || 0;
+      if (limit <= 0) return;
+
+      const currentSpent = dbTotals[catId] || 0;
+      const projected = currentSpent + valToAdd;
+
+      if (projected > limit) {
+        const catConfig = PERCENTUAL_CATEGORIES[catId];
+        const excess = projected - limit;
+        warnings.push({
+          catId,
+          label: catConfig?.label || catId,
+          icon: catConfig?.icon || '⚠️',
+          color: catConfig?.color || 'var(--saida)',
+          limit,
+          currentSpent,
+          projected,
+          excess
+        });
+      }
+    });
+
+    return warnings;
+  }, [config, form.tipo, form.valor, form.dataInicio, form.categoria, itens, transactions, initial]);
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -910,6 +1007,24 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
               {PERCENTUAL_CATEGORIES[form.categoria].desc}
             </p>
           )}
+        </div>
+      ))}
+
+      {budgetWarnings.map(warn => (
+        <div key={warn.catId} style={{
+          display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
+          borderRadius: 10, background: 'rgba(245,158,11,0.08)',
+          border: '1px solid rgba(245,158,11,0.25)', marginTop: 4
+        }}>
+          <span style={{ fontSize: 16, marginTop: 1 }}>{warn.icon}</span>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#f59e0b' }}>
+              Limite de {warn.label} excedido!
+            </p>
+            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              Este lançamento fará a categoria somar <strong>{formatBRL(warn.projected)}</strong> no mês, ultrapassando o limite teto de <strong>{formatBRL(warn.limit)}</strong>.
+            </p>
+          </div>
         </div>
       ))}
 

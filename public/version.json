@@ -1,9 +1,8 @@
 {
-  "version": "1.6.31",
+  "version": "1.6.32",
   "date": "03/06/2026",
   "notes": [
-    "Visual: adicionado modal de carregamento para feedback visual ao atualizar o aplicativo",
-    "Visual: ocultado botão \"Pagar\" e exibido badge \"✓ Pago\" para contas já liquidadas na Home",
-    "Otimização: unificação dos gatilhos de atualização (banner e painel de configurações)"
+    "Sincronização: painel \"Pense com Calma\" (itens de impulso e economia acumulada) agora é salvo no Firestore (multi-dispositivo)",
+    "Alertas: avisos de limite orçamentário em tempo real no formulário de transação (informa antes de exceder o teto da categoria)"
   ]
 }

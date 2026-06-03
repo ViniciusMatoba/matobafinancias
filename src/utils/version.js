@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.31';
+export const APP_VERSION = '1.6.32';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.32',
+    date: '03/06/2026',
+    changes: [
+      'Sincronização: painel "Pense com Calma" (itens de impulso e economia acumulada) agora é salvo no Firestore (multi-dispositivo)',
+      'Alertas: avisos de limite orçamentário em tempo real no formulário de transação (informa antes de exceder o teto da categoria)',
+    ],
+  },
   {
     version: '1.6.31',
     date: '03/06/2026',

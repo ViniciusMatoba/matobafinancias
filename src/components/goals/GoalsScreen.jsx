@@ -8,7 +8,7 @@ const COLOR_OPTIONS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4',
 ];
 
-export default function GoalsScreen({ goals, transactions, config, onAddGoal, onUpdateGoal, onRemoveGoal, onAddTransaction }) {
+export default function GoalsScreen({ goals, transactions, config, onSaveConfig, onAddGoal, onUpdateGoal, onRemoveGoal, onAddTransaction }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
@@ -26,23 +26,8 @@ export default function GoalsScreen({ goals, transactions, config, onAddGoal, on
 
   // --- Estados do Painel Pense com Calma ---
   const [activeTab, setActiveTab] = useState('caixinhas'); // 'caixinhas' | 'penseComCalma'
-  const [impulseItems, setImpulseItems] = useState(() => {
-    try {
-      const saved = localStorage.getItem('impulse_items');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [economiaAcumulada, setEconomiaAcumulada] = useState(() => {
-    try {
-      const saved = localStorage.getItem('economia_acumulada');
-      return saved ? parseFloat(saved) : 0;
-    } catch {
-      return 0;
-    }
-  });
+  const impulseItems = config?.impulseItems || [];
+  const economiaAcumulada = config?.economiaAcumulada || 0;
 
   const [nomeDesejo, setNomeDesejo] = useState('');
   const [precoDesejo, setPrecoDesejo] = useState('');
@@ -50,14 +35,6 @@ export default function GoalsScreen({ goals, transactions, config, onAddGoal, on
   const [penseFormOpen, setPenseFormOpen] = useState(false);
   const [, setTick] = useState(0);
   const [confettiParticles, setConfettiParticles] = useState([]);
-
-  useEffect(() => {
-    localStorage.setItem('impulse_items', JSON.stringify(impulseItems));
-  }, [impulseItems]);
-
-  useEffect(() => {
-    localStorage.setItem('economia_acumulada', economiaAcumulada.toString());
-  }, [economiaAcumulada]);
 
   useEffect(() => {
     const timer = setInterval(() => setTick(t => t + 1), 30000);
@@ -85,7 +62,7 @@ export default function GoalsScreen({ goals, transactions, config, onAddGoal, on
     }, 3500);
   };
 
-  const handleAddImpulseItem = (e) => {
+  const handleAddImpulseItem = async (e) => {
     e.preventDefault();
     if (!nomeDesejo.trim() || !precoDesejo) return;
 
@@ -100,20 +77,28 @@ export default function GoalsScreen({ goals, transactions, config, onAddGoal, on
       createdAt: Date.now(),
     };
 
-    setImpulseItems(prev => [newItem, ...prev]);
+    if (onSaveConfig) {
+      await onSaveConfig({
+        impulseItems: [newItem, ...impulseItems]
+      });
+    }
     setNomeDesejo('');
     setPrecoDesejo('');
     setCategoriaDesejo('prazeres');
     setPenseFormOpen(false);
   };
 
-  const handleDesistir = (item) => {
-    setEconomiaAcumulada(prev => prev + item.preco);
+  const handleDesistir = async (item) => {
     triggerConfetti();
-    setImpulseItems(prev => prev.filter(i => i.id !== item.id));
+    if (onSaveConfig) {
+      await onSaveConfig({
+        economiaAcumulada: economiaAcumulada + item.preco,
+        impulseItems: impulseItems.filter(i => i.id !== item.id)
+      });
+    }
   };
 
-  const handleConfirmar = (item) => {
+  const handleConfirmar = async (item) => {
     onAddTransaction({
       tipo: 'saida',
       descricao: `Compra: ${item.nome}`,
@@ -122,7 +107,11 @@ export default function GoalsScreen({ goals, transactions, config, onAddGoal, on
       frequencia: 'unico',
       dataInicio: new Date().toISOString().slice(0, 10),
     });
-    setImpulseItems(prev => prev.filter(i => i.id !== item.id));
+    if (onSaveConfig) {
+      await onSaveConfig({
+        impulseItems: impulseItems.filter(i => i.id !== item.id)
+      });
+    }
   };
 
   const getRemainingTime = (createdAt) => {

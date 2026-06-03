@@ -156,6 +156,7 @@ export default function App() {
             onAddGoal={addGoal}
             onUpdateGoal={updateGoal}
             onRemoveGoal={removeGoal}
+            onSaveConfig={saveConfig}
             onAddTransaction={(prefill) => {
               setEditing(prefill);
               setFormOpen(true);
@@ -214,6 +215,7 @@ export default function App() {
             wallets={wallets}
             goals={goals}
             transactions={transactions}
+            config={config}
             onSave={handleSave}
             onCancel={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
           />
