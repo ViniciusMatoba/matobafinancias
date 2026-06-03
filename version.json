@@ -1,8 +1,7 @@
 {
-  "version": "1.6.35",
+  "version": "1.6.36",
   "date": "03/06/2026",
   "notes": [
-    "Simulador: correção de bug crítico de parse de strings BRL para números nas fórmulas de amortização",
-    "Carteiras: corrigida gravação de saldoInicial como string no Firestore para evitar NaNs em somatórios acumulados"
+    "Conciliação: corrigido alinhamento lógico de conciliação bancária e pagamentos para transações legadas sem propriedade frequencia"
   ]
 }
