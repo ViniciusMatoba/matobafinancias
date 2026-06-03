@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.33';
+export const APP_VERSION = '1.6.34';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.34',
+    date: '03/06/2026',
+    changes: [
+      'Simulador: nova aba de simulação de grandes compras e financiamentos imobiliários/veículos integrada a Metas',
+      'Simulador: cenários baseados em médias históricas de 1, 3 e 5 anos (juros bancários, TR, INCC e IPCA)',
+      'Simulador: suporte a entradas parceladas em obras corrigidas por INCC e diferimento do cronograma de financiamento',
+      'Simulador: projeção de fluxo de caixa de 24 meses e indicador de comprometimento de renda a partir do perfil do usuário',
+    ],
+  },
   {
     version: '1.6.33',
     date: '03/06/2026',

@@ -1,14 +1,15 @@
 /* eslint-disable react-hooks/purity */
 import { useState, useMemo, useEffect } from 'react';
-import { Target, Plus, Pencil, Trash2, TrendingUp } from 'lucide-react';
-import { formatBRL, formatBRLInput, normalizeBRLInput } from '../../utils/formatters';
+import { Target, Plus, Pencil, Trash2, TrendingUp, Sparkles, Building, Car, HelpCircle } from 'lucide-react';
+import { formatBRL, formatBRLInput, normalizeBRLInput, todayStr, addMonths, formatMonthYear } from '../../utils/formatters';
 import { getAutoCategory, PERCENTUAL_CATEGORIES, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
+import { calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 
 const COLOR_OPTIONS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4',
 ];
 
-export default function GoalsScreen({ goals, transactions, config, onSaveConfig, onAddGoal, onUpdateGoal, onRemoveGoal, onAddTransaction }) {
+export default function GoalsScreen({ goals, transactions, wallets = [], config, onSaveConfig, onAddGoal, onUpdateGoal, onRemoveGoal, onAddTransaction }) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
@@ -25,9 +26,299 @@ export default function GoalsScreen({ goals, transactions, config, onSaveConfig,
   const [expandedSimId, setExpandedSimId] = useState(null);
 
   // --- Estados do Painel Pense com Calma ---
-  const [activeTab, setActiveTab] = useState('caixinhas'); // 'caixinhas' | 'penseComCalma'
+  const [activeTab, setActiveTab] = useState('caixinhas'); // 'caixinhas' | 'penseComCalma' | 'simulador'
   const impulseItems = config?.impulseItems || [];
   const economiaAcumulada = config?.economiaAcumulada || 0;
+
+  // --- Constantes do Simulador de Grandes Compras ---
+  const TAX_SCENARIOS = useMemo(() => ({
+    '1': {
+      label: 'Último Ano (2025)',
+      jurosFinanciamento: 11.20,
+      incc: 5.94,
+      tr: 1.97,
+      ipca: 4.26
+    },
+    '3': {
+      label: 'Últimos 3 Anos (2023-2025)',
+      jurosFinanciamento: 10.90,
+      incc: 5.32,
+      tr: 1.51,
+      ipca: 4.57
+    },
+    '5': {
+      label: 'Últimos 5 Anos (2021-2025)',
+      jurosFinanciamento: 9.80,
+      incc: 7.82,
+      tr: 1.23,
+      ipca: 5.91
+    }
+  }), []);
+
+  // --- Estados do Simulador de Grandes Compras ---
+  const [simValorCompra, setSimValorCompra] = useState('500.000,00');
+  const [simValorEntrada, setSimValorEntrada] = useState('100.000,00');
+  const [simEntradaParcelada, setSimEntradaParcelada] = useState(false);
+  const [simPrazoEntrada, setSimPrazoEntrada] = useState('24');
+  const [simIndexadorEntrada, setSimIndexadorEntrada] = useState('incc');
+  const [simTaxaIndexadorEntrada, setSimTaxaIndexadorEntrada] = useState('5,32');
+
+  const [simPrazoFinanciamento, setSimPrazoFinanciamento] = useState('360');
+  const [simTaxaJuros, setSimTaxaJuros] = useState('10,90');
+  const [simAmortizacao, setSimAmortizacao] = useState('sac');
+  const [simIndexadorFinanc, setSimIndexadorFinanc] = useState('tr');
+  const [simTaxaIndexadorFinanc, setSimTaxaIndexadorFinanc] = useState('1,51');
+  const [simTaxasExtras, setSimTaxasExtras] = useState('120,00');
+  const [simComecarAposEntrada, setSimComecarAposEntrada] = useState(true);
+  const [simCenarioPeriodo, setSimCenarioPeriodo] = useState('3'); // '1' | '3' | '5'
+
+  // Handlers para preencher automaticamente taxas sugeridas de acordo com o cenário e indexadores
+  const handleCenarioPeriodoChange = (periodo) => {
+    setSimCenarioPeriodo(periodo);
+    const sc = TAX_SCENARIOS[periodo];
+    if (!sc) return;
+    
+    setSimTaxaJuros(sc.jurosFinanciamento.toFixed(2).replace('.', ','));
+
+    if (simIndexadorFinanc === 'none') setSimTaxaIndexadorFinanc('0,00');
+    else if (simIndexadorFinanc === 'tr') setSimTaxaIndexadorFinanc(sc.tr.toFixed(2).replace('.', ','));
+    else if (simIndexadorFinanc === 'incc') setSimTaxaIndexadorFinanc(sc.incc.toFixed(2).replace('.', ','));
+    else if (simIndexadorFinanc === 'ipca') setSimTaxaIndexadorFinanc(sc.ipca.toFixed(2).replace('.', ','));
+
+    if (simIndexadorEntrada === 'none') setSimTaxaIndexadorEntrada('0,00');
+    else if (simIndexadorEntrada === 'tr') setSimTaxaIndexadorEntrada(sc.tr.toFixed(2).replace('.', ','));
+    else if (simIndexadorEntrada === 'incc') setSimTaxaIndexadorEntrada(sc.incc.toFixed(2).replace('.', ','));
+    else if (simIndexadorEntrada === 'ipca') setSimTaxaIndexadorEntrada(sc.ipca.toFixed(2).replace('.', ','));
+  };
+
+  const handleIndexadorFinancChange = (idx) => {
+    setSimIndexadorFinanc(idx);
+    const sc = TAX_SCENARIOS[simCenarioPeriodo];
+    if (!sc) return;
+    if (idx === 'none') setSimTaxaIndexadorFinanc('0,00');
+    else if (idx === 'tr') setSimTaxaIndexadorFinanc(sc.tr.toFixed(2).replace('.', ','));
+    else if (idx === 'incc') setSimTaxaIndexadorFinanc(sc.incc.toFixed(2).replace('.', ','));
+    else if (idx === 'ipca') setSimTaxaIndexadorFinanc(sc.ipca.toFixed(2).replace('.', ','));
+  };
+
+  const handleIndexadorEntradaChange = (idx) => {
+    setSimIndexadorEntrada(idx);
+    const sc = TAX_SCENARIOS[simCenarioPeriodo];
+    if (!sc) return;
+    if (idx === 'none') setSimTaxaIndexadorEntrada('0,00');
+    else if (idx === 'tr') setSimTaxaIndexadorEntrada(sc.tr.toFixed(2).replace('.', ','));
+    else if (idx === 'incc') setSimTaxaIndexadorEntrada(sc.incc.toFixed(2).replace('.', ','));
+    else if (idx === 'ipca') setSimTaxaIndexadorEntrada(sc.ipca.toFixed(2).replace('.', ','));
+  };
+
+  // Projeção Mês a Mês (SAC / Price, parcelamentos e fluxo de caixa)
+  const simResultados = useMemo(() => {
+    const vCompra = normalizeBRLInput(simValorCompra) || 0;
+    const vEntrada = normalizeBRLInput(simValorEntrada) || 0;
+    const pFinanc = parseInt(simPrazoFinanciamento) || 360;
+    const rateJurosAA = (normalizeBRLInput(simTaxaJuros) || 0) / 100;
+    
+    const pEntrada = simEntradaParcelada ? (parseInt(simPrazoEntrada) || 24) : 0;
+    const rateIdxEntradaAA = (normalizeBRLInput(simTaxaIndexadorEntrada) || 0) / 100;
+    const rateIdxFinancAA = (normalizeBRLInput(simTaxaIndexadorFinanc) || 0) / 100;
+    const tExtras = normalizeBRLInput(simTaxasExtras) || 0;
+
+    const vFinanciado = Math.max(0, vCompra - vEntrada);
+
+    const jurosMensal = Math.pow(1 + rateJurosAA, 1 / 12) - 1;
+    const idxEntradaMensal = Math.pow(1 + rateIdxEntradaAA, 1 / 12) - 1;
+    const idxFinancMensal = Math.pow(1 + rateIdxFinancAA, 1 / 12) - 1;
+
+    const hoje = todayStr();
+    const globalTx = calcSaldo(transactions, '2020-01-01', hoje);
+    const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
+    const saldoInicialLiquido = globalTx + wInitials;
+
+    const expenses = transactions.filter(t => t.tipo !== 'entrada' && t.tipo !== 'investimento');
+    
+    const dtHoje = new Date();
+    const dtPassado = new Date(dtHoje.getFullYear() - 1, dtHoje.getMonth(), dtHoje.getDate());
+    const fromDateStr = dtPassado.toISOString().slice(0, 10);
+    const toDateStr = hoje;
+    
+    const occurrences = expenses.flatMap(tx => expandOccurrences(tx, fromDateStr, toDateStr));
+    
+    const monthlySums = {};
+    occurrences.forEach(o => {
+      const m = o.date.slice(0, 7);
+      monthlySums[m] = (monthlySums[m] || 0) + o.valor;
+    });
+    
+    const activeMonths = Object.keys(monthlySums);
+    const despesaMediaMensal = activeMonths.length > 0 
+      ? (Object.values(monthlySums).reduce((a, b) => a + b, 0) / activeMonths.length)
+      : 0;
+
+    const rendaMensal = config?.rendaMensal || 0;
+    const sobraBaseline = Math.max(0, rendaMensal - despesaMediaMensal);
+
+    const prazoTotalSimulado = Math.max(24, pEntrada + pFinanc);
+    const timeline = [];
+
+    let saldoPoupanca = saldoInicialLiquido;
+    if (!simEntradaParcelada) {
+      saldoPoupanca = Math.max(0, saldoPoupanca - vEntrada);
+    }
+
+    let saldoDevedorFinanc = vFinanciado;
+    const financDiferido = simEntradaParcelada && simComecarAposEntrada;
+
+    let prestacaoInicialFinanc = 0;
+    let prestacaoFinalFinanc = 0;
+    let custoTotalAmortizacao = 0;
+    let custoTotalEntrada = 0;
+
+    if (vFinanciado > 0) {
+      if (simAmortizacao === 'sac') {
+        const amort = vFinanciado / pFinanc;
+        const juros = vFinanciado * jurosMensal;
+        prestacaoInicialFinanc = amort + juros + tExtras;
+        
+        const amortFinal = vFinanciado / pFinanc;
+        const ultimoJuros = amortFinal * jurosMensal;
+        prestacaoFinalFinanc = amortFinal + ultimoJuros + tExtras;
+      } else {
+        const pmt = vFinanciado * (jurosMensal * Math.pow(1 + jurosMensal, pFinanc)) / (Math.pow(1 + jurosMensal, pFinanc) - 1);
+        prestacaoInicialFinanc = pmt + tExtras;
+        prestacaoFinalFinanc = pmt + tExtras;
+      }
+    }
+
+    for (let m = 1; m <= prazoTotalSimulado; m++) {
+      let parcelaEntrada = 0;
+      let parcelaFinanc = 0;
+      
+      if (simEntradaParcelada && m <= pEntrada) {
+        const parcelaBase = vEntrada / pEntrada;
+        parcelaEntrada = parcelaBase * Math.pow(1 + idxEntradaMensal, m);
+        custoTotalEntrada += parcelaEntrada;
+
+        if (financDiferido) {
+          saldoDevedorFinanc = saldoDevedorFinanc * (1 + idxEntradaMensal);
+        }
+      }
+
+      let mesFinanciamento = 0;
+      let pagandoFinanciamento = false;
+
+      if (financDiferido) {
+        if (m > pEntrada) {
+          mesFinanciamento = m - pEntrada;
+          pagandoFinanciamento = mesFinanciamento <= pFinanc;
+        }
+      } else {
+        mesFinanciamento = m;
+        pagandoFinanciamento = mesFinanciamento <= pFinanc;
+      }
+
+      if (vFinanciado > 0 && pagandoFinanciamento) {
+        saldoDevedorFinanc = saldoDevedorFinanc * (1 + idxFinancMensal);
+        const parcelasRestantes = pFinanc - mesFinanciamento + 1;
+
+        if (simAmortizacao === 'sac') {
+          const amort = saldoDevedorFinanc / parcelasRestantes;
+          const juros = saldoDevedorFinanc * jurosMensal;
+          parcelaFinanc = amort + juros + tExtras;
+          saldoDevedorFinanc = Math.max(0, saldoDevedorFinanc - amort);
+        } else {
+          const pmt = saldoDevedorFinanc * (jurosMensal * Math.pow(1 + jurosMensal, parcelasRestantes)) / (Math.pow(1 + jurosMensal, parcelasRestantes) - 1);
+          parcelaFinanc = pmt + tExtras;
+          const amort = parcelaFinanc - tExtras - (saldoDevedorFinanc * jurosMensal);
+          saldoDevedorFinanc = Math.max(0, saldoDevedorFinanc - amort);
+        }
+
+        custoTotalAmortizacao += parcelaFinanc;
+      }
+
+      const totalParcelasMes = parcelaEntrada + parcelaFinanc;
+      const sobraLiquidaMes = sobraBaseline - totalParcelasMes;
+      saldoPoupanca = saldoPoupanca + sobraLiquidaMes;
+
+      if (m <= 24) {
+        timeline.push({
+          mes: m,
+          dataLabel: formatMonthYear(addMonths(hoje, m)),
+          parcelaEntrada,
+          parcelaFinanc,
+          totalMes: totalParcelasMes,
+          sobraLiquida: sobraLiquidaMes,
+          saldoAcumulado: saldoPoupanca
+        });
+      }
+    }
+
+    return {
+      vFinanciado,
+      saldoInicialLiquido,
+      sobraBaseline,
+      despesaMediaMensal,
+      timeline,
+      totalPagoFinal: (simEntradaParcelada ? custoTotalEntrada : vEntrada) + custoTotalAmortizacao,
+      prestacaoInicialFinanc,
+      prestacaoFinalFinanc,
+      custoTotalEntrada: simEntradaParcelada ? custoTotalEntrada : vEntrada,
+      comprometimentoRendaPct: rendaMensal > 0 ? (prestacaoInicialFinanc / rendaMensal) * 100 : 0
+    };
+  }, [
+    transactions, wallets, config,
+    simValorCompra, simValorEntrada, simEntradaParcelada, simPrazoEntrada, simTaxaIndexadorEntrada,
+    simPrazoFinanciamento, simTaxaJuros, simAmortizacao, simTaxaIndexadorFinanc,
+    simTaxasExtras, simComecarAposEntrada
+  ]);
+
+  const handlePresetImovelPronto = () => {
+    setSimValorCompra('500.000,00');
+    setSimValorEntrada('100.000,00');
+    setSimEntradaParcelada(false);
+    setSimPrazoFinanciamento('360');
+    setSimAmortizacao('sac');
+    setSimIndexadorFinanc('tr');
+    setSimTaxasExtras('120,00');
+    const sc = TAX_SCENARIOS[simCenarioPeriodo];
+    if (sc) {
+      setSimTaxaJuros(sc.jurosFinanciamento.toFixed(2).replace('.', ','));
+      setSimTaxaIndexadorFinanc(sc.tr.toFixed(2).replace('.', ','));
+    }
+  };
+
+  const handlePresetImovelPlanta = () => {
+    setSimValorCompra('500.000,00');
+    setSimValorEntrada('120.000,00');
+    setSimEntradaParcelada(true);
+    setSimPrazoEntrada('24');
+    setSimIndexadorEntrada('incc');
+    setSimPrazoFinanciamento('360');
+    setSimAmortizacao('sac');
+    setSimIndexadorFinanc('tr');
+    setSimComecarAposEntrada(true);
+    setSimTaxasExtras('120,00');
+    const sc = TAX_SCENARIOS[simCenarioPeriodo];
+    if (sc) {
+      setSimTaxaJuros(sc.jurosFinanciamento.toFixed(2).replace('.', ','));
+      setSimTaxaIndexadorFinanc(sc.tr.toFixed(2).replace('.', ','));
+      setSimTaxaIndexadorEntrada(sc.incc.toFixed(2).replace('.', ','));
+    }
+  };
+
+  const handlePresetVeiculo = () => {
+    setSimValorCompra('90.000,00');
+    setSimValorEntrada('20.000,00');
+    setSimEntradaParcelada(false);
+    setSimPrazoFinanciamento('60');
+    setSimAmortizacao('price');
+    setSimIndexadorFinanc('none');
+    setSimTaxasExtras('0,00');
+    const sc = TAX_SCENARIOS[simCenarioPeriodo];
+    if (sc) {
+      setSimTaxaJuros(sc.jurosFinanciamento.toFixed(2).replace('.', ','));
+      setSimTaxaIndexadorFinanc('0,00');
+    }
+  };
 
   const [nomeDesejo, setNomeDesejo] = useState('');
   const [precoDesejo, setPrecoDesejo] = useState('');
@@ -230,31 +521,44 @@ export default function GoalsScreen({ goals, transactions, config, onSaveConfig,
             type="button"
             onClick={() => setActiveTab('caixinhas')} 
             style={{
-              flex: 1, padding: '10px', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none',
+              flex: 1, padding: '10px 5px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none',
               background: activeTab === 'caixinhas' ? 'var(--bg-card)' : 'transparent',
               color: activeTab === 'caixinhas' ? 'var(--text-primary)' : 'var(--text-secondary)',
               transition: 'all 0.2s', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
             }}
           >
-            📦 Minhas Caixinhas
+            📦 Caixinhas
           </button>
           <button 
             type="button"
             onClick={() => setActiveTab('penseComCalma')} 
             style={{
-              flex: 1, padding: '10px', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none',
+              flex: 1, padding: '10px 5px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none',
               background: activeTab === 'penseComCalma' ? 'var(--bg-card)' : 'transparent',
               color: activeTab === 'penseComCalma' ? 'var(--text-primary)' : 'var(--text-secondary)',
               transition: 'all 0.2s', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
             }}
           >
             ⏳ Pense com Calma
           </button>
+          <button 
+            type="button"
+            onClick={() => setActiveTab('simulador')} 
+            style={{
+              flex: 1, padding: '10px 5px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none',
+              background: activeTab === 'simulador' ? 'var(--bg-card)' : 'transparent',
+              color: activeTab === 'simulador' ? 'var(--text-primary)' : 'var(--text-secondary)',
+              transition: 'all 0.2s', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
+            }}
+          >
+            🛍️ Simular Compras
+          </button>
         </div>
 
-        {activeTab === 'caixinhas' ? (
+        {activeTab === 'caixinhas' && (
           <>
             {formOpen && (
               <form onSubmit={handleSubmit} style={{
@@ -515,7 +819,9 @@ export default function GoalsScreen({ goals, transactions, config, onSaveConfig,
               </div>
             )}
           </>
-        ) : (
+        )}
+
+        {activeTab === 'penseComCalma' && (
           <div>
             {/* Placar de Economia Acumulada */}
             <div style={{
@@ -715,6 +1021,305 @@ export default function GoalsScreen({ goals, transactions, config, onSaveConfig,
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === 'simulador' && (
+          <div style={{ animation: 'fadeIn 0.2s ease-out' }}>
+            {/* Presets Rápidos */}
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 12, marginBottom: 16, scrollbarWidth: 'none' }}>
+              <button
+                type="button"
+                onClick={handlePresetImovelPronto}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10,
+                  background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.2)',
+                  color: 'var(--primary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0
+                }}
+              >
+                <Building size={14} /> Imóvel Pronto (SBPE)
+              </button>
+              <button
+                type="button"
+                onClick={handlePresetImovelPlanta}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10,
+                  background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)',
+                  color: '#8b5cf6', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0
+                }}
+              >
+                <Sparkles size={14} /> Imóvel na Planta (INCC)
+              </button>
+              <button
+                type="button"
+                onClick={handlePresetVeiculo}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 10,
+                  background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)',
+                  color: 'var(--conforto)', fontSize: 12, fontWeight: 600, cursor: 'pointer', flexShrink: 0
+                }}
+              >
+                <Car size={14} /> Veículo (Tabela Price)
+              </button>
+            </div>
+
+            {/* Painel do Formulário */}
+            <div style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 16, padding: '16px', marginBottom: 20
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyIntent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: 10, marginBottom: 14 }}>
+                <h4 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>⚙️ Parâmetros da Simulação</h4>
+                
+                {/* Cenário de Médias */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Média:</span>
+                  <select
+                    value={simCenarioPeriodo}
+                    onChange={e => handleCenarioPeriodoChange(e.target.value)}
+                    style={{ fontSize: 11, height: 26, padding: '0 4px', borderRadius: 6, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="1">1 ano (2025)</option>
+                    <option value="3">3 anos (2023-2025)</option>
+                    <option value="5">5 anos (2021-2025)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Form Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+                
+                {/* Coluna 1: Entrada e Compra */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <h5 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dados do Imóvel/Compra</h5>
+                  
+                  <div>
+                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Valor Total do Bem (R$)</label>
+                    <input
+                      type="text" inputMode="decimal" placeholder="0,00"
+                      value={simValorCompra}
+                      onChange={e => setSimValorCompra(formatBRLInput(e.target.value))}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Valor da Entrada (R$)</label>
+                    <input
+                      type="text" inputMode="decimal" placeholder="0,00"
+                      value={simValorEntrada}
+                      onChange={e => setSimValorEntrada(formatBRLInput(e.target.value))}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0' }}>
+                    <input
+                      type="checkbox" id="simEntradaParcelada"
+                      checked={simEntradaParcelada}
+                      onChange={e => setSimEntradaParcelada(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
+                    />
+                    <label htmlFor="simEntradaParcelada" style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Entrada Parcelada (Obras)</label>
+                  </div>
+
+                  {simEntradaParcelada && (
+                    <div style={{ padding: 10, background: 'var(--bg-surface)', border: '1px solid var(--border)', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div>
+                        <label style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 3, display: 'block' }}>Prazo da Entrada (meses)</label>
+                        <input
+                          type="number" value={simPrazoEntrada}
+                          onChange={e => setSimPrazoEntrada(e.target.value)}
+                          style={{ height: 32, fontSize: 12 }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 3, display: 'block' }}>Indexador de Correção</label>
+                        <select
+                          value={simIndexadorEntrada}
+                          onChange={e => handleIndexadorEntradaChange(e.target.value)}
+                          style={{ height: 32, fontSize: 12, padding: '0 6px', background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 8 }}
+                        >
+                          <option value="none">Nenhum</option>
+                          <option value="incc">INCC (Construção)</option>
+                          <option value="ipca">IPCA (Inflação)</option>
+                          <option value="tr">TR (Taxa Referencial)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 3, display: 'block' }}>Taxa do Indexador (% a.a.)</label>
+                        <input
+                          type="text" inputMode="decimal"
+                          value={simTaxaIndexadorEntrada}
+                          onChange={e => setSimTaxaIndexadorEntrada(formatBRLInput(e.target.value))}
+                          style={{ height: 32, fontSize: 12 }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Coluna 2: Financiamento */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <h5 style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--investimento)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dados do Financiamento</h5>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div>
+                      <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Prazo (meses)</label>
+                      <input
+                        type="number" value={simPrazoFinanciamento}
+                        onChange={e => setSimPrazoFinanciamento(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Taxa Juros (% a.a.)</label>
+                      <input
+                        type="text" inputMode="decimal"
+                        value={simTaxaJuros}
+                        onChange={e => setSimTaxaJuros(formatBRLInput(e.target.value))}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div>
+                      <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Amortização</label>
+                      <select
+                        value={simAmortizacao}
+                        onChange={e => setSimAmortizacao(e.target.value)}
+                        style={{ height: 38, padding: '0 8px', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 10 }}
+                      >
+                        <option value="sac">SAC (Decrescente)</option>
+                        <option value="price">Price (Constante)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Indexador</label>
+                      <select
+                        value={simIndexadorFinanc}
+                        onChange={e => handleIndexadorFinancChange(e.target.value)}
+                        style={{ height: 38, padding: '0 8px', background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', borderRadius: 10 }}
+                      >
+                        <option value="none">Nenhum</option>
+                        <option value="tr">TR</option>
+                        <option value="incc">INCC</option>
+                        <option value="ipca">IPCA</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div>
+                      <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Taxa Indexador (% a.a.)</label>
+                      <input
+                        type="text" inputMode="decimal"
+                        value={simTaxaIndexadorFinanc}
+                        onChange={e => setSimTaxaIndexadorFinanc(formatBRLInput(e.target.value))}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>Taxas Extras (Seg/Adm)</label>
+                      <input
+                        type="text" inputMode="decimal"
+                        value={simTaxasExtras}
+                        onChange={e => setSimTaxasExtras(formatBRLInput(e.target.value))}
+                      />
+                    </div>
+                  </div>
+
+                  {simEntradaParcelada && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, margin: '6px 0' }}>
+                      <input
+                        type="checkbox" id="simComecarAposEntrada"
+                        checked={simComecarAposEntrada}
+                        onChange={e => setSimComecarAposEntrada(e.target.checked)}
+                        style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
+                      />
+                      <label htmlFor="simComecarAposEntrada" style={{ fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Financiamento após Entrada</label>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Painel de Resultados Consolidados */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, marginBottom: 16 }}>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 12, textAlign: 'center' }}>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Financiado</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{formatBRL(simResultados.vFinanciado)}</span>
+              </div>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 12, textAlign: 'center' }}>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Total da Entrada</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>{formatBRL(simResultados.custoTotalEntrada)}</span>
+              </div>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 12, textAlign: 'center' }}>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Prestação 1 (Financ.)</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--saida)' }}>{formatBRL(simResultados.prestacaoInicialFinanc)}</span>
+              </div>
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 12, textAlign: 'center' }}>
+                <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Custo Final Pago</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{formatBRL(simResultados.totalPagoFinal)}</span>
+              </div>
+            </div>
+
+            {/* Indicador de Compromisso Orçamentário e Diagnóstico */}
+            <div style={{
+              background: simResultados.comprometimentoRendaPct > 30 ? 'rgba(239, 68, 68, 0.06)' : 'rgba(16, 185, 129, 0.06)',
+              border: `1px solid ${simResultados.comprometimentoRendaPct > 30 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)'}`,
+              borderRadius: 14, padding: '14px', marginBottom: 20
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                <HelpCircle size={18} color={simResultados.comprometimentoRendaPct > 30 ? 'var(--saida)' : 'var(--entrada)'} style={{ marginTop: 2, flexShrink: 0 }} />
+                <div>
+                  <h5 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 700 }}>Análise de Fluxo de Caixa</h5>
+                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    Sua renda mensal é de <strong>{formatBRL(config?.rendaMensal || 0)}</strong>. A despesa média recente identificada das suas transações é de <strong>{formatBRL(simResultados.despesaMediaMensal)}</strong>, o que deixa uma sobra disponível de <strong>{formatBRL(simResultados.sobraBaseline)}</strong>/mês.
+                  </p>
+                  <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text-primary)', fontWeight: 600 }}>
+                    🚨 Prestação do financiamento compromete {simResultados.comprometimentoRendaPct.toFixed(1)}% da sua renda mensal.
+                    {simResultados.comprometimentoRendaPct > 30 && ' Recomenda-se comprometer no máximo 30% da renda mensal para evitar endividamento excessivo.'}
+                  </p>
+                  {simResultados.sobraBaseline - simResultados.prestacaoInicialFinanc < 0 && (
+                    <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--saida)', fontWeight: 700 }}>
+                      ⚠️ ATENÇÃO: A prestação excede sua sobra de caixa atual! Isso causará um déficit mensal de {formatBRL(Math.abs(simResultados.sobraBaseline - simResultados.prestacaoInicialFinanc))} no seu fluxo de caixa mensal.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Tabela do Fluxo de Caixa Futuro */}
+            <h5 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700 }}>📈 Projeção do Fluxo de Caixa (Próximos 24 Meses)</h5>
+            <div style={{ overflowX: 'auto', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)' }}>
+                    <th style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>Mês</th>
+                    <th style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>Parcela Entrada</th>
+                    <th style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>Parcela Financ.</th>
+                    <th style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>Sobra Líquida</th>
+                    <th style={{ padding: '10px 12px', color: 'var(--text-muted)' }}>Saldo Acumulado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {simResultados.timeline.map(t => (
+                    <tr key={t.mes} style={{ borderBottom: '1px solid var(--border)', height: 38 }}>
+                      <td style={{ padding: '8px 12px', fontWeight: 600 }}>{t.mes}º ({t.dataLabel})</td>
+                      <td style={{ padding: '8px 12px', color: t.parcelaEntrada > 0 ? 'var(--primary)' : 'var(--text-muted)' }}>
+                        {t.parcelaEntrada > 0 ? formatBRL(t.parcelaEntrada) : '-'}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: t.parcelaFinanc > 0 ? 'var(--saida)' : 'var(--text-muted)' }}>
+                        {t.parcelaFinanc > 0 ? formatBRL(t.parcelaFinanc) : '-'}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: t.sobraLiquida >= 0 ? 'var(--entrada)' : 'var(--saida)', fontWeight: 600 }}>
+                        {formatBRL(t.sobraLiquida)}
+                      </td>
+                      <td style={{ padding: '8px 12px', color: t.saldoAcumulado >= 0 ? 'var(--entrada)' : 'var(--saida)', fontWeight: 700 }}>
+                        {formatBRL(t.saldoAcumulado)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

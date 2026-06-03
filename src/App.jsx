@@ -152,6 +152,7 @@ export default function App() {
           <GoalsScreen
             goals={goals}
             transactions={transactions}
+            wallets={wallets}
             config={config}
             onAddGoal={addGoal}
             onUpdateGoal={updateGoal}
