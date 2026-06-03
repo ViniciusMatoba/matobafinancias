@@ -781,6 +781,66 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     }
   }
 
+  // ── N19 — Alerta de padrão incomum de gastos (dia atípico) ──────────────────
+  if (tipos.n19 !== false) {
+    const todayS2 = dateStrFromDate(hoje);
+    const ago30   = (() => { const d = new Date(hoje); d.setDate(d.getDate() - 30); return dateStrFromDate(d); })();
+    const occsHoje30 = expandRange(transactions, ago30, todayS2);
+    const gastoHoje2 = occsHoje30.filter(o => o.date === todayS2 && o.tipo !== 'entrada')
+      .reduce((s, o) => s + o.valor, 0);
+    const somaUltimos30 = occsHoje30.filter(o => o.tipo !== 'entrada')
+      .reduce((s, o) => s + o.valor, 0);
+    const media = somaUltimos30 / 30;
+    if (gastoHoje2 > media * 2 && gastoHoje2 > 50) {
+      const mult = (gastoHoje2 / media).toFixed(1);
+      let msg = `⚠️ *Dia atípico de gastos!*\n\n`;
+      msg += `Você registrou *${formatBRL(gastoHoje2)}* hoje — `;
+      msg += `*${mult}×* acima da sua média diária (${formatBRL(media)}).\n`;
+      msg += `_Tudo planejado?_`;
+      msgs.push(msg);
+    }
+  }
+
+  // ── N20 — Progresso semanal das metas (toda sexta-feira) ─────────────────────
+  if (tipos.n20 !== false && weekday === 5 && goals.length > 0) {
+    const metasComMeta = goals.filter(g => g.metaFinal > 0);
+    if (metasComMeta.length > 0) {
+      let msg = `🎯 *Progresso das Metas — Semana*\n\n`;
+      metasComMeta.forEach(g => {
+        const pct = Math.min(100, Math.round((g.saldo / g.metaFinal) * 100));
+        const barF = Math.round(pct / 10);
+        const barLine = '█'.repeat(barF) + '░'.repeat(10 - barF);
+        msg += `${g.nome}: *${formatBRL(g.saldo)}* / ${formatBRL(g.metaFinal)} (${pct}%)\n`;
+        msg += `\`[${barLine}]\`\n\n`;
+      });
+      msgs.push(msg.trim());
+    }
+  }
+
+  // ── N21 — Lembrete de conferência bancária (dia 20) ───────────────────────────
+  if (tipos.n21 !== false && day === 20) {
+    const currentMonthStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+    const fromConf = `${currentMonthStr}-01`;
+    const lastDayConf = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
+    const toConf = `${currentMonthStr}-${String(lastDayConf).padStart(2,'0')}`;
+    const todayStr21 = dateStrFromDate(hoje);
+    const isConferido21 = (o) => {
+      const tx = o.tx;
+      if (!tx) return false;
+      if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') return !!tx.conferido;
+      return !!(tx.conferidos && tx.conferidos.includes(o.date));
+    };
+    const occsConf = expandRange(transactions, fromConf, toConf);
+    const pendentes = occsConf.filter(o => o.date <= todayStr21 && !isConferido21(o) && o.tipo !== 'entrada').length;
+    if (pendentes > 0) {
+      let msg = `📋 *Hora de conciliar seu extrato!*\n\n`;
+      msg += `Você tem *${pendentes} lançamento${pendentes > 1 ? 's' : ''} pendente${pendentes > 1 ? 's' : ''}* de conferência neste mês.\n\n`;
+      msg += `Confira seu extrato bancário e marque o que já foi debitado.\n`;
+      msg += `_App → Histórico → filtro "Pendentes"_`;
+      msgs.push(msg);
+    }
+  }
+
   return msgs;
 }
 
@@ -1344,15 +1404,17 @@ const DEFAULT_TG_TIPOS = {
   n1:true,n2:true,n3:true,n4:true,n5:true,n6:true,n7:true,
   n8:true,n9:true,n10:true,n11:true,n12:true,
   n13:true,n14:true,n15:true,n16:true,n17:true,n18:true,
+  n19:true,n20:true,n21:true,
 };
 
 const ALERT_LABELS = {
-  n1:'Fatura vence hoje', n2:'Vence em X dias', n3:'Fecha em 2 dias',
-  n4:'Orçamento >80%',   n5:'Orçamento estourado', n6:'Saldo negativo 7d',
-  n7:'Resumo semanal',   n8:'Resumo diário',  n9:'Limite geral gastos',
-  n10:'Contas fixas',    n11:'Cartão no limite', n12:'Rel. mensal',
-  n13:'Fecha amanhã',    n14:'Última parcela', n15:'Saldo mínimo',
-  n16:'Caixinhas (dia 1)',n17:'Metade do mês', n18:'Economia do dia',
+  n1:'Fatura vence hoje',   n2:'Vence em X dias',      n3:'Fecha em 2 dias',
+  n4:'Orçamento >80%',      n5:'Orçamento estourado',  n6:'Saldo negativo 7d',
+  n7:'Resumo semanal',      n8:'Resumo diário',         n9:'Limite geral gastos',
+  n10:'Contas fixas',       n11:'Cartão no limite',     n12:'Rel. mensal',
+  n13:'Fecha amanhã',       n14:'Última parcela',       n15:'Saldo mínimo',
+  n16:'Caixinhas (dia 1)',  n17:'Metade do mês',        n18:'Economia do dia',
+  n19:'Gasto atípico do dia', n20:'Progresso metas (sex)', n21:'Conferência (dia 20)',
 };
 
 // Grupos de alertas para organizar o menu
@@ -1361,7 +1423,8 @@ const ALERT_GROUPS = [
   { emoji:'💰', title:'Orçamento',     ids:['n4','n5','n9'] },
   { emoji:'⚠️', title:'Alertas',       ids:['n6','n10','n11','n14','n15'] },
   { emoji:'📊', title:'Resumos',       ids:['n7','n8','n12','n16','n17'] },
-  { emoji:'💚', title:'Economia',      ids:['n18'] },
+  { emoji:'💚', title:'Economia',      ids:['n18','n19'] },
+  { emoji:'🎯', title:'Metas e Banco', ids:['n20','n21'] },
 ];
 
 // Texto do menu de configuração
@@ -1493,6 +1556,144 @@ async function handleCallbackQuery(cbq) {
   }
 }
 
+// ─── Novos handlers ───────────────────────────────────────────────────────────
+
+async function handleProximas(chatId, uid) {
+  const hoje     = todayStrBrasilia();
+  const fim7     = addDaysFn(hoje, 6);
+  const { transactions, walletInitials } = await loadUserData(uid);
+  const saldo    = calcSaldoSimples(transactions, hoje, walletInitials);
+
+  const occs = expandRange(transactions, hoje, fim7)
+    .filter(o => o.tipo !== 'entrada')
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  if (occs.length === 0) {
+    return sendMessage(chatId, '📅 *Próximos 7 dias*\n\n✅ Nenhuma despesa prevista nos próximos 7 dias!');
+  }
+
+  const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  let totalSaidas = 0;
+  let text = `📅 *Próximos 7 dias*\n\n`;
+
+  // Agrupa por data
+  const byDate = {};
+  occs.forEach(o => { if (!byDate[o.date]) byDate[o.date] = []; byDate[o.date].push(o); });
+
+  Object.entries(byDate).forEach(([date, items]) => {
+    const [y, m, d] = date.split('-').map(Number);
+    const dt = new Date(y, m - 1, d);
+    const dayName = DIAS[dt.getDay()];
+    const dateLabel = `${dayName}, ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}`;
+    const dayTotal = items.reduce((s, o) => s + o.valor, 0);
+    totalSaidas += dayTotal;
+    text += `*${dateLabel}* — ${formatBRL(dayTotal)}\n`;
+    items.forEach(o => {
+      const desc = o.tx?.descricao || o.tipo;
+      text += `  • ${desc}\n`;
+    });
+    text += '\n';
+  });
+
+  text += `─────────────────\n`;
+  text += `💸 Total previsto: *${formatBRL(totalSaidas)}*\n`;
+  text += `💰 Saldo esperado: *${formatBRL(saldo - totalSaidas)}*`;
+
+  return sendMessage(chatId, text.trim());
+}
+
+async function handlePrevisao(chatId, uid) {
+  const hoje   = todayStrBrasilia();
+  const fim30  = addDaysFn(hoje, 29);
+  const { transactions, walletInitials } = await loadUserData(uid);
+  const saldoHoje = calcSaldoSimples(transactions, hoje, walletInitials);
+
+  const occs = expandRange(transactions, hoje, fim30);
+  let entradas = 0, saidas = 0;
+  let diaMaisCritico = null, maiorSaidaDia = 0;
+
+  const byDate = {};
+  occs.forEach(o => {
+    if (!byDate[o.date]) byDate[o.date] = 0;
+    if (o.tipo !== 'entrada') byDate[o.date] += o.valor;
+  });
+
+  occs.forEach(o => {
+    if (o.tipo === 'entrada') entradas += o.valor;
+    else saidas += o.valor;
+  });
+
+  Object.entries(byDate).forEach(([date, val]) => {
+    if (val > maiorSaidaDia) { maiorSaidaDia = val; diaMaisCritico = date; }
+  });
+
+  const saldoFim = saldoHoje + entradas - saidas;
+  const tendencia = saldoFim >= saldoHoje ? '✅ Positiva' : '⚠️ Negativa';
+
+  let diaCriticoStr = '';
+  if (diaMaisCritico) {
+    const [, m, d] = diaMaisCritico.split('-');
+    diaCriticoStr = `\n⚠️ Dia mais crítico: *${String(d).padStart(2,'0')}/${m}* (${formatBRL(maiorSaidaDia)})`;
+  }
+
+  return sendMessage(chatId,
+    `📊 *Projeção — próximos 30 dias*\n\n` +
+    `💰 Saldo hoje: *${formatBRL(saldoHoje)}*\n` +
+    `📈 Entradas previstas: *${formatBRL(entradas)}*\n` +
+    `📉 Saídas previstas: *${formatBRL(saidas)}*\n` +
+    `─────────────────\n` +
+    `🏁 Saldo em 30 dias: *${formatBRL(saldoFim)}*` +
+    diaCriticoStr + `\n` +
+    `${tendencia}`
+  );
+}
+
+async function handleEconomias(chatId, uid) {
+  const { transactions } = await loadUserData(uid);
+  const configDoc = await db.collection('config').doc(uid).get();
+  const config = configDoc.exists ? configDoc.data() : {};
+
+  // Calcula economia do N18
+  const msgs = checkN18(transactions, config, { n18: true });
+
+  const rendaMensal = config?.rendaMensal || 0;
+  const pctLiberdade = config?.budgetPcts?.liberdade || 25;
+  const metaMensal = rendaMensal > 0 ? (rendaMensal * pctLiberdade / 100) : 0;
+
+  // Investimentos do mês
+  const hoje = getNowBrasilia();
+  const monthStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  const from = `${monthStr}-01`;
+  const lastDay = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
+  const to = `${monthStr}-${String(lastDay).padStart(2,'0')}`;
+  const occsInv = expandRange(transactions, from, to).filter(o => o.tipo === 'investimento');
+  const investido = occsInv.reduce((s, o) => s + o.valor, 0);
+
+  const nomeMes = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+  const mesLabel = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+
+  let text = msgs.length > 0 ? msgs[0] + '\n\n' : `💚 *Economia de ${mesLabel}*\n\n_Nenhum gasto previsto não registrado hoje._\n\n`;
+
+  if (metaMensal > 0) {
+    const pct = Math.min(100, Math.round((investido / metaMensal) * 100));
+    const barFilled = Math.round(pct / 10);
+    const bar = '█'.repeat(barFilled) + '░'.repeat(10 - barFilled);
+    text += `🎯 *Meta mensal de poupança:* ${formatBRL(metaMensal)}\n`;
+    text += `Investido: *${formatBRL(investido)}*\n`;
+    text += `Progresso: \`[${bar}] ${pct}%\``;
+    if (investido >= metaMensal) text += `\n✅ Meta atingida!`;
+  }
+
+  return sendMessage(chatId, text.trim());
+}
+
+// Helper: adiciona dias a uma string de data
+function addDaysFn(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + n);
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
 async function handleAjuda(chatId) {
   const MAIN_KEYBOARD = {
     keyboard: [
@@ -1522,8 +1723,11 @@ async function handleAjuda(chatId) {
     `/cartoes — Seus cartões, limites e vencimentos\n` +
     `/fatura — Detalhamento de faturas e compras do mês 🧾\n\n` +
 
-    `*📈 Projeção*\n` +
-    `/projecao — Saldo projetado nos próximos 7 dias\n\n` +
+    `*📈 Projeção e Economia*\n` +
+    `/projecao — Saldo projetado nos próximos 7 dias\n` +
+    `/proximas — Próximas despesas dos próximos 7 dias\n` +
+    `/previsao — Fluxo de caixa para os próximos 30 dias\n` +
+    `/economias — Gastos não registrados e meta de poupança\n\n` +
 
     `*⚙️ Configurações*\n` +
     `/configurar — Ativar/desativar alertas diretamente aqui no Telegram\n\n` +
@@ -1992,6 +2196,9 @@ async function processUpdate(update) {
     case '/fatura':    return handleFatura(chatId, uid);
     case '/projecao':  return handleProjecao(chatId, uid);
     case '/insight':    return handleInsight(chatId, uid);
+    case '/proximas':   return handleProximas(chatId, uid);
+    case '/previsao':   return handlePrevisao(chatId, uid);
+    case '/economias':  return handleEconomias(chatId, uid);
     case '/configurar':
     case '/alertas':   return handleConfigurar(chatId, uid);
     case '/ajuda':

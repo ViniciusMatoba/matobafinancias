@@ -283,8 +283,14 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
           totalParcelas: parseInt(item.totalParcelas) || 1,
         } : {})
       }));
+      // Cartão com itens: todos os itens precisam de categoria
+      const itensSemCat = itensToSave.filter(i => !i.categoria);
+      if (itensSemCat.length > 0) {
+        setErro(`${itensSemCat.length} item(ns) sem categoria. Classifique todos antes de continuar.`);
+        return;
+      }
     } else {
-      if (form.tipo !== 'cartao' && needsCat && !autocat && !form.categoria) {
+      if (needsCat && !autocat && !form.categoria) {
         setErro('Selecione uma categoria antes de continuar.');
         return;
       }

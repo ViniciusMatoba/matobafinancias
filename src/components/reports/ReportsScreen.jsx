@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
@@ -254,6 +254,27 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
         return t;
       }),
     };
+  }, [transactions]);
+
+  // Gráfico de evolução: últimos 6 meses com entradas, saídas e saldo
+  const chartEvolutionData = useMemo(() => {
+    const FAR_PAST = '2020-01-01';
+    return [-5,-4,-3,-2,-1,0].map(offset => {
+      const { from, to, label } = getMonthRange(offset);
+      let entradas = 0, saidas = 0;
+      transactions.forEach(tx => {
+        expandOccurrences(tx, from, to).forEach(occ => {
+          if (occ.sinal > 0) entradas += occ.valor;
+          else saidas += occ.valor;
+        });
+      });
+      // Saldo acumulado até o fim do mês
+      let saldo = 0;
+      transactions.forEach(tx => {
+        expandOccurrences(tx, FAR_PAST, to).forEach(occ => { saldo += occ.sinal * occ.valor; });
+      });
+      return { label, entradas: Math.round(entradas * 100) / 100, saidas: Math.round(saidas * 100) / 100, saldo: Math.round(saldo * 100) / 100 };
+    });
   }, [transactions]);
 
   return (
@@ -609,8 +630,34 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
         {/* ── Aba Evolução: comparação dos últimos 3 meses por categoria ── */}
         {activeTab === TABS.EVOLUCAO && (
           <div style={{ padding: '16px 20px 24px' }}>
+            {/* Gráfico de evolução — últimos 6 meses */}
+            <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              📊 Fluxo dos últimos 6 meses
+            </p>
+            <ResponsiveContainer width="100%" height={220}>
+              <ComposedChart data={chartEvolutionData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+                <YAxis tick={{ fontSize: 9, fill: 'var(--text-muted)' }} tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} width={38} />
+                <Tooltip
+                  contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
+                  formatter={(value, name) => [
+                    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value),
+                    name === 'entradas' ? 'Entradas' : name === 'saidas' ? 'Saídas' : 'Saldo',
+                  ]}
+                />
+                <Legend formatter={v => v === 'entradas' ? 'Entradas' : v === 'saidas' ? 'Saídas' : 'Saldo'} iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="entradas" fill="#10b981" opacity={0.75} radius={[4,4,0,0]} />
+                <Bar dataKey="saidas"   fill="#ef4444" opacity={0.75} radius={[4,4,0,0]} />
+                <Line dataKey="saldo" stroke="var(--primary)" strokeWidth={2} dot={{ r: 3 }} type="monotone" />
+              </ComposedChart>
+            </ResponsiveContainer>
+
+            <p style={{ margin: '20px 0 8px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              📋 Comparativo por categoria (últimos 3 meses)
+            </p>
             <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
-              Gastos reais por categoria nos últimos 3 meses. ↑↓ indica tendência vs mês anterior.
+              ↑↓ indica tendência vs mês anterior.
             </p>
 
             <div style={{ overflowX: 'auto' }}>

@@ -5,6 +5,7 @@ export const DEFAULT_NOTIFICATION_TIPOS = {
   n1: true, n2: true, n3: true, n4: true, n5: true, n6: true, n7: true,
   n8: true, n9: true, n10: true, n11: true, n12: true,
   n13: true, n14: true, n15: true, n16: true, n17: true, n18: true,
+  n19: true, n20: true, n21: true,
 };
 
 export const TIPO_INFO = {
@@ -26,4 +27,7 @@ export const TIPO_INFO = {
   n16: { label: 'Resumo das caixinhas (dia 1)',  icon: '🎯', desc: 'No início do mês: progresso de todas as metas com barra visual' },
   n17: { label: 'Balanço da metade do mês',      icon: '📊', desc: 'No dia 15: projeção de como o orçamento vai fechar' },
   n18: { label: 'Economia do dia',               icon: '💚', desc: 'Às 19h: parabeniza quando gastos previstos não foram registrados e mostra o total economizado no mês' },
+  n19: { label: 'Gasto atípico do dia',          icon: '⚠️', desc: 'Avisa quando os gastos do dia estão 2× acima da sua média diária dos últimos 30 dias' },
+  n20: { label: 'Progresso semanal de metas',    icon: '🎯', desc: 'Toda sexta-feira: atualização do progresso de todas as suas metas financeiras' },
+  n21: { label: 'Lembrete de conferência',       icon: '📋', desc: 'Dia 20 de cada mês: lembra de conciliar o extrato bancário com os lançamentos pendentes' },
 };

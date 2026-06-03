@@ -1,11 +1,13 @@
 {
-  "version": "1.6.38",
+  "version": "1.6.39",
   "date": "03/06/2026",
   "notes": [
-    "Fix: edição de ocorrência única agora preserva status de conciliação da recorrência original",
-    "Fix: dependência redundante removida de handleDelete (performance)",
-    "Novo: alerta proativo ao salvar despesa que ultrapassa 80% ou 100% do orçamento da categoria",
-    "Novo: aba \"Evolução\" em Relatórios — comparativo dos últimos 3 meses por categoria com tendência ↑↓",
-    "Melhoria: exportação CSV agora inclui itens individuais de cartão, carteira, conferido e parcela"
+    "Obrigatório: categoria agora é exigida em todos os lançamentos (saída, diário, cartão)",
+    "Novo: card \"Próximas Contas\" na Home — clique para ver fluxo de caixa dos próximos 7 dias",
+    "Novo: resumo automático de virada de mês (aparece nos dias 1–5 com resultado do mês anterior)",
+    "Novo: barra de poupança mensal na meta de Liberdade Financeira (GoalsScreen)",
+    "Novo: gráfico ComposedChart na aba Evolução — entradas, saídas e saldo dos últimos 6 meses",
+    "Bot: novos comandos /proximas, /previsao e /economias",
+    "Notificações: N19 (gasto atípico), N20 (progresso metas sexta), N21 (lembrete conferência dia 20)"
   ]
 }

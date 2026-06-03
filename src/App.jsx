@@ -47,6 +47,8 @@ export default function App() {
   const [payingItem, setPayingItem] = useState(null); // { item, occDate }
   const [tourActive, setTourActive] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showMonthRecap, setShowMonthRecap] = useState(false);
+  const [monthRecapData, setMonthRecapData] = useState(null);
 
   const handleUpdate = async () => {
     setIsUpdating(true);
@@ -80,6 +82,62 @@ export default function App() {
     await saveConfig({ tourDone: true });
     showToast('🏆 Tour guiado concluído! Aproveite o app.');
   };
+
+  // Resumo automático de virada de mês (aparece uma vez por mês nos dias 1–5)
+  useEffect(() => {
+    if (!user || !transactions.length || dataLoading) return;
+    const today = new Date();
+    if (today.getDate() > 5) return;
+    const recapKey = `matoba:recap:${user.uid}:${today.toISOString().slice(0, 7)}`;
+    if (localStorage.getItem(recapKey)) return;
+
+    // Calcula dados do mês anterior
+    const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const prevY = prevMonth.getFullYear();
+    const prevM = prevMonth.getMonth() + 1;
+    const prevMonthStr = `${prevY}-${String(prevM).padStart(2,'0')}`;
+    const from = `${prevMonthStr}-01`;
+    const lastDay = new Date(prevY, prevM, 0).getDate();
+    const to   = `${prevMonthStr}-${String(lastDay).padStart(2,'0')}`;
+
+    let entradas = 0, saidas = 0;
+    const catTotals = {};
+    transactions.forEach(tx => {
+      expandOccurrences(tx, from, to).forEach(occ => {
+        if (occ.sinal > 0) entradas += occ.valor;
+        else {
+          saidas += occ.valor;
+          const cat = tx.categoria || 'outros';
+          catTotals[cat] = (catTotals[cat] || 0) + occ.valor;
+        }
+      });
+    });
+
+    const rendaMensal = config?.rendaMensal || 0;
+    const budgetPcts  = config?.budgetPcts  || {};
+    let melhorCat = null, piorCat = null;
+    let melhorPct = Infinity, piorPct = -Infinity;
+    Object.entries(catTotals).forEach(([catId, gasto]) => {
+      const budget = rendaMensal > 0 ? (rendaMensal * (budgetPcts[catId] || 0)) / 100 : 0;
+      if (budget > 0) {
+        const pct = gasto / budget;
+        if (pct < melhorPct) { melhorPct = pct; melhorCat = catId; }
+        if (pct > piorPct)   { piorPct  = pct; piorCat  = catId; }
+      }
+    });
+
+    const MONTH_NAMES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    Promise.resolve().then(() => {
+      setMonthRecapData({
+        mesNome: MONTH_NAMES_FULL[prevM - 1],
+        entradas, saidas, resultado: entradas - saidas,
+        melhorCat: melhorCat ? PERCENTUAL_CATEGORIES[melhorCat]?.label : null,
+        piorCat:   piorCat   ? PERCENTUAL_CATEGORIES[piorCat]?.label   : null,
+        recapKey,
+      });
+      setShowMonthRecap(true);
+    });
+  }, [user, transactions, dataLoading, config?.rendaMensal, config?.budgetPcts]);
 
   // Função auxiliar para renderizar a tela ativa com base no estado de forma estável
   const renderScreen = () => {
@@ -224,6 +282,53 @@ export default function App() {
             onCancel={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
           />
         </Modal>
+
+        {/* Modal de Resumo de Virada de Mês */}
+        {showMonthRecap && monthRecapData && (
+          <Modal open onClose={() => { setShowMonthRecap(false); localStorage.setItem(monthRecapData.recapKey, '1'); }} title={`☀️ Fechamento de ${monthRecapData.mesNome}`}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div style={{ background: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: '12px', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-muted)' }}>Receitas</p>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--entrada)' }}>+{new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(monthRecapData.entradas)}</p>
+                </div>
+                <div style={{ background: 'rgba(239,68,68,0.08)', borderRadius: 12, padding: '12px', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-muted)' }}>Despesas</p>
+                  <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--saida)' }}>-{new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(monthRecapData.saidas)}</p>
+                </div>
+              </div>
+              <div style={{ background: monthRecapData.resultado >= 0 ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', borderRadius: 12, padding: '14px 16px', textAlign: 'center', border: `1px solid ${monthRecapData.resultado >= 0 ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--text-secondary)' }}>Resultado do mês</p>
+                <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: monthRecapData.resultado >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
+                  {monthRecapData.resultado >= 0 ? '+' : ''}{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(monthRecapData.resultado)}
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                  {monthRecapData.resultado >= 0 ? '✅ Mês no azul! Ótimo trabalho.' : '⚠️ Mês no vermelho. Que tal revisar os gastos?'}
+                </p>
+              </div>
+              {(monthRecapData.melhorCat || monthRecapData.piorCat) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {monthRecapData.melhorCat && <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>✅ Melhor categoria: <strong>{monthRecapData.melhorCat}</strong></p>}
+                  {monthRecapData.piorCat && monthRecapData.piorCat !== monthRecapData.melhorCat && <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)' }}>⚠️ Maior consumo: <strong>{monthRecapData.piorCat}</strong></p>}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setShowMonthRecap(false); localStorage.setItem(monthRecapData.recapKey, '1'); setView('projection'); }}
+                  style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 13, fontWeight: 600, background: 'var(--primary)', color: '#fff', border: 'none', cursor: 'pointer' }}
+                >
+                  Ver Histórico
+                </button>
+                <button
+                  onClick={() => { setShowMonthRecap(false); localStorage.setItem(monthRecapData.recapKey, '1'); }}
+                  style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 13, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', cursor: 'pointer' }}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </Modal>
+        )}
 
         {/* Modal de Exceção Recorrente */}
         <Modal

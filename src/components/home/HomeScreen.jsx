@@ -5,6 +5,7 @@ import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/p
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import BudgetSummaryCard from './BudgetSummaryCard';
 import AdjustBalanceModal from './AdjustBalanceModal';
+import ProximasContasCard from './ProximasContasCard';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -497,6 +498,11 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           ))}
         </div>
       )}
+
+      {/* Card de Próximas Contas — fluxo dos próximos 7 dias */}
+      <div style={{ padding: '0 20px' }}>
+        <ProximasContasCard transactions={transactions} wallets={wallets} />
+      </div>
 
       {/* Orçamento por Divisão Percentual — sempre exibe o mês corrente,
            independente do dia selecionado na navegação diária */}

@@ -1,7 +1,21 @@
-export const APP_VERSION = '1.6.38';
+export const APP_VERSION = '1.6.39';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.39',
+    date: '03/06/2026',
+    changes: [
+      'Obrigatório: categoria agora é exigida em todos os lançamentos (saída, diário, cartão)',
+      'Novo: card "Próximas Contas" na Home — clique para ver fluxo de caixa dos próximos 7 dias',
+      'Novo: resumo automático de virada de mês (aparece nos dias 1–5 com resultado do mês anterior)',
+      'Novo: barra de poupança mensal na meta de Liberdade Financeira (GoalsScreen)',
+      'Novo: gráfico ComposedChart na aba Evolução — entradas, saídas e saldo dos últimos 6 meses',
+      'Bot: novos comandos /proximas, /previsao e /economias',
+      'Bot: /hoje agora mostra pago vs pendente',
+      'Notificações: N19 (gasto atípico), N20 (progresso metas sexta), N21 (lembrete conferência dia 20)',
+    ],
+  },
   {
     version: '1.6.38',
     date: '03/06/2026',

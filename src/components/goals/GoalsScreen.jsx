@@ -424,6 +424,23 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
     }
   };
 
+  // Poupança mensal: investimentos do mês atual (para meta de Liberdade Financeira)
+  const { investidoMes, metaMensal } = useMemo(() => {
+    const today = new Date();
+    const monthPrefix = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    const from = `${monthPrefix}-01`;
+    const lastDay = new Date(today.getFullYear(), today.getMonth()+1, 0).getDate();
+    const to = `${monthPrefix}-${String(lastDay).padStart(2,'0')}`;
+    let investido = 0;
+    transactions.forEach(tx => {
+      if (tx.tipo !== 'investimento') return;
+      expandOccurrences(tx, from, to).forEach(occ => { investido += occ.valor; });
+    });
+    const renda = Number(config?.rendaMensal) || 0;
+    const pct   = Number(config?.budgetPcts?.liberdade) || 25;
+    return { investidoMes: investido, metaMensal: renda > 0 ? (renda * pct / 100) : 0 };
+  }, [transactions, config]);
+
   const resetForm = () => {
     setNome('');
     setCor(COLOR_OPTIONS[0]);
@@ -737,9 +754,39 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
                       </button>
                     </div>
 
+                    {g.isIndependencia && metaMensal > 0 && (
+                      <div style={{ padding: '0 16px 10px' }}>
+                        <div style={{
+                          background: 'var(--bg-surface)', borderRadius: 12, padding: '12px 14px',
+                          border: '1px solid var(--border)',
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+                              💎 Poupança mensal
+                            </span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: investidoMes >= metaMensal ? 'var(--entrada)' : 'var(--text-primary)' }}>
+                              {formatBRL(investidoMes)} / {formatBRL(metaMensal)}
+                            </span>
+                          </div>
+                          <div style={{ height: 6, background: 'var(--bg-card)', borderRadius: 3, overflow: 'hidden' }}>
+                            <div style={{
+                              height: '100%', borderRadius: 3, transition: 'width 0.5s',
+                              width: `${Math.min(100, metaMensal > 0 ? (investidoMes / metaMensal) * 100 : 0)}%`,
+                              background: investidoMes >= metaMensal ? '#10b981' : 'var(--investimento)',
+                            }} />
+                          </div>
+                          <p style={{ margin: '4px 0 0', fontSize: 11, color: investidoMes >= metaMensal ? 'var(--entrada)' : 'var(--text-muted)', textAlign: 'right' }}>
+                            {investidoMes >= metaMensal
+                              ? '✅ Meta atingida este mês!'
+                              : `Faltam ${formatBRL(metaMensal - investidoMes)}`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {g.isIndependencia && (
                       <div style={{ padding: '0 16px 16px' }}>
-                        <button 
+                        <button
                           onClick={() => setExpandedSimId(expandedSimId === g.id ? null : g.id)}
                           style={{
                             width: '100%', padding: '8px', borderRadius: 10, fontSize: 12, fontWeight: 600,
