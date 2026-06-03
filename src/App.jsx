@@ -136,17 +136,6 @@ export default function App() {
             onAdjustBalance={handleAdjustBalance}
           />
         )}
-        {view === 'history' && (
-          <TransactionsScreen
-            transactions={transactions}
-            wallets={wallets}
-            onEdit={handleEdit}
-            onClone={handleClone}
-            onDelete={handleDelete}
-            onPay={openPayModal}
-            onUpdate={update}
-          />
-        )}
         {view === 'goals' && (
           <GoalsScreen
             goals={goals}
@@ -164,10 +153,12 @@ export default function App() {
         {view === 'projection' && (
           <ProjectionScreen
             transactions={transactions}
+            wallets={wallets}
             onEdit={handleEdit}
             onClone={handleClone}
             onDelete={handleDelete}
             onPay={openPayModal}
+            onUpdate={update}
           />
         )}
         {view === 'reports' && (

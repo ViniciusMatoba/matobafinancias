@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.26';
+export const APP_VERSION = '1.6.27';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.27',
+    date: '03/06/2026',
+    changes: [
+      'Histórico movido para dentro da tela de Projeção como nova aba',
+      'Menu inferior simplificado — 5 botões (sem Histórico separado)',
+      'Abas da Projeção: Mensal, Período, Anual e Histórico',
+    ],
+  },
   {
     version: '1.6.26',
     date: '03/06/2026',

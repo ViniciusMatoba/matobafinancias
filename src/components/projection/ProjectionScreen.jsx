@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Calendar, Pencil, Trash2, BarChart2, Copy, Percent } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Calendar, Pencil, Trash2, BarChart2, Copy, Percent, List } from 'lucide-react';
+import TransactionsScreen from '../transactions/TransactionsScreen';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -23,7 +24,7 @@ function formatDayNum(dateStr) {
   return dateStr.split('-')[2];
 }
 
-export default function ProjectionScreen({ transactions, onEdit, onClone, onDelete, onPay }) {
+export default function ProjectionScreen({ transactions, wallets, onEdit, onClone, onDelete, onPay, onUpdate }) {
   const [viewTab, setViewTab] = useState('mensal'); // 'mensal' | 'resumo' | 'anual'
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -138,7 +139,7 @@ export default function ProjectionScreen({ transactions, onEdit, onClone, onDele
 
   return (
     <>
-    <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
+    <div style={{ flex: 1, overflowY: viewTab === 'historico' ? 'hidden' : 'auto', paddingBottom: viewTab === 'historico' ? 0 : 90 }}>
 
       {/* Header fixo */}
       <div style={{
@@ -187,11 +188,25 @@ export default function ProjectionScreen({ transactions, onEdit, onClone, onDele
               >
                 Anual
               </button>
+              <button
+                onClick={() => { setViewTab('historico'); setIsChartMode(false); }}
+                style={{
+                  padding: '6px 10px', borderRadius: 8, fontSize: 10, fontWeight: 600,
+                  background: viewTab === 'historico' ? 'var(--primary)' : 'none',
+                  color: viewTab === 'historico' ? '#fff' : 'var(--text-secondary)',
+                  border: 'none', cursor: 'pointer', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', gap: 4,
+                }}
+              >
+                <List size={11} />
+                Histórico
+              </button>
             </div>
           </div>
         </div>
 
         {/* Controles dinâmicos de acordo com a aba selecionada */}
+        {viewTab === 'historico' && null}
         {viewTab === 'resumo' && (
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', animation: 'fadeIn 0.2s ease-out' }}>
             <div style={{ flex: 1 }}>
@@ -248,8 +263,21 @@ export default function ProjectionScreen({ transactions, onEdit, onClone, onDele
         )}
       </div>
 
-      {/* Conteúdo Principal */}
-      <div style={{ padding: '16px 20px 0' }}>
+      {/* Histórico — renderiza TransactionsScreen com scroll próprio */}
+      {viewTab === 'historico' && (
+        <TransactionsScreen
+          transactions={transactions}
+          wallets={wallets}
+          onEdit={onEdit}
+          onClone={onClone}
+          onDelete={onDelete}
+          onPay={onPay}
+          onUpdate={onUpdate}
+        />
+      )}
+
+      {/* Conteúdo Principal — Projeção */}
+      {viewTab !== 'historico' && <div style={{ padding: '16px 20px 0' }}>
 
         {/* Visualização de Resumo/Mensal */}
         {viewTab !== 'anual' && (
@@ -699,7 +727,7 @@ export default function ProjectionScreen({ transactions, onEdit, onClone, onDele
         )}
 
         <div style={{ height: 8 }} />
-      </div>
+      </div>}
     </div>
     </>
   );
