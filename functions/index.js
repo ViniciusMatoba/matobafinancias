@@ -29,6 +29,10 @@ const TELEGRAM    = `https://api.telegram.org/bot${BOT_TOKEN}`;
 const PROJECT_ID  = process.env.GCLOUD_PROJECT || 'matobafinancas';
 const REGION      = 'us-central1';
 
+// Meses em português (índice 1–12 = Janeiro–Dezembro)
+const MESES_LONGO  = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MESES_CURTO  = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
 // ─── Helpers Telegram ─────────────────────────────────────────────────────────
 async function tgFetch(method, body) {
   const res = await fetch(`${TELEGRAM}/${method}`, {
@@ -967,8 +971,7 @@ async function handleMes(chatId, uid, args) {
     else                      saidas   += o.valor;
   }
 
-  const MESES = ['','Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  const nomeMes = MESES[month];
+  const nomeMes = MESES_LONGO[month];
   const saldo   = entradas - saidas;
 
   let text = `📊 *${nomeMes} ${year}*\n\n`;
@@ -993,8 +996,7 @@ async function handleCategoria(chatId, uid) {
   const txs    = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
   const spent  = computeSpentByCategory(txs, mesStr);
 
-  const MESES = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-  const nomeMes = MESES[agora.getMonth() + 1];
+  const nomeMes = MESES_CURTO[agora.getMonth() + 1];
 
   const ICONS = {
     liberdade: '💎', custos_fixos: '🏠', conforto: '🛋',
@@ -1054,13 +1056,12 @@ async function handleMeta(chatId, uid) {
   const diaAtual   = agora.getDate();
   const progMes    = (diaAtual / diasNoMes) * 100; // % do mês que já passou
 
-  const MESES = ['','Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   const LABELS = {
     liberdade: '💎 Liberdade', custos_fixos: '🏠 Custos Fixos', conforto: '🛋 Conforto',
     metas: '🎯 Metas', prazeres: '🎉 Prazeres', conhecimento: '📚 Conhecimento',
   };
 
-  let text = `🎯 *Status das Metas — ${MESES[agora.getMonth()+1]}*\n`;
+  let text = `🎯 *Status das Metas — ${MESES_CURTO[agora.getMonth()+1]}*\n`;
   text += `_Mês ${Math.round(progMes)}% concluído (dia ${diaAtual}/${diasNoMes})_\n\n`;
 
   for (const catId of CATEGORY_ORDER) {

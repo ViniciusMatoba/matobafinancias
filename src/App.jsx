@@ -71,7 +71,7 @@ export default function App() {
   const renderScreen = () => {
     if (!isConfigured) return <SetupScreen />;
 
-    if (user === undefined || (user && configLoading && authConfirmed)) {
+    if (user === undefined || (user && configLoading)) {
       return (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: 'var(--bg-primary)' }}>
           <div style={{
@@ -374,12 +374,15 @@ export default function App() {
     return addMonths(dataInicio, maxRestante);
   };
 
+  // Faturas virtuais têm IDs que não existem no Firestore (gerados em projectionCalc)
+  const isVirtualTxId = (id) => !!id && !transactions.find(t => t.id === id);
+
   const handleSave = async (data) => {
     const { _overwriteId, ...cleanData } = data;
 
     // Fatura de cartão com itens parcelados com parcelas restantes → perguntar escopo
     if (cleanData.tipo === 'cartao' && hasParceladoRestante(cleanData.itens) && editing) {
-      const isVirtualProj = String(editing.id).includes('-proj-');
+      const isVirtualProj = isVirtualTxId(editing.id);
       const parentId = isVirtualProj ? editing.id.split('-proj-')[0] : null;
       const parentTx = parentId ? transactions.find(t => t.id === parentId) : null;
       setCartaoEditScope({ cleanData, isVirtualProj, parentId, parentTx, editing, editingOccDate });
@@ -390,7 +393,7 @@ export default function App() {
     }
 
     // Caso de edição de fatura de cartão virtual projetada (sem parcelado restante)
-    if (editing && String(editing.id).includes('-proj-') && editingOccDate) {
+    if (editing && isVirtualTxId(editing.id) && editingOccDate) {
       const parentId = editing.id.split('-proj-')[0];
       const parentTx = transactions.find(t => t.id === parentId);
       if (parentTx) {
@@ -501,7 +504,7 @@ export default function App() {
 
   const handleDelete = async (id, occDate) => {
     // Caso de remoção de fatura de cartão virtual projetada
-    if (String(id).includes('-proj-')) {
+    if (isVirtualTxId(id)) {
       const parentId = id.split('-proj-')[0];
       const parentTx = transactions.find(t => t.id === parentId);
       if (parentTx && window.confirm('Remover esta fatura projetada?')) {
@@ -536,7 +539,7 @@ export default function App() {
     setPayingItem(null);
     const tx        = item.tx;
     const isCartao  = tx.tipo === 'cartao';
-    const isVirtual = String(tx.id).includes('-proj-');
+    const isVirtual = isVirtualTxId(tx.id);
 
     try {
       if (isVirtual) {

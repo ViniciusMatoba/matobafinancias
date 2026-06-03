@@ -5,8 +5,12 @@ export function Toast({ message, type = 'success', onDone }) {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => { setVisible(false); setTimeout(onDone, 300); }, 2500);
-    return () => clearTimeout(t);
+    let t2;
+    const t1 = setTimeout(() => {
+      setVisible(false);
+      t2 = setTimeout(onDone, 300);
+    }, 2500);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onDone]);
 
   const isSuccess = type === 'success';

@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.25';
+export const APP_VERSION = '1.6.26';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.26',
+    date: '03/06/2026',
+    changes: [
+      'Fix: tela de carregamento aparece corretamente em todos os fluxos de login',
+      'Fix: detecção de fatura virtual agora usa ID real do Firestore (mais robusto)',
+      'Fix: Toast não vaza memória ao fechar o app durante a animação de saída',
+      'Refactor: constantes de meses centralizadas nas Cloud Functions (sem duplicação)',
+    ],
+  },
   {
     version: '1.6.25',
     date: '03/06/2026',
