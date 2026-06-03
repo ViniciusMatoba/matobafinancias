@@ -1,9 +1,10 @@
 {
-  "version": "1.6.33",
+  "version": "1.6.34",
   "date": "03/06/2026",
   "notes": [
-    "Busca: expandida para permitir filtrar e buscar pelo nome legível das categorias no Histórico",
-    "Badges: exibição de resumo financeiro por categoria no topo do Histórico com filtros ativos em tempo real",
-    "Conciliação: novo atalho \"Conciliar Visíveis\" para marcar lançamentos pendentes em lote com um único clique"
+    "Simulador: nova aba de simulação de grandes compras e financiamentos imobiliários/veículos integrada a Metas",
+    "Simulador: cenários baseados em médias históricas de 1, 3 e 5 anos (juros bancários, TR, INCC e IPCA)",
+    "Simulador: suporte a entradas parceladas em obras corrigidas por INCC e diferimento do cronograma de financiamento",
+    "Simulador: projeção de fluxo de caixa de 24 meses e indicador de comprometimento de renda a partir do perfil do usuário"
   ]
 }
