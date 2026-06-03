@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.34';
+export const APP_VERSION = '1.6.35';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.35',
+    date: '03/06/2026',
+    changes: [
+      'Simulador: correção de bug crítico de parse de strings BRL para números nas fórmulas de amortização',
+      'Carteiras: corrigida gravação de saldoInicial como string no Firestore para evitar NaNs em somatórios acumulados',
+    ],
+  },
   {
     version: '1.6.34',
     date: '03/06/2026',

@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Plus, Pencil, Trash2, Wallet, FileText } from 'lucide-react';
-import { formatBRL, formatBRLInput, normalizeBRLInput, addDays } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, addDays } from '../../utils/formatters';
 import { calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 import Modal from '../shared/Modal';
 
@@ -99,7 +99,7 @@ export default function WalletManager({ wallets, transactions = [], onAdd, onUpd
     const data = {
       nome: nome.trim(),
       cor,
-      saldoInicial: normalizeBRLInput(saldoInicial) || 0,
+      saldoInicial: parseBRLInput(saldoInicial) || 0,
     };
 
     if (editingId) {

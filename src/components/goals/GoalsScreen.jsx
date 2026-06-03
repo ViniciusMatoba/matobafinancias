@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/purity */
 import { useState, useMemo, useEffect } from 'react';
 import { Target, Plus, Pencil, Trash2, TrendingUp, Sparkles, Building, Car, HelpCircle } from 'lucide-react';
-import { formatBRL, formatBRLInput, normalizeBRLInput, todayStr, addMonths, formatMonthYear } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, todayStr, addMonths, formatMonthYear } from '../../utils/formatters';
 import { getAutoCategory, PERCENTUAL_CATEGORIES, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 import { calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 
@@ -113,15 +113,15 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
 
   // Projeção Mês a Mês (SAC / Price, parcelamentos e fluxo de caixa)
   const simResultados = useMemo(() => {
-    const vCompra = normalizeBRLInput(simValorCompra) || 0;
-    const vEntrada = normalizeBRLInput(simValorEntrada) || 0;
+    const vCompra = parseBRLInput(simValorCompra) || 0;
+    const vEntrada = parseBRLInput(simValorEntrada) || 0;
     const pFinanc = parseInt(simPrazoFinanciamento) || 360;
-    const rateJurosAA = (normalizeBRLInput(simTaxaJuros) || 0) / 100;
+    const rateJurosAA = (parseBRLInput(simTaxaJuros) || 0) / 100;
     
     const pEntrada = simEntradaParcelada ? (parseInt(simPrazoEntrada) || 24) : 0;
-    const rateIdxEntradaAA = (normalizeBRLInput(simTaxaIndexadorEntrada) || 0) / 100;
-    const rateIdxFinancAA = (normalizeBRLInput(simTaxaIndexadorFinanc) || 0) / 100;
-    const tExtras = normalizeBRLInput(simTaxasExtras) || 0;
+    const rateIdxEntradaAA = (parseBRLInput(simTaxaIndexadorEntrada) || 0) / 100;
+    const rateIdxFinancAA = (parseBRLInput(simTaxaIndexadorFinanc) || 0) / 100;
+    const tExtras = parseBRLInput(simTaxasExtras) || 0;
 
     const vFinanciado = Math.max(0, vCompra - vEntrada);
 
@@ -131,7 +131,7 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
 
     const hoje = todayStr();
     const globalTx = calcSaldo(transactions, '2020-01-01', hoje);
-    const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
+    const wInitials = wallets?.reduce((acc, w) => acc + (parseBRLInput(w.saldoInicial) || 0), 0) || 0;
     const saldoInicialLiquido = globalTx + wInitials;
 
     const expenses = transactions.filter(t => t.tipo !== 'entrada' && t.tipo !== 'investimento');
@@ -154,7 +154,7 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
       ? (Object.values(monthlySums).reduce((a, b) => a + b, 0) / activeMonths.length)
       : 0;
 
-    const rendaMensal = config?.rendaMensal || 0;
+    const rendaMensal = parseBRLInput(config?.rendaMensal) || 0;
     const sobraBaseline = Math.max(0, rendaMensal - despesaMediaMensal);
 
     const prazoTotalSimulado = Math.max(24, pEntrada + pFinanc);
@@ -357,7 +357,7 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
     e.preventDefault();
     if (!nomeDesejo.trim() || !precoDesejo) return;
 
-    const priceNum = normalizeBRLInput(precoDesejo) || 0;
+    const priceNum = parseBRLInput(precoDesejo) || 0;
     if (priceNum <= 0) return;
 
     const newItem = {
@@ -457,12 +457,12 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
     const data = {
       nome: nome.trim(),
       cor,
-      metaFinal: normalizeBRLInput(metaFinal) || 0,
+      metaFinal: parseBRLInput(metaFinal) || 0,
       dataAlvo: dataAlvo || null,
       isIndependencia,
       tipoAtivo: isIndependencia ? tipoAtivo : null,
-      taxaRendimento: isIndependencia ? (normalizeBRLInput(taxaRendimento) || 0) : null,
-      aporteMensal: isIndependencia ? (normalizeBRLInput(aporteMensal) || 0) : null,
+      taxaRendimento: isIndependencia ? (parseBRLInput(taxaRendimento) || 0) : null,
+      aporteMensal: isIndependencia ? (parseBRLInput(aporteMensal) || 0) : null,
     };
 
     if (editingId) {
