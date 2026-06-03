@@ -4,8 +4,9 @@
   "notes": [
     "Fix crítico: bot Telegram agora lê carteiras corretamente (/saldo mostrava R$0)",
     "Fix crítico: notificações diárias incluem saldo real das carteiras",
-    "Fix: campo inválido removido ao criar nova série de pagamento",
-    "Fix: transações diárias históricas no cálculo de sobra segura",
-    "Segurança: perfil protegido contra leitura por terceiros"
+    "Fix: campo \"conferidos\" inválido removido ao criar nova série de pagamento",
+    "Fix: transações diárias históricas incluídas no cálculo de sobra segura",
+    "Segurança: perfil do usuário (fcmToken, telegramChatId) protegido contra leitura por terceiros",
+    "Regras Firestore: wallets e goals com proteção explícita por userId"
   ]
 }
