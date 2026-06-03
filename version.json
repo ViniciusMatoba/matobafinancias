@@ -2,7 +2,9 @@
   "version": "1.6.37",
   "date": "03/06/2026",
   "notes": [
-    "N18: alerta de economia do dia às 19h — parabeniza quando gastos previstos não foram registrados",
+    "N18: novo alerta \"Economia do dia\" — às 19h, parabeniza quando gastos previstos não foram registrados",
+    "N18: exibe total economizado no mês até hoje",
+    "N18: dispara para todos os usuários às 19h, independente do horário configurado",
     "Toggle N18 disponível em Notificações Push e Bot Telegram"
   ]
 }
