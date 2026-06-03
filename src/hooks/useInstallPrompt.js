@@ -16,7 +16,6 @@ export function useInstallPrompt() {
   useEffect(() => {
     const listener = (e) => setPrompt(e);
     listeners.add(listener);
-    if (globalDeferredPrompt) setPrompt(globalDeferredPrompt);
     
     return () => listeners.delete(listener);
   }, []);

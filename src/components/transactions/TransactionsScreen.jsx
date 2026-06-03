@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp, Copy, Calendar, X, RefreshCw } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp, Copy, X, RefreshCw } from 'lucide-react';
 import { formatBRL, formatDateShort, TYPE_CONFIG, todayStr } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -96,7 +96,9 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
 
   // Reseta o limite de visibilidade ao alterar filtros
   useEffect(() => {
-    setVisibleCount(50);
+    Promise.resolve().then(() => {
+      setVisibleCount(50);
+    });
   }, [viewMode, debouncedSearch, filterTipo, filterCategory, filterWallet, filterConciliacao, filterFromDate, filterToDate]);
 
   const allOccs = useMemo(() => {
@@ -231,13 +233,13 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
             </span>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <button onClick={() => setMonthOffset(o => o - 1)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                ‹ {MONTH_NAMES[(() => { const [y,m] = monthStr(monthOffset-1).split('-').map(Number); return m-1; })()]}
+                ‹ {MONTH_NAMES[(() => { const [,m] = monthStr(monthOffset-1).split('-').map(Number); return m-1; })()]}
               </button>
               <button onClick={() => setMonthOffset(0)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 500, color: 'var(--primary)', cursor: 'pointer' }}>
                 Hoje
               </button>
               <button onClick={() => setMonthOffset(o => o + 1)} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                {MONTH_NAMES[(() => { const [y,m] = monthStr(monthOffset+1).split('-').map(Number); return m-1; })()] } ›
+                {MONTH_NAMES[(() => { const [,m] = monthStr(monthOffset+1).split('-').map(Number); return m-1; })()] } ›
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { ChevronRight, RotateCcw, DollarSign, CheckCircle } from 'lucide-react';
 import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';

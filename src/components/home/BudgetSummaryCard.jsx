@@ -43,9 +43,16 @@ export default function BudgetSummaryCard({
     const totals  = Object.fromEntries(CATEGORY_ORDER.map(id => [id, 0]));
     const details = Object.fromEntries(CATEGORY_ORDER.map(id => [id, []]));
 
-    transactions.forEach(tx => {
+    // Expande todas as transações no período
+    const occurrences = transactions.flatMap(tx =>
+      expandOccurrences(tx, from, to).map(o => ({ ...o, tx }))
+    );
 
-      // ── Cartão com itens ───────────────────────────────────────────────────
+    occurrences.forEach(occ => {
+      const tx = occ.tx;
+      if (tx.tipo === 'entrada') return;
+
+      // ── Cartão com itens (inclui faturas projetadas virtuais) ───────────────
       if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
         const cartaoNome = cardsMap[tx.cartaoId] || tx.descricao || 'Cartão';
 
@@ -55,20 +62,19 @@ export default function BudgetSummaryCard({
           const valor = Number(item.valor) || 0;
 
           if (item.isParcelado) {
-            // Conta apenas se a FATURA (tx.dataInicio) é do mês atual.
-            // Não itera meses futuros: parcelas de outros meses têm faturas próprias.
-            if (!tx.dataInicio?.startsWith(currentMonth)) return;
+            // Em faturas virtuais (-proj-), o expandOccurrences filtra e atualiza a parcela automaticamente.
             totals[cat] += valor;
             details[cat].push({
               descricao:  item.descricao || tx.descricao || 'Item parcelado',
-              date:       tx.dataInicio,
+              date:       occ.date,
               valor,
               source:     'cartao',
               cartaoNome,
               parcela:    `${item.parcelaAtual || 1}/${item.totalParcelas}`,
-              isFuture:   tx.dataInicio > today,
+              isFuture:   occ.date > today,
             });
           } else {
+            // Itens avulsos não parcelados contam apenas no mês da compra (dataCompra)
             if (!item.dataCompra?.startsWith(currentMonth)) return;
             totals[cat] += valor;
             details[cat].push({
@@ -84,25 +90,18 @@ export default function BudgetSummaryCard({
         return;
       }
 
-      // ── Demais tipos (saida, diario, investimento, entrada ignorada) ────────
-      if (tx.tipo === 'entrada') return;
-
-      const occs = expandOccurrences(tx, from, to);
-      if (!occs.length) return;
-
+      // ── Demais tipos (saida, diario, investimento) ─────────────────────────
       const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
       if (!cat || !(cat in totals)) return;
 
-      occs.forEach(o => {
-        totals[cat] += o.valor;
-        details[cat].push({
-          descricao:   tx.descricao || SOURCE_LABELS[tx.tipo] || tx.tipo,
-          date:        o.date,
-          valor:       o.valor,
-          source:      tx.tipo,
-          frequencia:  tx.frequencia,
-          isFuture:    o.date > today,
-        });
+      totals[cat] += occ.valor;
+      details[cat].push({
+        descricao:   tx.descricao || SOURCE_LABELS[tx.tipo] || tx.tipo,
+        date:        occ.date,
+        valor:       occ.valor,
+        source:      tx.tipo,
+        frequencia:  tx.frequencia,
+        isFuture:    occ.date > today,
       });
     });
 

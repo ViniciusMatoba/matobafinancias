@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, User, Shield, ChevronDown, ChevronUp, Download, Calendar } from 'lucide-react';
+import { LogOut, User, Shield, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { useToast } from '../shared/Toast';
 import { triggerUpdate } from '../../hooks/useVersionCheck';
 import { doc, collection, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
@@ -138,7 +138,7 @@ const CHANGELOG_DATA = [
   }
 ];
 
-export default function SettingsScreen({ user, cards, wallets, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour }) {
+export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour }) {
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [walletsOpen, setWalletsOpen] = useState(false);

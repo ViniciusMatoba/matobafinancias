@@ -3,8 +3,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
-import { TrendingUp, TrendingDown, Calendar, BarChart2, DollarSign, Download, ArrowLeft, Printer } from 'lucide-react';
-import { todayStr } from '../../utils/formatters';
+import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer } from 'lucide-react';
 
 const TABS = {
   RESUMO: 'resumo',
@@ -25,31 +24,33 @@ export default function ReportsScreen({ transactions, config, onNavigate }) {
     const year = d.getFullYear();
     const month = d.getMonth(); // 0-indexed
 
-    if (period === 'current_month') {
-      const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-      const lastDay = new Date(year, month + 1, 0).getDate();
-      const lastDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-      setFromDate(firstDay);
-      setToDate(lastDayStr);
-    } else if (period === 'last_month') {
-      const prevMonth = month === 0 ? 11 : month - 1;
-      const prevYear = month === 0 ? year - 1 : year;
-      const firstDay = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
-      const lastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
-      const lastDayStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-      setFromDate(firstDay);
-      setToDate(lastDayStr);
-    } else if (period === 'last_3_months') {
-      const prev3 = new Date(year, month - 2, 1);
-      const firstDay = `${prev3.getFullYear()}-${String(prev3.getMonth() + 1).padStart(2, '0')}-01`;
-      const lastDay = new Date(year, month + 1, 0).getDate();
-      const lastDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
-      setFromDate(firstDay);
-      setToDate(lastDayStr);
-    } else if (period === 'current_year') {
-      setFromDate(`${year}-01-01`);
-      setToDate(`${year}-12-31`);
-    }
+    Promise.resolve().then(() => {
+      if (period === 'current_month') {
+        const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const lastDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        setFromDate(firstDay);
+        setToDate(lastDayStr);
+      } else if (period === 'last_month') {
+        const prevMonth = month === 0 ? 11 : month - 1;
+        const prevYear = month === 0 ? year - 1 : year;
+        const firstDay = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+        const lastDayStr = `${prevYear}-${String(prevMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        setFromDate(firstDay);
+        setToDate(lastDayStr);
+      } else if (period === 'last_3_months') {
+        const prev3 = new Date(year, month - 2, 1);
+        const firstDay = `${prev3.getFullYear()}-${String(prev3.getMonth() + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const lastDayStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        setFromDate(firstDay);
+        setToDate(lastDayStr);
+      } else if (period === 'current_year') {
+        setFromDate(`${year}-01-01`);
+        setToDate(`${year}-12-31`);
+      }
+    });
   }, [period]);
 
   // Ocorrências do período

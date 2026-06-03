@@ -43,10 +43,10 @@ function getNotificationPermission() {
   return typeof Notification !== 'undefined' ? Notification.permission : 'default';
 }
 
-function getMessagingSwUrl() {
-  if (typeof window === 'undefined') return './firebase-messaging-sw.js';
-  return new URL('firebase-messaging-sw.js', window.location.href).toString();
-}
+// function getMessagingSwUrl() {
+//   if (typeof window === 'undefined') return './firebase-messaging-sw.js';
+//   return new URL('firebase-messaging-sw.js', window.location.href).toString();
+// }
 
 async function showForegroundNotification(payload) {
   const n = payload.notification || {};
@@ -149,7 +149,7 @@ export function useNotifications(user) {
       return opts;
     };
 
-    let token = null;
+    let token;
     try {
       token = await withTimeout(getToken(messaging, makeOpts(true)), TIMEOUT_MS, TIMEOUT_MSG);
     } catch (err) {
@@ -158,7 +158,7 @@ export function useNotifications(user) {
         token = await withTimeout(getToken(messaging, makeOpts(false)), TIMEOUT_MS, TIMEOUT_MSG);
       } catch (err2) {
         console.error('[FCM] todas as tentativas falharam:', err2.message);
-        throw new Error(`Não foi possível registrar push: ${err2.message}`);
+        throw new Error(`Não foi possível registrar push: ${err2.message}`, { cause: err2 });
       }
     }
 

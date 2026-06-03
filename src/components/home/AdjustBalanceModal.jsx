@@ -54,7 +54,6 @@ export default function AdjustBalanceModal({ saldoAtual, onConfirm, onAddSaida, 
   };
 
   const diffColor    = isPositive ? '#10b981' : isNegative ? '#ef4444' : 'var(--text-muted)';
-  const diffLabel    = isPositive ? `+${formatBRL(diff)}` : isNegative ? `−${formatBRL(Math.abs(diff))}` : '';
   const today        = todayStr();
 
   return (

@@ -16,20 +16,16 @@ service cloud.firestore {
 
     // Carteiras — coleção flat filtrada por userId
     match /wallets/{walletId} {
-      allow read, write: if request.auth != null && (
-        request.resource == null
-          ? resource.data.userId == request.auth.uid
-          : request.resource.data.userId == request.auth.uid
-      );
+      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
     }
 
     // Metas/caixinhas — coleção flat filtrada por userId
     match /goals/{goalId} {
-      allow read, write: if request.auth != null && (
-        request.resource == null
-          ? resource.data.userId == request.auth.uid
-          : request.resource.data.userId == request.auth.uid
-      );
+      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
     }
 
     // Perfil do usuário — fcmToken e telegramChatId são sensíveis
@@ -39,11 +35,12 @@ service cloud.firestore {
     }
 
     // Códigos temporários de vinculação Telegram (expiram em 15 min)
-    // Usuário cria para si mesmo; leitura/exclusão feita pelas Cloud Functions (admin SDK)
     match /telegramLinks/{code} {
       allow create: if request.auth != null
                     && request.resource.data.uid == request.auth.uid;
-      allow read, delete: if false; // somente Cloud Functions (admin SDK) lê e apaga
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+      allow read, update: if false; // somente Cloud Functions (admin SDK) lê e atualiza
     }
   }
 }

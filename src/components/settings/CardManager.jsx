@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CreditCard, Plus, Trash2, Pencil, Check, X } from 'lucide-react';
+import { CreditCard, Plus, Trash2, Pencil } from 'lucide-react';
 import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 
 const CARD_COLORS = ['#3b82f6','#6366f1','#a855f7','#ec4899','#10b981','#f59e0b','#ef4444','#14b8a6'];

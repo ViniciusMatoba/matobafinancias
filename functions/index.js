@@ -142,10 +142,48 @@ function expandRange(transactions, from, to) {
     const v       = Number(tx.valor) || 0;
     if (!v) continue;
     const excl    = Array.isArray(tx.exclusoes) ? tx.exclusoes : [];
-    const push    = (ds) => { if (!excl.includes(ds)) occs.push({ date: ds, valor: v, tipo: tx.tipo }); };
+    const push    = (ds) => { if (!excl.includes(ds)) occs.push({ date: ds, valor: v, tipo: tx.tipo, tx }); };
 
     if (tx.frequencia === 'unico') {
       if (tx.dataInicio >= from && tx.dataInicio <= to) push(tx.dataInicio);
+
+      // Projeção de faturas futuras de itens de cartão (cartão de crédito)
+      if (tx.tipo === 'cartao' && Array.isArray(tx.itens) && tx.itens.length > 0) {
+        const parcelados = tx.itens.filter(i => i.isParcelado && (i.totalParcelas || 1) > (i.parcelaAtual || 1));
+        if (parcelados.length > 0) {
+          let maxMeses = 0;
+          parcelados.forEach(i => {
+            const remaining = (i.totalParcelas || 1) - (i.parcelaAtual || 1);
+            if (remaining > maxMeses) maxMeses = remaining;
+          });
+
+          for (let m = 1; m <= maxMeses; m++) {
+            const pd = new Date(tx.dataInicio + 'T00:00:00');
+            for (let j = 0; j < m; j++) addOneMonthClamped(pd);
+            const futureDate = dateStrFromDate(pd);
+
+            if (futureDate > to) continue;
+            if (excl.includes(futureDate)) continue;
+
+            const futureItens = parcelados
+              .filter(i => (i.parcelaAtual || 1) + m <= i.totalParcelas)
+              .map(i => ({ ...i, parcelaAtual: (i.parcelaAtual || 1) + m }));
+
+            if (futureItens.length > 0 && futureDate >= from) {
+              const futureValor = futureItens.reduce((s, i) => s + (Number(i.valor) || 0), 0);
+              const virtualTx = {
+                ...tx,
+                id: `${tx.id}-proj-${m}`,
+                valor: futureValor,
+                descricao: `${tx.descricao || 'Fatura'} (Parcelas restantes)`,
+                itens: futureItens,
+                conferido: false,
+              };
+              occs.push({ date: futureDate, valor: futureValor, tipo: tx.tipo, tx: virtualTx });
+            }
+          }
+        }
+      }
 
     } else if (tx.frequencia === 'parcelado') {
       const total = tx.totalParcelas || 1;
@@ -212,25 +250,36 @@ function computeSpentByCategory(transactions, currentMonth) {
   const from = `${currentMonth}-01`;
   const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
 
-  for (const tx of transactions) {
-    // ── Cartão com itens: conta apenas faturas do mês corrente ───────────────
+  const occs = expandRange(transactions, from, to);
+
+  for (const o of occs) {
+    const tx = o.tx;
+    if (!tx || tx.tipo === 'entrada') continue;
+
+    // ── Cartão com itens (inclui faturas projetadas virtuais) ───────────────
     if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-      if (!tx.dataInicio?.startsWith(currentMonth)) continue;
       for (const item of tx.itens) {
         const cat = item.categoria;
         if (!cat || !(cat in totals)) continue;
-        totals[cat] += Number(item.valor) || 0;
+        const valor = Number(item.valor) || 0;
+
+        if (item.isParcelado) {
+          // Conta a parcela se ela pertence a esta ocorrência de fatura
+          totals[cat] += valor;
+        } else {
+          // Itens avulsos não parcelados contam apenas no mês da compra (dataCompra)
+          if (item.dataCompra?.startsWith(currentMonth)) {
+            totals[cat] += valor;
+          }
+        }
       }
       continue;
     }
 
-    // ── Demais tipos: expande ocorrências no mês (captura recorrentes) ────────
-    if (tx.tipo === 'entrada') continue;
+    // ── Demais tipos (saida, diario, investimento) ─────────────────────────
     const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
     if (!cat || !(cat in totals)) continue;
-
-    const occs = expandRange([tx], from, to);
-    for (const o of occs) totals[cat] += o.valor;
+    totals[cat] += o.valor;
   }
   return totals;
 }

@@ -12,7 +12,7 @@ const CHART_TYPES = {
   CATEGORIAS: 'categorias',
 };
 
-const CustomTooltip = ({ active, payload, label, saldoInicial }) => {
+const CustomTooltip = ({ active, payload, saldoInicial }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const isLineChart = payload[0].dataKey === 'saldo';
@@ -148,7 +148,7 @@ export default function ProjectionCharts({ days, saldoInicial }) {
     });
 
     return Object.entries(catTotals)
-      .filter(([_, val]) => val > 0)
+      .filter(([, val]) => val > 0)
       .map(([key, val]) => ({
         name: PERCENTUAL_CATEGORIES[key]?.label || 'Outros',
         value: val,

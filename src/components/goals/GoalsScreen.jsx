@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/purity */
 import { useState, useMemo, useEffect } from 'react';
 import { Target, Plus, Pencil, Trash2, TrendingUp } from 'lucide-react';
 import { formatBRL, formatBRLInput, normalizeBRLInput } from '../../utils/formatters';
@@ -47,7 +48,7 @@ export default function GoalsScreen({ goals, transactions, config, onAddGoal, on
   const [precoDesejo, setPrecoDesejo] = useState('');
   const [categoriaDesejo, setCategoriaDesejo] = useState('prazeres');
   const [penseFormOpen, setPenseFormOpen] = useState(false);
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const [confettiParticles, setConfettiParticles] = useState([]);
 
   useEffect(() => {

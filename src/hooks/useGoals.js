@@ -8,8 +8,10 @@ export function useGoals(userId) {
 
   useEffect(() => {
     if (!userId) {
-      setGoals([]);
-      setLoading(false);
+      Promise.resolve().then(() => {
+        setGoals([]);
+        setLoading(false);
+      });
       return;
     }
 

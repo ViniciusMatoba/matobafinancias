@@ -6,13 +6,26 @@ import { db } from '../firebase';
 
 export function useCards(uid) {
   const [cards, setCards] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!uid) { setCards([]); return; }
+    if (!uid) {
+      Promise.resolve().then(() => {
+        setCards([]);
+        setLoading(false);
+      });
+      return;
+    }
     return onSnapshot(
       collection(db, `cards/${uid}/list`),
-      snap => { setCards(snap.docs.map(d => ({ id: d.id, ...d.data() }))); },
-      err => { console.error('[useCards]', err.code, err.message); }
+      snap => {
+        setCards(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      },
+      err => {
+        console.error('[useCards]', err.code, err.message);
+        setLoading(false);
+      }
     );
   }, [uid]);
 
@@ -25,5 +38,5 @@ export function useCards(uid) {
   const remove = async (id) =>
     deleteDoc(doc(db, `cards/${uid}/list`, id));
 
-  return { cards, add, update, remove };
+  return { cards, loading, add, update, remove };
 }

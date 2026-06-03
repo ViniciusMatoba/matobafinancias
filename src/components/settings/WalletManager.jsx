@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Pencil, Trash2, Wallet, FileText, ArrowRightLeft, Calendar } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet, FileText } from 'lucide-react';
 import { formatBRL, formatBRLInput, normalizeBRLInput, addDays } from '../../utils/formatters';
 import { calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 import Modal from '../shared/Modal';

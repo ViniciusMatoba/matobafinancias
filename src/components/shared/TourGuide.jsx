@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, X, Play } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 
 const STEPS = [
   {

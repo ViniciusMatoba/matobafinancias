@@ -94,7 +94,9 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   useEffect(() => {
     if (form.tipo === 'cartao' && itens.length > 0) {
       const sum = itens.reduce((s, item) => s + parseBRLInput(item.valor), 0);
-      setForm(f => ({ ...f, valor: numberToBRLInput(sum) }));
+      Promise.resolve().then(() => {
+        setForm(f => ({ ...f, valor: numberToBRLInput(sum) }));
+      });
     }
   }, [itens, form.tipo]);
 

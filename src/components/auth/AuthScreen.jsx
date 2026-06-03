@@ -159,13 +159,11 @@ export default function AuthScreen({ user, redirectError, onLogin, onRegister, o
   const [googleLoading, setGoogleLoading] = useState(false);
   const { prompt: deferredPrompt, handleInstall: handleInstallClick } = useInstallPrompt();
   const [showChangelog, setShowChangelog] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [isStandalone] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !!(window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone);
+  });
   const [showInstallTutorial, setShowInstallTutorial] = useState(false);
-
-  useEffect(() => {
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    setIsStandalone(!!standalone);
-  }, []);
 
   const getOS = () => {
     const ua = navigator.userAgent || navigator.vendor || window.opera;

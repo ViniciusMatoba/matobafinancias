@@ -1,7 +1,19 @@
-export const APP_VERSION = '1.6.29';
+export const APP_VERSION = '1.6.30';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.30',
+    date: '03/06/2026',
+    changes: [
+      'Segurança: blindagem contra sequestro de dados no Firestore para carteiras e caixinhas',
+      'Segurança: permissão de deleção de códigos de vinculação obsoletos do Telegram',
+      'Sincronização: exibição do carregamento unificado do banco de dados no frontend (evita flashes/dados vazios)',
+      'Cartão de Crédito: alinhamento dos parcelamentos antigos e futuros no BudgetSummaryCard na Home',
+      'Backend: sincronização das projeções virtuais de faturas nas Cloud Functions (alertas do Bot do Telegram)',
+      'Qualidade de Código: refatoração geral e correção de lint warnings em múltiplos hooks e telas',
+    ],
+  },
   {
     version: '1.6.29',
     date: '03/06/2026',

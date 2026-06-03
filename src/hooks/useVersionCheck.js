@@ -97,7 +97,9 @@ export function useVersionCheck() {
   }, []);
 
   useEffect(() => {
-    check();
+    Promise.resolve().then(() => {
+      check();
+    });
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') check();

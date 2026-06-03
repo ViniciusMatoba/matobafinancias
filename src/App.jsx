@@ -27,10 +27,10 @@ import { addMonths } from './utils/formatters';
 
 export default function App() {
   const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
-  const { transactions, add, update, remove } = useTransactions(user?.uid);
-  const { cards, add: addCard, update: updateCard, remove: removeCard } = useCards(user?.uid);
-  const { wallets, add: addWallet, update: updateWallet, remove: removeWallet } = useWallets(user?.uid);
-  const { goals, add: addGoal, update: updateGoal, remove: removeGoal } = useGoals(user?.uid);
+  const { transactions, loading: transactionsLoading, add, update, remove } = useTransactions(user?.uid);
+  const { cards, loading: cardsLoading, add: addCard, update: updateCard, remove: removeCard } = useCards(user?.uid);
+  const { wallets, loading: walletsLoading, add: addWallet, update: updateWallet, remove: removeWallet } = useWallets(user?.uid);
+  const { goals, loading: goalsLoading, add: addGoal, update: updateGoal, remove: removeGoal } = useGoals(user?.uid);
   const { config, configLoading, saveConfig } = useConfig(user?.uid);
   const { showToast, ToastNode } = useToast();
   const { updateAvailable, latestVersion, latestNotes } = useVersionCheck();
@@ -45,18 +45,24 @@ export default function App() {
   const [payingItem, setPayingItem] = useState(null); // { item, occDate }
   const [tourActive, setTourActive] = useState(false);
 
-  // Atualização do PWA só pode ser aplicada na tela de login
-  const isLoginScreen = !isConfigured || user === undefined || !user || !authConfirmed;
+  // Combina todos os status de carregamento do Firestore
+  const dataLoading = configLoading || transactionsLoading || walletsLoading || goalsLoading || cardsLoading;
 
   // Se o usuário acabou de voltar de um login Google via redirect
   useEffect(() => {
-    if (justLoggedIn) setAuthConfirmed(true);
+    if (justLoggedIn) {
+      Promise.resolve().then(() => {
+        setAuthConfirmed(true);
+      });
+    }
   }, [justLoggedIn]);
 
   // Ativa o tour guiado se o onboarding estiver concluído e o tour não tiver sido feito
   useEffect(() => {
     if (user && config && config.onboardingDone && !config.tourDone) {
-      setTourActive(true);
+      Promise.resolve().then(() => {
+        setTourActive(true);
+      });
     }
   }, [user, config]);
 
@@ -70,7 +76,7 @@ export default function App() {
   const renderScreen = () => {
     if (!isConfigured) return <SetupScreen />;
 
-    if (user === undefined || (user && configLoading)) {
+    if (user === undefined || (user && dataLoading)) {
       return (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, background: 'var(--bg-primary)' }}>
           <div style={{
@@ -172,6 +178,7 @@ export default function App() {
             user={user}
             cards={cards}
             wallets={wallets}
+            goals={goals}
             transactions={transactions}
             config={config}
             onSaveConfig={saveConfig}
@@ -454,7 +461,9 @@ export default function App() {
         });
       } else {
         // Doc real: congela este mês + cria novo doc fonte a partir do mês seguinte com itens originais
-        const { id: _id, criadoEm: _c, ...originalBase } = editingSnap;
+        const originalBase = { ...editingSnap };
+        delete originalBase.id;
+        delete originalBase.criadoEm;
         const nextDate = addMonths(editingSnap.dataInicio, 1);
         const continuationItens = (editingSnap.itens || []).map(i =>
           i.isParcelado ? { ...i, parcelaAtual: (i.parcelaAtual || 1) + 1 } : i

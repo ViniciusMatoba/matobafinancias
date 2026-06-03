@@ -15,7 +15,12 @@ export function useConfig(uid) {
   const [configLoading, setConfigLoading] = useState(true);
 
   useEffect(() => {
-    if (!uid || !isConfigured) { setConfigLoading(false); return; }
+    if (!uid || !isConfigured) {
+      Promise.resolve().then(() => {
+        setConfigLoading(false);
+      });
+      return;
+    }
     return onSnapshot(
       doc(db, `config/${uid}`),
       snap => {

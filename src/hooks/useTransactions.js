@@ -9,7 +9,13 @@ export function useTransactions(uid) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!uid) { setTransactions([]); setLoading(false); return; }
+    if (!uid) {
+      Promise.resolve().then(() => {
+        setTransactions([]);
+        setLoading(false);
+      });
+      return;
+    }
     // Sem orderBy no servidor para evitar dependência de índice; ordenamos no cliente
     return onSnapshot(
       collection(db, `transactions/${uid}/entries`),

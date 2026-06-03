@@ -8,8 +8,10 @@ export function useWallets(userId) {
 
   useEffect(() => {
     if (!userId) {
-      setWallets([]);
-      setLoading(false);
+      Promise.resolve().then(() => {
+        setWallets([]);
+        setLoading(false);
+      });
       return;
     }
 

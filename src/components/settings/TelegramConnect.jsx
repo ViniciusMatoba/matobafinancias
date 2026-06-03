@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { doc, setDoc, deleteDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { CheckCircle, XCircle, Copy, RefreshCw, Unlink } from 'lucide-react';
+import { CheckCircle, Copy, RefreshCw, Unlink } from 'lucide-react';
 
 // Caracteres sem ambiguidade (sem 0/O, 1/I/l)
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
