@@ -44,6 +44,13 @@ export default function App() {
   const [cartaoEditScope, setCartaoEditScope] = useState(null);
   const [payingItem, setPayingItem] = useState(null); // { item, occDate }
   const [tourActive, setTourActive] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    setTimeout(() => window.location.reload(), 8000);
+    await triggerUpdate();
+  };
 
   // Combina todos os status de carregamento do Firestore
   const dataLoading = configLoading || transactionsLoading || walletsLoading || goalsLoading || cardsLoading;
@@ -190,6 +197,7 @@ export default function App() {
             onRemoveWallet={removeWallet}
             onLogout={logout}
             onResetTour={async () => { await saveConfig({ tourDone: false }); setView('home'); }}
+            onUpdateApp={handleUpdate}
           />
         )}
 
@@ -692,7 +700,7 @@ export default function App() {
             </div>
           </div>
           <button
-            onClick={triggerUpdate}
+            onClick={handleUpdate}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               background: '#fff', color: '#6366f1',
@@ -708,6 +716,52 @@ export default function App() {
 
       {renderScreen()}
       <ReloadPrompt />
+      {isUpdating && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 99999,
+          background: 'var(--bg-primary, #0f0f1a)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 28,
+        }}>
+          {/* Ícone do app */}
+          <div style={{
+            width: 76, height: 76, borderRadius: 22,
+            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 40px rgba(99,102,241,0.35)',
+          }}>
+            <DollarSign size={38} color="#fff" />
+          </div>
+
+          {/* Spinner */}
+          <div style={{ position: 'relative', width: 52, height: 52 }}>
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              border: '3px solid rgba(99,102,241,0.12)',
+            }} />
+            <div style={{
+              position: 'absolute', inset: 0, borderRadius: '50%',
+              border: '3px solid transparent',
+              borderTopColor: '#6366f1',
+              animation: 'mf-spin-app 0.75s linear infinite',
+            }} />
+          </div>
+
+          {/* Textos */}
+          <div style={{ textAlign: 'center', padding: '0 40px' }}>
+            <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary, #f1f1f9)' }}>
+              Atualizando o aplicativo
+            </p>
+            <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--text-secondary, #8b8fa8)', lineHeight: 1.5 }}>
+              Instalando a nova versão…<br />O app será recarregado em instantes.
+            </p>
+          </div>
+
+          <style>{`
+            @keyframes mf-spin-app { to { transform: rotate(360deg); } }
+          `}</style>
+        </div>
+      )}
       {ToastNode}
     </>
   );

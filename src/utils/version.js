@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.30';
+export const APP_VERSION = '1.6.31';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.31',
+    date: '03/06/2026',
+    changes: [
+      'Visual: adicionado modal de carregamento para feedback visual ao atualizar o aplicativo',
+      'Visual: ocultado botão "Pagar" e exibido badge "✓ Pago" para contas já liquidadas na Home',
+      'Otimização: unificação dos gatilhos de atualização (banner e painel de configurações)',
+    ],
+  },
   {
     version: '1.6.30',
     date: '03/06/2026',

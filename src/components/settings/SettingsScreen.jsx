@@ -138,7 +138,7 @@ const CHANGELOG_DATA = [
   }
 ];
 
-export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour }) {
+export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour, onUpdateApp }) {
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [walletsOpen, setWalletsOpen] = useState(false);
@@ -623,7 +623,7 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
               {/* Botão de Forçar Atualização */}
               <button
                 type="button"
-                onClick={triggerUpdate}
+                onClick={onUpdateApp || triggerUpdate}
                 style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   padding: '10px 14px', borderRadius: 10,

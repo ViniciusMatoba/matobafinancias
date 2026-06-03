@@ -1,12 +1,9 @@
 {
-  "version": "1.6.30",
+  "version": "1.6.31",
   "date": "03/06/2026",
   "notes": [
-    "Segurança: blindagem contra sequestro de dados no Firestore para carteiras e caixinhas",
-    "Segurança: permissão de deleção de códigos de vinculação obsoletos do Telegram",
-    "Sincronização: exibição do carregamento unificado do banco de dados no frontend (evita flashes/dados vazios)",
-    "Cartão de Crédito: alinhamento dos parcelamentos antigos e futuros no BudgetSummaryCard na Home",
-    "Backend: sincronização das projeções virtuais de faturas nas Cloud Functions (alertas do Bot do Telegram)",
-    "Qualidade de Código: refatoração geral e correção de lint warnings em múltiplos hooks e telas"
+    "Visual: adicionado modal de carregamento para feedback visual ao atualizar o aplicativo",
+    "Visual: ocultado botão \"Pagar\" e exibido badge \"✓ Pago\" para contas já liquidadas na Home",
+    "Otimização: unificação dos gatilhos de atualização (banner e painel de configurações)"
   ]
 }

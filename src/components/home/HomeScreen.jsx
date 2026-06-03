@@ -222,6 +222,15 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     };
   }, [sobraSegura, reserveStats]);
 
+  const isOccConferido = (occ) => {
+    const tx = occ.tx;
+    if (!tx) return false;
+    if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+      return !!tx.conferido;
+    }
+    return !!tx.conferidos?.includes(occ.date);
+  };
+
   const saldoPositivo = saldoAcumulado >= 0;
   const summaryCards = [
     { label: isFuture ? 'Previsto entrar' : 'Entradas', value: dayTotals.entrada, color: 'var(--entrada)' },
@@ -580,8 +589,8 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                     )}
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    {/* Botão Pagar — hoje e futuro, apenas despesas */}
-                    {onPay && occ.tx.tipo !== 'entrada' && selectedDate >= today && (
+                    {/* Botão Pagar — hoje e futuro, apenas despesas não pagas */}
+                    {onPay && occ.tx.tipo !== 'entrada' && selectedDate >= today && !isOccConferido(occ) && (
                       <button
                         onClick={() => onPay(occ, occ.date)}
                         style={{
@@ -593,6 +602,18 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                       >
                         💸 Pagar
                       </button>
+                    )}
+                    {isOccConferido(occ) && (
+                      <span
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 3,
+                          height: 26, padding: '0 8px', borderRadius: 7,
+                          background: 'rgba(16,185,129,0.1)',
+                          color: '#10b981', fontSize: 11, fontWeight: 700,
+                        }}
+                      >
+                        ✓ Pago
+                      </span>
                     )}
                     {onClone && (
                       <button onClick={() => onClone(occ.tx)} title="Repetir lançamento" style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2, cursor: 'pointer' }}>
