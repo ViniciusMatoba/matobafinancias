@@ -1,7 +1,19 @@
-export const APP_VERSION = '1.6.28';
+export const APP_VERSION = '1.6.29';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.29',
+    date: '03/06/2026',
+    changes: [
+      'Otimização: aba Histórico preserva filtros e scroll ao trocar de aba',
+      'Otimização: busca no Histórico com debounce de 200ms — sem lag ao digitar',
+      'Otimização: cálculos de projeção ignorados quando aba Histórico está ativa',
+      'Otimização: lookup de faturas virtuais agora é O(1) via Set (era O(n) linear)',
+      'Fix: scroll da lista não pula mais ao conferir pagamentos',
+      'Refactor: handlers principais com useCallback — menos re-renders nos filhos',
+    ],
+  },
   {
     version: '1.6.28',
     date: '03/06/2026',

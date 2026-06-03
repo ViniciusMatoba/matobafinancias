@@ -18,6 +18,7 @@ function monthStr(offset) {
 export default function TransactionsScreen({ transactions, wallets = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
   const [viewMode, setViewMode] = useState('mensal'); // 'mensal' | 'completo'
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterTipo, setFilterTipo] = useState('');
   const [monthOffset, setMonthOffset] = useState(0);
 
@@ -87,10 +88,16 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
     }
   };
 
+  // Debounce da busca textual — evita recalcular a cada tecla
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 200);
+    return () => clearTimeout(t);
+  }, [search]);
+
   // Reseta o limite de visibilidade ao alterar filtros
   useEffect(() => {
     setVisibleCount(50);
-  }, [viewMode, search, filterTipo, filterCategory, filterWallet, filterConciliacao, filterFromDate, filterToDate]);
+  }, [viewMode, debouncedSearch, filterTipo, filterCategory, filterWallet, filterConciliacao, filterFromDate, filterToDate]);
 
   const allOccs = useMemo(() => {
     return transactions
@@ -98,13 +105,13 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
       .filter(o => {
         // 1. Filtro Tipo
         if (filterTipo && o.tx.tipo !== filterTipo) return false;
-        
-        // 2. Busca textual
-        if (search) {
-          const s = search.toLowerCase();
+
+        // 2. Busca textual (usa debouncedSearch para não recalcular a cada tecla)
+        if (debouncedSearch) {
+          const s = debouncedSearch.toLowerCase();
           const matchDesc = o.tx.descricao?.toLowerCase().includes(s);
           const matchCat = o.tx.categoria?.toLowerCase().includes(s);
-          const matchItems = o.tx.itens?.some(item => 
+          const matchItems = o.tx.itens?.some(item =>
             item.descricao?.toLowerCase().includes(s) || item.categoria?.toLowerCase().includes(s)
           );
           if (!matchDesc && !matchCat && !matchItems) return false;
@@ -138,7 +145,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
           return b.date.localeCompare(a.date);
         }
       });
-  }, [transactions, from, to, filterTipo, search, filterCategory, filterWallet, filterConciliacao, viewMode]);
+  }, [transactions, from, to, filterTipo, debouncedSearch, filterCategory, filterWallet, filterConciliacao, viewMode]);
 
   // Totalizador de pendências (apenas anteriores a hoje, independente do filtro de visualização)
   const pendingCount = useMemo(() => {
@@ -168,7 +175,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
     if (viewMode === 'mensal' && listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
-  }, [grouped, viewMode, monthOffset]);
+  }, [viewMode, monthOffset]);
 
   const clearFilters = () => {
     setSearch('');

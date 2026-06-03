@@ -1,7 +1,9 @@
 {
-  "version": "1.6.28",
+  "version": "1.6.29",
   "date": "03/06/2026",
   "notes": [
-    "Fix: botão + centralizado no menu inferior"
+    "Histórico preserva filtros e scroll ao trocar de aba",
+    "Busca com debounce — sem lag ao digitar",
+    "Otimizações de performance: cálculos, lookup O(1), useCallback"
   ]
 }

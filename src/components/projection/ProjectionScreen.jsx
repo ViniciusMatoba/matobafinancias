@@ -52,15 +52,16 @@ export default function ProjectionScreen({ transactions, wallets, onEdit, onClon
   const from = viewTab === 'resumo' ? customFrom : fromMonth;
   const to = viewTab === 'resumo' ? customTo : toMonth;
 
-  // Saldo acumulado antes do período
+  // Saldo acumulado antes do período — não calcula em abas que não usam projeção diária
   const saldoInicial = useMemo(() => {
+    if (viewTab === 'anual' || viewTab === 'historico') return 0;
     if (!from) return 0;
     const dayBefore = addDays(from, -1);
     return calcSaldo(transactions, FAR_PAST, dayBefore);
-  }, [transactions, from]);
+  }, [transactions, from, viewTab]);
 
   const days = useMemo(() => {
-    if (viewTab === 'anual' || !from || !to || from > to) return [];
+    if (viewTab === 'anual' || viewTab === 'historico' || !from || !to || from > to) return [];
     return buildDailyProjection(transactions, from, to, saldoInicial);
   }, [transactions, from, to, saldoInicial, viewTab]);
 
@@ -139,7 +140,7 @@ export default function ProjectionScreen({ transactions, wallets, onEdit, onClon
 
   return (
     <>
-    <div style={{ flex: 1, overflowY: viewTab === 'historico' ? 'hidden' : 'auto', paddingBottom: viewTab === 'historico' ? 0 : 90 }}>
+    <div style={{ flex: 1, overflowY: viewTab === 'historico' ? 'hidden' : 'auto', paddingBottom: viewTab === 'historico' ? 0 : 90, display: 'flex', flexDirection: 'column' }}>
 
       {/* Header fixo */}
       <div style={{
@@ -263,8 +264,8 @@ export default function ProjectionScreen({ transactions, wallets, onEdit, onClon
         )}
       </div>
 
-      {/* Histórico — renderiza TransactionsScreen com scroll próprio */}
-      {viewTab === 'historico' && (
+      {/* Histórico — sempre montado para preservar filtros e scroll entre trocas de aba */}
+      <div style={{ display: viewTab === 'historico' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
         <TransactionsScreen
           transactions={transactions}
           wallets={wallets}
@@ -274,7 +275,7 @@ export default function ProjectionScreen({ transactions, wallets, onEdit, onClon
           onPay={onPay}
           onUpdate={onUpdate}
         />
-      )}
+      </div>
 
       {/* Conteúdo Principal — Projeção */}
       {viewTab !== 'historico' && <div style={{ padding: '16px 20px 0' }}>

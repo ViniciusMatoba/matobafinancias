@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { isConfigured } from './firebase';
 import { useAuth } from './hooks/useAuth';
 import { useVersionCheck, triggerUpdate } from './hooks/useVersionCheck';
@@ -12,7 +12,6 @@ import AuthScreen from './components/auth/AuthScreen';
 import SetupScreen from './components/auth/SetupScreen';
 import SetupGoalsScreen from './components/onboarding/SetupGoalsScreen';
 import HomeScreen from './components/home/HomeScreen';
-import TransactionsScreen from './components/transactions/TransactionsScreen';
 import ProjectionScreen from './components/projection/ProjectionScreen';
 import GoalsScreen from './components/goals/GoalsScreen';
 import SettingsScreen from './components/settings/SettingsScreen';
@@ -332,14 +331,14 @@ export default function App() {
     );
   };
 
-  const handleNavigate = (dest) => {
+  const handleNavigate = useCallback((dest) => {
     if (dest === 'add') { setEditing(null); setFormOpen(true); return; }
     setView(dest);
-  };
+  }, []);
 
-  const handleEdit = (tx, occDate) => { setEditing(tx); setEditingOccDate(occDate); setFormOpen(true); };
+  const handleEdit = useCallback((tx, occDate) => { setEditing(tx); setEditingOccDate(occDate); setFormOpen(true); }, []);
 
-  const handleClone = (tx) => {
+  const handleClone = useCallback((tx) => {
     // eslint-disable-next-line no-unused-vars
     const { id, criadoEm, exclusoes, dataFim, ...cloneBase } = tx;
     const cloned = {
@@ -349,7 +348,7 @@ export default function App() {
     setEditing(cloned);
     setEditingOccDate(null);
     setFormOpen(true);
-  };
+  }, []);
 
   const hasParceladoRestante = (itens) =>
     itens?.some(i => i.isParcelado && (i.totalParcelas || 1) > (i.parcelaAtual || 1));
@@ -365,8 +364,9 @@ export default function App() {
     return addMonths(dataInicio, maxRestante);
   };
 
-  // Faturas virtuais têm IDs que não existem no Firestore (gerados em projectionCalc)
-  const isVirtualTxId = (id) => !!id && !transactions.find(t => t.id === id);
+  // Set de IDs reais para lookup O(1) — evita .find() linear a cada operação
+  const txIdSet = useMemo(() => new Set(transactions.map(t => t.id)), [transactions]);
+  const isVirtualTxId = useCallback((id) => !!id && !txIdSet.has(id), [txIdSet]);
 
   const handleSave = async (data) => {
     const { _overwriteId, ...cleanData } = data;
@@ -493,7 +493,7 @@ export default function App() {
     }
   };
 
-  const handleDelete = async (id, occDate) => {
+  const handleDelete = useCallback(async (id, occDate) => {
     // Caso de remoção de fatura de cartão virtual projetada
     if (isVirtualTxId(id)) {
       const parentId = id.split('-proj-')[0];
@@ -519,7 +519,7 @@ export default function App() {
       await remove(id);
       showToast('Lançamento removido.', 'error');
     }
-  };
+  }, [isVirtualTxId, transactions, update, remove, setRecurrenceAction, showToast]);
 
   // ── Registrar pagamento (centralizado — usado por todas as telas) ─────────────
   const openPayModal = (item, occDate) => setPayingItem({ item, occDate });
