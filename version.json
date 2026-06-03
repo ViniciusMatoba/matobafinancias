@@ -1,10 +1,9 @@
 {
-  "version": "1.6.26",
+  "version": "1.6.27",
   "date": "03/06/2026",
   "notes": [
-    "Fix: tela de carregamento aparece corretamente em todos os fluxos de login",
-    "Fix: detecção de fatura virtual agora usa ID real do Firestore (mais robusto)",
-    "Fix: Toast não vaza memória ao fechar o app durante a animação de saída",
-    "Refactor: constantes de meses centralizadas nas Cloud Functions (sem duplicação)"
+    "Histórico movido para dentro da tela de Projeção como nova aba",
+    "Menu inferior simplificado — 5 botões (sem Histórico separado)",
+    "Abas da Projeção: Mensal, Período, Anual e Histórico"
   ]
 }
