@@ -2,8 +2,8 @@ import { Home, PlusCircle, BarChart3, TrendingUp, Settings } from 'lucide-react'
 
 const TABS = [
   { id: 'home',       icon: Home,        label: 'Início'   },
-  { id: 'add',        icon: PlusCircle,  label: null       },
   { id: 'reports',    icon: BarChart3,   label: 'Painel'   },
+  { id: 'add',        icon: PlusCircle,  label: null       },
   { id: 'projection', icon: TrendingUp,  label: 'Projeção' },
   { id: 'settings',   icon: Settings,    label: 'Config'   },
 ];

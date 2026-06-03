@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.27';
+export const APP_VERSION = '1.6.28';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.28',
+    date: '03/06/2026',
+    changes: [
+      'Fix: botão + centralizado no menu inferior (posição 3 de 5)',
+    ],
+  },
   {
     version: '1.6.27',
     date: '03/06/2026',

@@ -1,9 +1,7 @@
 {
-  "version": "1.6.27",
+  "version": "1.6.28",
   "date": "03/06/2026",
   "notes": [
-    "Histórico movido para dentro da tela de Projeção como nova aba",
-    "Menu inferior simplificado — 5 botões (sem Histórico separado)",
-    "Abas da Projeção: Mensal, Período, Anual e Histórico"
+    "Fix: botão + centralizado no menu inferior"
   ]
 }
