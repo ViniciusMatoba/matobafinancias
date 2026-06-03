@@ -1,8 +1,9 @@
 {
-  "version": "1.6.32",
+  "version": "1.6.33",
   "date": "03/06/2026",
   "notes": [
-    "Sincronização: painel \"Pense com Calma\" (itens de impulso e economia acumulada) agora é salvo no Firestore (multi-dispositivo)",
-    "Alertas: avisos de limite orçamentário em tempo real no formulário de transação (informa antes de exceder o teto da categoria)"
+    "Busca: expandida para permitir filtrar e buscar pelo nome legível das categorias no Histórico",
+    "Badges: exibição de resumo financeiro por categoria no topo do Histórico com filtros ativos em tempo real",
+    "Conciliação: novo atalho \"Conciliar Visíveis\" para marcar lançamentos pendentes em lote com um único clique"
   ]
 }
