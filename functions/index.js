@@ -135,14 +135,14 @@ function expandRange(transactions, from, to) {
   const occs = [];
   for (const tx of transactions) {
     if (!tx.dataInicio || tx.dataInicio > to) continue;
-    const v = Number(tx.valor) || 0;
+    const v       = Number(tx.valor) || 0;
     if (!v) continue;
+    const excl    = Array.isArray(tx.exclusoes) ? tx.exclusoes : [];
+    const push    = (ds) => { if (!excl.includes(ds)) occs.push({ date: ds, valor: v, tipo: tx.tipo }); };
 
     if (tx.frequencia === 'unico') {
-      if (tx.dataInicio >= from && tx.dataInicio <= to) {
-        occs.push({ date: tx.dataInicio, valor: v, tipo: tx.tipo });
-      }
-      // Parcelas futuras de cartão (tipo cartao com itens) — incluídas pela fatura
+      if (tx.dataInicio >= from && tx.dataInicio <= to) push(tx.dataInicio);
+
     } else if (tx.frequencia === 'parcelado') {
       const total = tx.totalParcelas || 1;
       const start = tx.parcelaAtual  || 1;
@@ -151,34 +151,35 @@ function expandRange(transactions, from, to) {
         for (let j = 0; j < i; j++) addOneMonthClamped(pd);
         const ds = dateStrFromDate(pd);
         if (ds > to) break;
-        if (ds >= from && (!tx.dataFim || ds <= tx.dataFim)) {
-          occs.push({ date: ds, valor: v, tipo: tx.tipo });
-        }
+        if (ds >= from && (!tx.dataFim || ds <= tx.dataFim)) push(ds);
       }
+
     } else if (tx.frequencia === 'mensal') {
       const end = tx.dataFim && tx.dataFim < to ? tx.dataFim : to;
       let cur = new Date(tx.dataInicio + 'T00:00:00');
       while (dateStrFromDate(cur) <= end) {
         const ds = dateStrFromDate(cur);
-        if (ds >= from) occs.push({ date: ds, valor: v, tipo: tx.tipo });
+        if (ds >= from) push(ds);
         addOneMonthClamped(cur);
       }
+
     } else if (tx.frequencia === 'semanal') {
       const end = tx.dataFim && tx.dataFim < to ? tx.dataFim : to;
       let cur = new Date(tx.dataInicio + 'T00:00:00');
       while (dateStrFromDate(cur) <= end) {
         const ds = dateStrFromDate(cur);
-        if (ds >= from) occs.push({ date: ds, valor: v, tipo: tx.tipo });
+        if (ds >= from) push(ds);
         cur.setDate(cur.getDate() + 7);
       }
+
     } else if (tx.frequencia === 'diario') {
       // valor já é por dia (mensal / 30); gera uma ocorrência por dia
-      const start = tx.dataInicio > from ? tx.dataInicio : from;
-      const end   = tx.dataFim   && tx.dataFim < to ? tx.dataFim : to;
-      let cur = new Date(start + 'T00:00:00');
-      const endDt = new Date(end + 'T00:00:00');
+      const startStr = tx.dataInicio > from ? tx.dataInicio : from;
+      const endStr   = tx.dataFim && tx.dataFim < to ? tx.dataFim : to;
+      let cur = new Date(startStr + 'T00:00:00');
+      const endDt = new Date(endStr + 'T00:00:00');
       while (cur <= endDt) {
-        occs.push({ date: dateStrFromDate(cur), valor: v, tipo: tx.tipo });
+        push(dateStrFromDate(cur));
         cur.setDate(cur.getDate() + 1);
       }
     }
@@ -204,30 +205,28 @@ const CATEGORY_ORDER = ['liberdade','custos_fixos','conforto','metas','prazeres'
 function computeSpentByCategory(transactions, currentMonth) {
   const totals = Object.fromEntries(CATEGORY_ORDER.map(id => [id, 0]));
   const [year, mon] = currentMonth.split('-').map(Number);
-  const from  = `${currentMonth}-01`;
-  const to    = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
+  const from = `${currentMonth}-01`;
+  const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
 
   for (const tx of transactions) {
+    // ── Cartão com itens: conta apenas faturas do mês corrente ───────────────
     if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+      if (!tx.dataInicio?.startsWith(currentMonth)) continue;
       for (const item of tx.itens) {
         const cat = item.categoria;
         if (!cat || !(cat in totals)) continue;
-        if (item.isParcelado) {
-          // Conta apenas se a FATURA (tx.dataInicio) é do mês atual.
-          // Não itera meses futuros — cada mês tem sua própria fatura.
-          if (tx.dataInicio?.startsWith(currentMonth)) {
-            totals[cat] += Number(item.valor) || 0;
-          }
-        } else if (item.dataCompra?.startsWith(currentMonth)) {
-          totals[cat] += Number(item.valor) || 0;
-        }
+        totals[cat] += Number(item.valor) || 0;
       }
-    } else {
-      if (!tx.dataInicio || tx.dataInicio < from || tx.dataInicio > to) continue;
-      if (tx.tipo === 'entrada') continue;
-      const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
-      if (cat && cat in totals) totals[cat] += Number(tx.valor) || 0;
+      continue;
     }
+
+    // ── Demais tipos: expande ocorrências no mês (captura recorrentes) ────────
+    if (tx.tipo === 'entrada') continue;
+    const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
+    if (!cat || !(cat in totals)) continue;
+
+    const occs = expandRange([tx], from, to);
+    for (const o of occs) totals[cat] += o.valor;
   }
   return totals;
 }

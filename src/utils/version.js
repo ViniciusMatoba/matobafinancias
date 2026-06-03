@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.22';
+export const APP_VERSION = '1.6.23';
 export const APP_VERSION_DATE = '02/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.23',
+    date: '03/06/2026',
+    changes: [
+      'Fix crítico: saldo do bot agora respeita exclusoes de recorrências (sem dupla contagem)',
+      'Fix: alertas de orçamento (N4/N5/N9) agora contam recorrentes mensais/semanais do mês',
+      'Fix: /categoria mostra corretamente aluguel e outras despesas mensais recorrentes',
+    ],
+  },
   {
     version: '1.6.22',
     date: '02/06/2026',
