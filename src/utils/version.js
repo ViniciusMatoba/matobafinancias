@@ -1,7 +1,19 @@
-export const APP_VERSION = '1.6.37';
+export const APP_VERSION = '1.6.38';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.38',
+    date: '03/06/2026',
+    changes: [
+      'Fix: edição de ocorrência única agora preserva status de conciliação da recorrência original',
+      'Fix: dependência redundante removida de handleDelete (performance)',
+      'Novo: alerta proativo ao salvar despesa que ultrapassa 80% ou 100% do orçamento da categoria',
+      'Novo: aba "Evolução" em Relatórios — comparativo dos últimos 3 meses por categoria com tendência ↑↓',
+      'Melhoria: exportação CSV agora inclui itens individuais de cartão, carteira, conferido e parcela',
+    ],
+  },
+  {
   {
     version: '1.6.37',
     date: '03/06/2026',

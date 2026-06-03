@@ -1,8 +1,10 @@
-{
-  "version": "1.6.37",
+﻿{
+  "version": "1.6.38",
   "date": "03/06/2026",
   "notes": [
-    "N18: alerta de economia do dia às 19h — parabeniza quando gastos previstos não foram registrados",
-    "Toggle N18 disponível em Notificações Push e Bot Telegram"
+    "Fix: conciliacao preservada ao editar ocorrencia unica de recorrencia",
+    "Novo: alerta ao ultrapassar orcamento de categoria ao salvar despesa",
+    "Novo: aba Evolucao em Relatorios — comparativo 3 meses por categoria",
+    "Melhoria: CSV exporta itens de cartao separados, carteira, conferido e parcela"
   ]
 }

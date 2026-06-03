@@ -2,16 +2,37 @@ import { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
-import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
-import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer } from 'lucide-react';
+import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
+import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer, BarChart2 } from 'lucide-react';
 
 const TABS = {
   RESUMO: 'resumo',
   CATEGORIAS: 'categorias',
-  TOP_GASTOS: 'top_gastos'
+  TOP_GASTOS: 'top_gastos',
+  EVOLUCAO: 'evolucao',
 };
 
-export default function ReportsScreen({ transactions, config, onNavigate }) {
+const TAB_LABELS = {
+  resumo: 'Resumo',
+  categorias: 'Categorias',
+  top_gastos: 'Top Gastos',
+  evolucao: 'Evolução',
+};
+
+const MONTH_NAMES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function getMonthRange(offset) {
+  const d = new Date();
+  const target = new Date(d.getFullYear(), d.getMonth() + offset, 1);
+  const y = target.getFullYear();
+  const m = target.getMonth();
+  const from = `${y}-${String(m+1).padStart(2,'0')}-01`;
+  const lastDay = new Date(y, m+1, 0).getDate();
+  const to = `${y}-${String(m+1).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+  return { from, to, label: `${MONTH_NAMES_SHORT[m]}/${String(y).slice(2)}` };
+}
+
+export default function ReportsScreen({ transactions, wallets = [], config, onNavigate }) {
   const [activeTab, setActiveTab] = useState(TABS.RESUMO);
   const [period, setPeriod] = useState('current_month');
   
@@ -155,14 +176,28 @@ export default function ReportsScreen({ transactions, config, onNavigate }) {
   // Exportar dados do período em CSV formatado (aprimorado com ocorrências reais expandidas)
   const handleExportCSV = () => {
     let csv = '\ufeff'; // BOM para Excel abrir caracteres especiais sem corromper
-    csv += 'Data,Tipo,Categoria,Descricao,Valor\n';
+    // CSV aprimorado: itens de cartão por linha, carteira, conferido, parcela
+    const walletsMap = Object.fromEntries(wallets.map(w => [w.id, w.nome]));
+    const q = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
+    csv += 'Data,Tipo,Categoria,Descricao,Valor,Carteira,Conferido,Parcela\n';
 
     periodOccs.forEach(o => {
-      const typeLabel = o.tx.tipo === 'entrada' ? 'Entrada' : 'Saída';
-      const catLabel = o.tx.categoria ? (PERCENTUAL_CATEGORIES[o.tx.categoria]?.label || 'Outros') : 'Sem Categoria';
-      const desc = `"${(o.tx.descricao || '').replace(/"/g, '""')}"`;
-      const val = o.valor.toFixed(2);
-      csv += `${o.date},${typeLabel},${catLabel},${desc},${val}\n`;
+      const tx = o.tx;
+      const typeLabel = tx.tipo === 'entrada' ? 'Entrada' : 'Saída';
+      const walletName = walletsMap[tx.carteiraId] || '';
+      const conferido = tx.conferido ? 'Sim' : (tx.conferidos?.includes(o.date) ? 'Sim' : 'Não');
+
+      if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+        tx.itens.forEach(item => {
+          const catLabel = item.categoria ? (PERCENTUAL_CATEGORIES[item.categoria]?.label || 'Outros') : 'Sem Categoria';
+          const parcela = item.isParcelado ? `${item.parcelaAtual || 1}/${item.totalParcelas}` : '';
+          csv += `${o.date},Cartão,${catLabel},${q(item.descricao || tx.descricao)},${(Number(item.valor) || 0).toFixed(2)},${q(walletName)},${conferido},${parcela}\n`;
+        });
+      } else {
+        const catLabel = tx.categoria ? (PERCENTUAL_CATEGORIES[tx.categoria]?.label || 'Outros') : 'Sem Categoria';
+        const parcela = tx.frequencia === 'parcelado' ? `${tx.parcelaAtual || 1}/${tx.totalParcelas}` : '';
+        csv += `${o.date},${typeLabel},${catLabel},${q(tx.descricao)},${o.valor.toFixed(2)},${q(walletName)},${conferido},${parcela}\n`;
+      }
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -184,6 +219,42 @@ export default function ReportsScreen({ transactions, config, onNavigate }) {
         color: c.color
       }));
   }, [categoryStats]);
+
+  // Evolução mensal: últimos 3 meses por categoria
+  const evolutionData = useMemo(() => {
+    const months = [-2, -1, 0].map(getMonthRange);
+    return {
+      months,
+      rows: CATEGORY_ORDER.map(catId => {
+        const cat = PERCENTUAL_CATEGORIES[catId];
+        const values = months.map(({ from, to }) => {
+          let total = 0;
+          transactions.forEach(tx => {
+            if (tx.tipo === 'entrada') return;
+            expandOccurrences(tx, from, to).forEach(() => {
+              if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+                tx.itens.forEach(item => {
+                  if (item.categoria === catId) total += Number(item.valor) || 0;
+                });
+              } else if (tx.categoria === catId) {
+                total += Number(tx.valor) || 0;
+              }
+            });
+          });
+          return total;
+        });
+        return { catId, label: cat.label, icon: cat.icon, color: cat.color, values };
+      }),
+      totals: months.map((_, mi) => {
+        let t = 0;
+        transactions.forEach(tx => {
+          if (tx.tipo === 'entrada') return;
+          expandOccurrences(tx, months[mi].from, months[mi].to).forEach(o => { t += o.valor; });
+        });
+        return t;
+      }),
+    };
+  }, [transactions]);
 
   return (
     <>
@@ -325,22 +396,20 @@ export default function ReportsScreen({ transactions, config, onNavigate }) {
         </div>
 
         {/* Tabs Internas */}
-        <div style={{ padding: '16px 20px 0', display: 'flex', gap: 6 }}>
+        <div style={{ padding: '16px 20px 0', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {Object.values(TABS).map(t => (
             <button
               key={t}
               onClick={() => setActiveTab(t)}
               style={{
-                flex: 1, padding: '10px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                flex: '1 1 auto', padding: '9px 6px', borderRadius: 10, fontSize: 11, fontWeight: 600,
                 background: activeTab === t ? 'var(--bg-card)' : 'transparent',
                 border: activeTab === t ? '1px solid var(--border)' : '1px solid transparent',
                 color: activeTab === t ? 'var(--primary)' : 'var(--text-secondary)',
-                cursor: 'pointer', transition: 'all 0.2s'
+                cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap',
               }}
             >
-              {t === TABS.RESUMO && 'Resumo'}
-              {t === TABS.CATEGORIAS && 'Categorias'}
-              {t === TABS.TOP_GASTOS && 'Maiores Gastos'}
+              {TAB_LABELS[t]}
             </button>
           ))}
         </div>
@@ -534,6 +603,83 @@ export default function ReportsScreen({ transactions, config, onNavigate }) {
                 Nenhuma despesa registrada no período.
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Aba Evolução: comparação dos últimos 3 meses por categoria ── */}
+        {activeTab === TABS.EVOLUCAO && (
+          <div style={{ padding: '16px 20px 24px' }}>
+            <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-secondary)' }}>
+              Gastos reais por categoria nos últimos 3 meses. ↑↓ indica tendência vs mês anterior.
+            </p>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', padding: '8px 6px', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)', width: '35%' }}>
+                      Categoria
+                    </th>
+                    {evolutionData.months.map((m, i) => (
+                      <th key={i} style={{ textAlign: 'right', padding: '8px 6px', color: 'var(--text-muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>
+                        {m.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {evolutionData.rows.map(row => (
+                    <tr key={row.catId} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td style={{ padding: '10px 6px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontSize: 14 }}>{row.icon}</span>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{row.label}</span>
+                      </td>
+                      {row.values.map((val, i) => {
+                        const prev = i > 0 ? row.values[i - 1] : null;
+                        const trend = prev !== null && prev > 0
+                          ? ((val - prev) / prev * 100)
+                          : null;
+                        return (
+                          <td key={i} style={{ textAlign: 'right', padding: '10px 6px', verticalAlign: 'middle' }}>
+                            <span style={{ fontWeight: 600, color: val > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                              {val > 0 ? formatBRL(val) : '—'}
+                            </span>
+                            {trend !== null && val > 0 && (
+                              <span style={{
+                                display: 'block', fontSize: 10, fontWeight: 600,
+                                color: trend > 0 ? 'var(--saida)' : '#10b981',
+                              }}>
+                                {trend > 0 ? '↑' : '↓'} {Math.abs(Math.round(trend))}%
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  {/* Linha de total */}
+                  <tr style={{ background: 'var(--bg-card)' }}>
+                    <td style={{ padding: '10px 6px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                      Total Despesas
+                    </td>
+                    {evolutionData.totals.map((total, i) => {
+                      const prev = i > 0 ? evolutionData.totals[i - 1] : null;
+                      const trend = prev !== null && prev > 0 ? ((total - prev) / prev * 100) : null;
+                      return (
+                        <td key={i} style={{ textAlign: 'right', padding: '10px 6px' }}>
+                          <span style={{ fontWeight: 700, color: 'var(--saida)' }}>{formatBRL(total)}</span>
+                          {trend !== null && (
+                            <span style={{ display: 'block', fontSize: 10, fontWeight: 600, color: trend > 0 ? 'var(--saida)' : '#10b981' }}>
+                              {trend > 0 ? '↑' : '↓'} {Math.abs(Math.round(trend))}%
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>

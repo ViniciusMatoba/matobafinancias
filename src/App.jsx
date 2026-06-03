@@ -23,7 +23,9 @@ import Modal from './components/shared/Modal';
 import TransactionForm from './components/transactions/TransactionForm';
 import { DollarSign } from 'lucide-react';
 import PaymentModal from './components/projection/PaymentModal';
-import { addMonths } from './utils/formatters';
+import { addMonths, todayStr } from './utils/formatters';
+import { expandOccurrences } from './utils/projectionCalc';
+import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from './utils/categories';
 
 export default function App() {
   const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
@@ -178,6 +180,7 @@ export default function App() {
         {view === 'reports' && (
           <ReportsScreen
             transactions={transactions}
+            wallets={wallets}
             config={config}
             onNavigate={handleNavigate}
           />
@@ -386,6 +389,42 @@ export default function App() {
   const txIdSet = useMemo(() => new Set(transactions.map(t => t.id)), [transactions]);
   const isVirtualTxId = useCallback((id) => !!id && !txIdSet.has(id), [txIdSet]);
 
+  // Verifica se o novo lançamento empurra alguma categoria acima de 80% do orçamento
+  const checkBudgetAlert = (cleanData, currentTransactions) => {
+    const rendaMensal = config?.rendaMensal || 0;
+    const budgetPcts  = config?.budgetPcts  || {};
+    if (rendaMensal <= 0) return null;
+
+    // Determina a categoria afetada
+    const cat = cleanData.tipo === 'cartao' ? null : cleanData.categoria;
+    if (!cat || !(cat in PERCENTUAL_CATEGORIES)) return null;
+
+    const today = todayStr();
+    const monthPrefix = today.slice(0, 7);
+    const from = `${monthPrefix}-01`;
+    const lastDay = new Date(Number(monthPrefix.slice(0,4)), Number(monthPrefix.slice(5,7)), 0).getDate();
+    const to = `${monthPrefix}-${String(lastDay).padStart(2,'0')}`;
+
+    // Soma todos os gastos da categoria no mês atual (incluindo o novo lançamento)
+    const allWithNew = [...currentTransactions, { ...cleanData, id: '__new__', criadoEm: null }];
+    let gasto = 0;
+    allWithNew.forEach(tx => {
+      if (tx.tipo === 'entrada') return;
+      expandOccurrences(tx, from, to).forEach(() => {
+        if (tx.categoria === cat) gasto += Number(tx.valor) || 0;
+      });
+    });
+
+    const budget = (rendaMensal * (Number(budgetPcts[cat]) || 0)) / 100;
+    if (budget <= 0) return null;
+
+    const pct = Math.round((gasto / budget) * 100);
+    if (pct < 80) return null;
+
+    const catLabel = PERCENTUAL_CATEGORIES[cat]?.label || cat;
+    return { catLabel, pct, budget, gasto };
+  };
+
   const handleSave = async (data) => {
     const { _overwriteId, ...cleanData } = data;
 
@@ -447,6 +486,20 @@ export default function App() {
     setFormOpen(false);
     setEditing(null);
     setEditingOccDate(null);
+
+    // Alerta proativo de orçamento (após fechar o formulário)
+    if (cleanData.tipo !== 'entrada') {
+      const alert = checkBudgetAlert(cleanData, transactions);
+      if (alert) {
+        setTimeout(() => {
+          if (alert.pct >= 100) {
+            showToast(`🚨 Orçamento de ${alert.catLabel} estourado! (${alert.pct}% do limite)`, 'error');
+          } else {
+            showToast(`⚠️ ${alert.catLabel} em ${alert.pct}% do orçamento mensal`);
+          }
+        }, 600);
+      }
+    }
   };
 
   const confirmCartaoEditScope = async (scope) => {
@@ -539,7 +592,7 @@ export default function App() {
       await remove(id);
       showToast('Lançamento removido.', 'error');
     }
-  }, [isVirtualTxId, transactions, update, remove, setRecurrenceAction, showToast]);
+  }, [isVirtualTxId, update, remove, setRecurrenceAction, showToast]);
 
   // ── Registrar pagamento (centralizado — usado por todas as telas) ─────────────
   const openPayModal = (item, occDate) => setPayingItem({ item, occDate });
@@ -659,7 +712,9 @@ export default function App() {
         const exclusoes = tx.exclusoes || [];
         if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
         await update(tx.id, { exclusoes });
-        await add({ ...newData, frequencia: 'unico', dataInicio: occDate, dataFim: null });
+        // Preserva o status de conciliação da ocorrência original
+        const eraConferido = tx.conferidos?.includes(occDate) ?? false;
+        await add({ ...newData, frequencia: 'unico', dataInicio: occDate, dataFim: null, conferido: eraConferido });
         showToast('Ocorrência editada separadamente!');
       } else if (scope === 'future') {
         const d = new Date(`${occDate}T12:00:00`);

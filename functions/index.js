@@ -120,6 +120,12 @@ function formatBRL(n) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0);
 }
 
+function parseBRL(val) {
+  if (val === null || val === undefined) return 0;
+  if (typeof val === 'number') return val;
+  return parseFloat(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+}
+
 // Barra de progresso ASCII — ex: [████████░░] 82%
 function barra(valor, maximo, largura = 10) {
   const pct  = maximo > 0 ? valor / maximo : 0;
@@ -704,7 +710,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       const parcAtual = tx.parcelaAtual || 1;
       const parcTotal = tx.totalParcelas || 1;
       if (parcAtual !== parcTotal) continue;          // não é a última
-      if (!tx.dataInicio?.startsWith(todayStr)) continue; // não vence hoje
+      
+      const pd = new Date(tx.dataInicio + 'T00:00:00');
+      const diffMonths = (tx.totalParcelas || 1) - (tx.parcelaAtual || 1);
+      for (let j = 0; j < diffMonths; j++) addOneMonthClamped(pd);
+      const ds = dateStrFromDate(pd);
+      if (ds !== todayStr) continue; // não vence hoje
+      
       msgs.push(
         `🎉 *Última parcela!*\n${tx.descricao || 'Lançamento parcelado'} — a partir do próximo mês *${formatBRL(tx.valor)}* serão liberados no seu orçamento!`
       );
@@ -871,7 +883,7 @@ async function handleSaldo(chatId, uid) {
     msg += '\n\n📂 *Por carteira:*\n';
     for (const w of wallets) {
       const wTxs   = transactions.filter(t => t.carteiraId === w.id);
-      const wSaldo = (Number(w.saldoInicial) || 0) + calcSaldoSimples(wTxs, today, 0);
+      const wSaldo = (parseBRL(w.saldoInicial) || 0) + calcSaldoSimples(wTxs, today, 0);
       msg += `• ${w.nome}: *${formatBRL(wSaldo)}*\n`;
     }
   }
@@ -2055,7 +2067,7 @@ exports.dailyNotifications = onSchedule(
         ]);
         const cards          = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const transactions   = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        const walletInitials = walletSnap.docs.reduce((acc, d) => acc + (Number(d.data().saldoInicial) || 0), 0);
+        const walletInitials = walletSnap.docs.reduce((acc, d) => acc + (parseBRL(d.data().saldoInicial) || 0), 0);
         const goals          = goalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         // ── N1–N17: apenas quando o horário do usuário bate ──────────────────
