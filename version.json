@@ -1,10 +1,10 @@
 {
-  "version": "1.6.25",
+  "version": "1.6.26",
   "date": "03/06/2026",
   "notes": [
-    "Fix crítico: edição de fatura parcelada não duplica mais lançamentos futuros",
-    "Novo: ao editar fatura com parcelas, pergunta se aplica somente nesta ou em todas as futuras",
-    "Exibe até quando vão as parcelas no diálogo de escopo",
-    "Itens parcelados materializados por edição não geram mais projeções duplicadas"
+    "Fix: tela de carregamento aparece corretamente em todos os fluxos de login",
+    "Fix: detecção de fatura virtual mais robusta",
+    "Fix: Toast não vaza memória na animação de saída",
+    "Refactor: constantes de meses centralizadas nas Cloud Functions"
   ]
 }
