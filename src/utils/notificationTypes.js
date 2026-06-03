@@ -4,7 +4,7 @@
 export const DEFAULT_NOTIFICATION_TIPOS = {
   n1: true, n2: true, n3: true, n4: true, n5: true, n6: true, n7: true,
   n8: true, n9: true, n10: true, n11: true, n12: true,
-  n13: true, n14: true, n15: true, n16: true, n17: true,
+  n13: true, n14: true, n15: true, n16: true, n17: true, n18: true,
 };
 
 export const TIPO_INFO = {
@@ -25,4 +25,5 @@ export const TIPO_INFO = {
   n15: { label: 'Saldo abaixo do mínimo',        icon: '🔴', desc: 'Alerta quando o saldo global cai abaixo do valor mínimo configurado' },
   n16: { label: 'Resumo das caixinhas (dia 1)',  icon: '🎯', desc: 'No início do mês: progresso de todas as metas com barra visual' },
   n17: { label: 'Balanço da metade do mês',      icon: '📊', desc: 'No dia 15: projeção de como o orçamento vai fechar' },
+  n18: { label: 'Economia do dia',               icon: '💚', desc: 'Às 19h: parabeniza quando gastos previstos não foram registrados e mostra o total economizado no mês' },
 };

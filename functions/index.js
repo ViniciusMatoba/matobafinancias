@@ -772,6 +772,48 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   return msgs;
 }
 
+// ─── N18 — Economia do dia (19h, todos os usuários) ──────────────────────────
+function checkN18(transactions, config, tipos) {
+  if (tipos.n18 === false) return [];
+
+  const hoje      = getNowBrasilia();
+  const todayS    = dateStrFromDate(hoje);
+  const currentMonth = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+  const from      = `${currentMonth}-01`;
+
+  // Verifica se uma ocorrência já foi conferida/paga
+  const isConferido = (o) => {
+    const tx = o.tx;
+    if (!tx) return false;
+    if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+      return !!tx.conferido;
+    }
+    return !!(tx.conferidos && tx.conferidos.includes(o.date));
+  };
+
+  // Despesas previstas para hoje não pagas = possível economia
+  const occsHoje      = expandRange(transactions, todayS, todayS);
+  const naoConfHoje   = occsHoje.filter(o => o.tipo !== 'entrada' && !isConferido(o));
+  const economiaHoje  = naoConfHoje.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+
+  if (economiaHoje <= 0) return [];
+
+  // Acumulado do mês até hoje
+  const occsMonth    = expandRange(transactions, from, todayS);
+  const naoConfMes   = occsMonth.filter(o => o.tipo !== 'entrada' && !isConferido(o));
+  const economiaMes  = naoConfMes.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+
+  const nomeMes  = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+  const mesLabel = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+
+  let msg = `🎉 *Parabéns! Você economizou hoje!*\n\n`;
+  msg += `Não foram registrados *${formatBRL(economiaHoje)}* em gastos previstos para hoje.\n\n`;
+  msg += `📈 Economia acumulada em ${mesLabel}: *${formatBRL(economiaMes)}*\n`;
+  msg += `_Continue assim!_`;
+
+  return [msg];
+}
+
 // ─── Handlers de comandos ─────────────────────────────────────────────────────
 
 async function handleVincular(chatId, code, fromUser) {
@@ -1289,7 +1331,7 @@ async function handleFatura(chatId, uid) {
 const DEFAULT_TG_TIPOS = {
   n1:true,n2:true,n3:true,n4:true,n5:true,n6:true,n7:true,
   n8:true,n9:true,n10:true,n11:true,n12:true,
-  n13:true,n14:true,n15:true,n16:true,n17:true,
+  n13:true,n14:true,n15:true,n16:true,n17:true,n18:true,
 };
 
 const ALERT_LABELS = {
@@ -1298,7 +1340,7 @@ const ALERT_LABELS = {
   n7:'Resumo semanal',   n8:'Resumo diário',  n9:'Limite geral gastos',
   n10:'Contas fixas',    n11:'Cartão no limite', n12:'Rel. mensal',
   n13:'Fecha amanhã',    n14:'Última parcela', n15:'Saldo mínimo',
-  n16:'Caixinhas (dia 1)',n17:'Metade do mês',
+  n16:'Caixinhas (dia 1)',n17:'Metade do mês', n18:'Economia do dia',
 };
 
 // Grupos de alertas para organizar o menu
@@ -1307,6 +1349,7 @@ const ALERT_GROUPS = [
   { emoji:'💰', title:'Orçamento',     ids:['n4','n5','n9'] },
   { emoji:'⚠️', title:'Alertas',       ids:['n6','n10','n11','n14','n15'] },
   { emoji:'📊', title:'Resumos',       ids:['n7','n8','n12','n16','n17'] },
+  { emoji:'💚', title:'Economia',      ids:['n18'] },
 ];
 
 // Texto do menu de configuração
@@ -1997,7 +2040,11 @@ exports.dailyNotifications = onSchedule(
 
         // Verifica se o horário configurado pelo usuário bate com o horário atual
         const horaUsuario = prefs.horaAlerta ?? 7;
-        if (horaUsuario !== horaAtual) continue;
+        const horaMatch   = horaUsuario === horaAtual;
+        // N18 sempre roda às 19h, independente de horaAlerta
+        const n18Ativo    = horaAtual === 19;
+
+        if (!horaMatch && !n18Ativo) continue;
 
         // Lê cartões, transações, carteiras e metas em paralelo
         const [cardsSnap, txSnap, walletSnap, goalsSnap] = await Promise.all([
@@ -2011,41 +2058,70 @@ exports.dailyNotifications = onSchedule(
         const walletInitials = walletSnap.docs.reduce((acc, d) => acc + (Number(d.data().saldoInicial) || 0), 0);
         const goals          = goalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-        // ── Push: usa prefs.tipos (configurado em Notificações Push) ──────────
-        if (pushEnabled) {
-          const pushPrefs = { ...prefs, tipos: prefs.tipos || {} };
-          const pushMsgs  = checkNotifications(cards, transactions, config, pushPrefs, goals, walletInitials);
-          for (const msg of pushMsgs) {
-            try {
-              await sendPushNotification(fcmToken, msg);
-            } catch (pushErr) {
-              logger.error(`[PUSH] Erro FCM uid=${uid}:`, pushErr);
-              const code = pushErr?.errorInfo?.code || pushErr?.code;
-              if (code === 'messaging/registration-token-not-registered' ||
-                  code === 'messaging/invalid-registration-token') {
-                await userDoc.ref.set({
-                  fcmToken: admin.firestore.FieldValue.delete(),
-                  fcmUpdatedAt: admin.firestore.FieldValue.delete(),
-                }, { merge: true });
+        // ── N1–N17: apenas quando o horário do usuário bate ──────────────────
+        if (horaMatch) {
+          // Push
+          if (pushEnabled) {
+            const pushPrefs = { ...prefs, tipos: prefs.tipos || {} };
+            const pushMsgs  = checkNotifications(cards, transactions, config, pushPrefs, goals, walletInitials);
+            for (const msg of pushMsgs) {
+              try {
+                await sendPushNotification(fcmToken, msg);
+              } catch (pushErr) {
+                logger.error(`[PUSH] Erro FCM uid=${uid}:`, pushErr);
+                const code = pushErr?.errorInfo?.code || pushErr?.code;
+                if (code === 'messaging/registration-token-not-registered' ||
+                    code === 'messaging/invalid-registration-token') {
+                  await userDoc.ref.set({
+                    fcmToken: admin.firestore.FieldValue.delete(),
+                    fcmUpdatedAt: admin.firestore.FieldValue.delete(),
+                  }, { merge: true });
+                }
+              }
+            }
+            if (pushMsgs.length > 0)
+              logger.info(`[PUSH] uid=${uid}: ${pushMsgs.length} alerta(s) enviado(s)`);
+          }
+
+          // Telegram
+          if (telegramEnabled) {
+            const tgTipos = prefs.telegramTipos !== undefined ? prefs.telegramTipos : (prefs.tipos || {});
+            const tgPrefs = { ...prefs, tipos: tgTipos };
+            const tgMsgs  = checkNotifications(cards, transactions, config, tgPrefs, goals, walletInitials);
+            for (const msg of tgMsgs) {
+              await sendMessage(chatId, msg);
+              await new Promise(r => setTimeout(r, 100));
+            }
+            if (tgMsgs.length > 0)
+              logger.info(`[TELEGRAM] uid=${uid}: ${tgMsgs.length} alerta(s) enviado(s)`);
+          }
+        }
+
+        // ── N18 — Economia do dia (sempre às 19h para todos os usuários) ─────
+        if (n18Ativo) {
+          const pushN18Tipos = { n18: (prefs.tipos?.n18 !== false) };
+          const tgN18Tipos   = { n18: ((prefs.telegramTipos ?? prefs.tipos ?? {}).n18 !== false) };
+
+          if (pushEnabled) {
+            const n18Msgs = checkN18(transactions, config, pushN18Tipos);
+            for (const msg of n18Msgs) {
+              try {
+                await sendPushNotification(fcmToken, msg);
+              } catch (e) {
+                logger.error(`[PUSH N18] uid=${uid}:`, e.message);
               }
             }
           }
-          if (pushMsgs.length > 0)
-            logger.info(`[PUSH] uid=${uid}: ${pushMsgs.length} alerta(s) enviado(s)`);
-        }
 
-        // ── Telegram: usa prefs.telegramTipos (configurado em Bot do Telegram) ─
-        if (telegramEnabled) {
-          // Fallback: se telegramTipos nunca foi configurado, usa prefs.tipos
-          const tgTipos = prefs.telegramTipos !== undefined ? prefs.telegramTipos : (prefs.tipos || {});
-          const tgPrefs = { ...prefs, tipos: tgTipos };
-          const tgMsgs  = checkNotifications(cards, transactions, config, tgPrefs, goals, walletInitials);
-          for (const msg of tgMsgs) {
-            await sendMessage(chatId, msg);
-            await new Promise(r => setTimeout(r, 100)); // evita rate limit
+          if (telegramEnabled) {
+            const n18Msgs = checkN18(transactions, config, tgN18Tipos);
+            for (const msg of n18Msgs) {
+              await sendMessage(chatId, msg);
+              await new Promise(r => setTimeout(r, 100));
+            }
+            if (n18Msgs.length > 0)
+              logger.info(`[N18] uid=${uid}: economia do dia enviada`);
           }
-          if (tgMsgs.length > 0)
-            logger.info(`[TELEGRAM] uid=${uid}: ${tgMsgs.length} alerta(s) enviado(s)`);
         }
       } catch (err) {
         logger.error(`[NOTIF] Erro ao processar uid=${uid}:`, err);

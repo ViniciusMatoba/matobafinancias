@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.36';
+export const APP_VERSION = '1.6.37';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.37',
+    date: '03/06/2026',
+    changes: [
+      'N18: novo alerta "Economia do dia" — às 19h, parabeniza quando gastos previstos não foram registrados',
+      'N18: exibe total economizado no mês até hoje',
+      'N18: dispara para todos os usuários às 19h, independente do horário configurado',
+      'Toggle N18 disponível em Notificações Push e Bot Telegram',
+    ],
+  },
   {
     version: '1.6.36',
     date: '03/06/2026',
