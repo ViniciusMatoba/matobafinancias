@@ -1,11 +1,9 @@
 {
-  "version": "1.6.22",
-  "date": "02/06/2026",
+  "version": "1.6.23",
+  "date": "03/06/2026",
   "notes": [
-    "Fix crítico: saldo do bot agora inclui saldoInicial das carteiras",
-    "Fix: /resumo, /mes, /semana agora expandem transações recorrentes corretamente",
-    "Fix: /hoje mostra todos os tipos de lançamento do dia (não só avulsos)",
-    "Fix: alertas N6, N8, N15 calculam saldo com carteiras incluídas",
-    "Fix: diário acumulava apenas 1 dia em vez de todos os dias do período"
+    "Fix crítico: saldo do bot agora respeita exclusoes de recorrências (sem dupla contagem)",
+    "Fix: alertas de orçamento (N4/N5/N9) agora contam recorrentes mensais/semanais do mês",
+    "Fix: /categoria mostra corretamente aluguel e outras despesas mensais recorrentes"
   ]
 }
