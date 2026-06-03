@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.24';
+export const APP_VERSION = '1.6.25';
 export const APP_VERSION_DATE = '03/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.25',
+    date: '03/06/2026',
+    changes: [
+      'Fix crítico: edição de fatura parcelada não duplica mais lançamentos futuros',
+      'Novo: ao editar fatura com parcelas, pergunta se aplica somente nesta ou em todas as futuras',
+      'Exibe até quando vão as parcelas no diálogo de escopo',
+      'Itens parcelados materializados por edição não geram mais projeções duplicadas',
+    ],
+  },
   {
     version: '1.6.24',
     date: '03/06/2026',

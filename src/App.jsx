@@ -24,6 +24,7 @@ import Modal from './components/shared/Modal';
 import TransactionForm from './components/transactions/TransactionForm';
 import { DollarSign } from 'lucide-react';
 import PaymentModal from './components/projection/PaymentModal';
+import { addMonths } from './utils/formatters';
 
 export default function App() {
   const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
@@ -41,6 +42,7 @@ export default function App() {
   const [editingOccDate, setEditingOccDate] = useState(null);
   const [authConfirmed, setAuthConfirmed] = useState(false);
   const [recurrenceAction, setRecurrenceAction] = useState(null);
+  const [cartaoEditScope, setCartaoEditScope] = useState(null);
   const [payingItem, setPayingItem] = useState(null); // { item, occDate }
   const [tourActive, setTourActive] = useState(false);
 
@@ -249,6 +251,50 @@ export default function App() {
           </div>
         </Modal>
 
+        {/* Modal de escopo de edição de fatura parcelada */}
+        {cartaoEditScope && (() => {
+          const itens = cartaoEditScope.cleanData.itens || [];
+          const dataBase = cartaoEditScope.editingOccDate || cartaoEditScope.editing?.dataInicio || '';
+          const endDate = getParceladoEndDate(itens, dataBase);
+          const endFormatted = endDate
+            ? new Date(`${endDate}T12:00:00`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+            : '';
+          return (
+            <Modal
+              open
+              onClose={() => setCartaoEditScope(null)}
+              title="Editar fatura parcelada"
+            >
+              <div style={{ padding: '0 4px', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
+                <p style={{ marginBottom: 4 }}>
+                  Esta fatura contém compras parceladas.
+                </p>
+                {endFormatted && (
+                  <p style={{ marginBottom: 20, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    As parcelas vão até <span style={{ color: 'var(--entrada)' }}>{endFormatted}</span>.
+                  </p>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    onClick={() => confirmCartaoEditScope('single')}
+                    style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
+                  >
+                    Somente esta fatura
+                    <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>As faturas futuras não serão alteradas.</span>
+                  </button>
+                  <button
+                    onClick={() => confirmCartaoEditScope('future')}
+                    style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
+                  >
+                    Esta e todas as futuras
+                    <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>Todas as faturas a partir de agora serão atualizadas.</span>
+                  </button>
+                </div>
+              </div>
+            </Modal>
+          );
+        })()}
+
         {/* Modal de pagamento — centralizado, acessível de todas as telas */}
         {payingItem && (
           <PaymentModal
@@ -314,21 +360,43 @@ export default function App() {
     setFormOpen(true);
   };
 
+  const hasParceladoRestante = (itens) =>
+    itens?.some(i => i.isParcelado && (i.totalParcelas || 1) > (i.parcelaAtual || 1));
+
+  const getParceladoEndDate = (itens, dataInicio) => {
+    let maxRestante = 0;
+    itens?.forEach(i => {
+      if (i.isParcelado) {
+        const restante = (i.totalParcelas || 1) - (i.parcelaAtual || 1);
+        if (restante > maxRestante) maxRestante = restante;
+      }
+    });
+    return addMonths(dataInicio, maxRestante);
+  };
+
   const handleSave = async (data) => {
     const { _overwriteId, ...cleanData } = data;
 
-    // Caso de edição de fatura de cartão virtual projetada
+    // Fatura de cartão com itens parcelados com parcelas restantes → perguntar escopo
+    if (cleanData.tipo === 'cartao' && hasParceladoRestante(cleanData.itens) && editing) {
+      const isVirtualProj = String(editing.id).includes('-proj-');
+      const parentId = isVirtualProj ? editing.id.split('-proj-')[0] : null;
+      const parentTx = parentId ? transactions.find(t => t.id === parentId) : null;
+      setCartaoEditScope({ cleanData, isVirtualProj, parentId, parentTx, editing, editingOccDate });
+      setFormOpen(false);
+      setEditing(null);
+      setEditingOccDate(null);
+      return;
+    }
+
+    // Caso de edição de fatura de cartão virtual projetada (sem parcelado restante)
     if (editing && String(editing.id).includes('-proj-') && editingOccDate) {
       const parentId = editing.id.split('-proj-')[0];
       const parentTx = transactions.find(t => t.id === parentId);
       if (parentTx) {
-        // 1. Exclui a projeção original nesta data
         const exclusoes = [...(parentTx.exclusoes || [])];
         if (!exclusoes.includes(editingOccDate)) exclusoes.push(editingOccDate);
         await update(parentId, { exclusoes });
-
-        // 2. Cria a nova fatura real com os valores modificados.
-        // Usa dados do parentTx para não herdar descrição/cartaoId de tx virtual.
         await add({
           ...cleanData,
           tipo: 'cartao',
@@ -337,17 +405,17 @@ export default function App() {
           descricao: cleanData.descricao?.replace(/\s*\(Parcelas restantes\)/i, '').trim() || parentTx.descricao,
           categoria: null,
           dataFim: null,
-          itens: cleanData.itens || editing.itens || [],
+          itens: (cleanData.itens || editing.itens || []).map(i => ({ ...i, isParcelado: false })),
           cartaoId: parentTx.cartaoId || editing.cartaoId || null,
         });
-        showToast('Fatura editada separadamente!');
+        showToast('Fatura editada!');
       }
       setFormOpen(false);
       setEditing(null);
       setEditingOccDate(null);
       return;
     }
-    
+
     if (editing && ['diario','semanal','mensal','parcelado'].includes(editing.frequencia) && editingOccDate) {
       setRecurrenceAction({ tx: editing, occDate: editingOccDate, newData: cleanData, action: 'edit' });
       setFormOpen(false);
@@ -367,6 +435,68 @@ export default function App() {
     setFormOpen(false);
     setEditing(null);
     setEditingOccDate(null);
+  };
+
+  const confirmCartaoEditScope = async (scope) => {
+    const { cleanData, isVirtualProj, parentId, parentTx, editing: editingSnap, editingOccDate: occDate } = cartaoEditScope;
+    setCartaoEditScope(null);
+
+    if (scope === 'single') {
+      if (isVirtualProj && parentTx) {
+        // Exclui esta data do pai + cria fatura real congelada (sem projeções futuras)
+        const exclusoes = [...(parentTx.exclusoes || [])];
+        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+        await update(parentId, { exclusoes });
+        await add({
+          ...cleanData,
+          tipo: 'cartao',
+          frequencia: 'unico',
+          dataInicio: occDate,
+          descricao: cleanData.descricao?.replace(/\s*\(Parcelas restantes\)/i, '').trim() || parentTx.descricao,
+          categoria: null,
+          dataFim: null,
+          itens: (cleanData.itens || []).map(i => ({ ...i, isParcelado: false })),
+          cartaoId: parentTx.cartaoId || editingSnap.cartaoId || null,
+        });
+      } else {
+        // Doc real: congela este mês + cria novo doc fonte a partir do mês seguinte com itens originais
+        const { id: _id, criadoEm: _c, ...originalBase } = editingSnap;
+        const nextDate = addMonths(editingSnap.dataInicio, 1);
+        const continuationItens = (editingSnap.itens || []).map(i =>
+          i.isParcelado ? { ...i, parcelaAtual: (i.parcelaAtual || 1) + 1 } : i
+        );
+        await update(editingSnap.id, {
+          ...cleanData,
+          itens: (cleanData.itens || []).map(i => ({ ...i, isParcelado: false })),
+        });
+        await add({ ...originalBase, dataInicio: nextDate, exclusoes: [], itens: continuationItens });
+      }
+      showToast('Fatura editada (somente esta)!');
+    } else {
+      // 'future' — esta e todas as futuras
+      if (isVirtualProj && parentTx) {
+        // Encerra o pai antes desta data + cria novo doc real que vira nova fonte
+        const d = new Date(`${occDate}T12:00:00`);
+        d.setDate(d.getDate() - 1);
+        const dataFimPai = d.toISOString().slice(0, 10);
+        await update(parentId, { dataFim: dataFimPai });
+        await add({
+          ...cleanData,
+          tipo: 'cartao',
+          frequencia: 'unico',
+          dataInicio: occDate,
+          descricao: cleanData.descricao?.replace(/\s*\(Parcelas restantes\)/i, '').trim() || parentTx.descricao,
+          categoria: null,
+          dataFim: null,
+          itens: cleanData.itens || [],
+          cartaoId: parentTx.cartaoId || editingSnap.cartaoId || null,
+        });
+      } else {
+        // Doc real: atualiza o doc fonte — todas as projeções futuras refletem automaticamente
+        await update(editingSnap.id, cleanData);
+      }
+      showToast('Fatura e futuras atualizadas!');
+    }
   };
 
   const handleDelete = async (id, occDate) => {
