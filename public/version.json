@@ -1,8 +1,8 @@
 {
-  "version": "1.6.42",
+  "version": "1.6.43",
   "date": "08/06/2026",
   "notes": [
-    "Removido: cards de cartões de crédito da tela inicial — sem integração bancária, gerava confusão",
-    "Removido: alerta de vencimento de fatura na tela inicial"
+    "Alerta de vencimento de fatura restaurado na Home com valor da fatura do mês vinculado aos lançamentos",
+    "Alerta muda de cor: azul (>2 dias), laranja (≤2 dias), vermelho (vence hoje)"
   ]
 }

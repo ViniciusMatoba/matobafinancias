@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.42';
+export const APP_VERSION = '1.6.43';
 export const APP_VERSION_DATE = '08/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.43',
+    date: '08/06/2026',
+    changes: [
+      'Melhoria: alerta de vencimento de fatura restaurado na Home com valor da fatura do mês vinculado',
+      'Melhoria: alerta muda de cor conforme urgência — azul (>2 dias), laranja (≤2 dias), vermelho (hoje)',
+    ],
+  },
   {
     version: '1.6.42',
     date: '08/06/2026',
