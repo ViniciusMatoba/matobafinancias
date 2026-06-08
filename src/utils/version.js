@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.43';
+export const APP_VERSION = '1.6.44';
 export const APP_VERSION_DATE = '08/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.44',
+    date: '08/06/2026',
+    changes: [
+      'Fix: card "Próximas Contas" agora exibe apenas lançamentos concretos — lançamentos do tipo Diário (estimativas) são excluídos e continuam visíveis apenas na tela de Projeção',
+    ],
+  },
   {
     version: '1.6.43',
     date: '08/06/2026',

@@ -13,9 +13,13 @@ export default function ProximasContasCard({ transactions, wallets }) {
   const to7   = addDays(today, 6);
 
   const { days, totalSaidas, totalEntradas } = useMemo(() => {
+    // Exclui lançamentos do tipo "diário" — são estimativas de fluxo,
+    // não compromissos concretos. Devem aparecer apenas na tela de Projeção.
+    const txConcretos = transactions.filter(t => t.tipo !== 'diario');
+
     const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
     const saldoAtual = calcSaldo(transactions, FAR_PAST, addDays(today, -1)) + wInitials;
-    const days = buildDailyProjection(transactions, today, to7, saldoAtual);
+    const days = buildDailyProjection(txConcretos, today, to7, saldoAtual);
     const totalSaidas  = days.reduce((s, d) => s + d.saidas,  0);
     const totalEntradas = days.reduce((s, d) => s + d.entradas, 0);
     return { days, totalSaidas, totalEntradas };
