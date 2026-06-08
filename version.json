@@ -2,8 +2,8 @@
   "version": "1.6.40",
   "date": "08/06/2026",
   "notes": [
-    "Novo: campo 'Quantidade de vezes' nos lançamentos recorrentes — informe quantas vezes e a data fim é calculada automaticamente",
-    "Novo: toggle Data / Qtde disponível para frequências mensal, semanal, diário e tipo Diário",
+    "Novo: campo \"Quantidade de vezes\" nos lançamentos recorrentes — informe quantas vezes e a data fim é calculada automaticamente",
+    "Novo: toggle 📅 Data / 🔢 Qtde disponível para frequências mensal, semanal, diário e tipo Diário",
     "Melhoria: preview da última ocorrência exibida em tempo real ao digitar a quantidade"
   ]
 }
