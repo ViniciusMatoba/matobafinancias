@@ -2,6 +2,6 @@
   "version": "1.6.44",
   "date": "08/06/2026",
   "notes": [
-    "Fix: Próximas Contas exibe apenas lançamentos concretos — estimativas Diário ficam só na Projeção"
+    "Fix: card \"Próximas Contas\" agora exibe apenas lançamentos concretos — lançamentos do tipo Diário (estimativas) são excluídos e continuam visíveis apenas na tela de Projeção"
   ]
 }
