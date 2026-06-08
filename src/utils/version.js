@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.39';
-export const APP_VERSION_DATE = '03/06/2026';
+export const APP_VERSION = '1.6.40';
+export const APP_VERSION_DATE = '08/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.40',
+    date: '08/06/2026',
+    changes: [
+      'Novo: campo "Quantidade de vezes" nos lançamentos recorrentes — informe quantas vezes e a data fim é calculada automaticamente',
+      'Novo: toggle 📅 Data / 🔢 Qtde disponível para frequências mensal, semanal, diário e tipo Diário',
+      'Melhoria: preview da última ocorrência exibida em tempo real ao digitar a quantidade',
+    ],
+  },
   {
     version: '1.6.39',
     date: '03/06/2026',

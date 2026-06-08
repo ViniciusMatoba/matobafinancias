@@ -1,13 +1,9 @@
 {
-  "version": "1.6.39",
-  "date": "03/06/2026",
+  "version": "1.6.40",
+  "date": "08/06/2026",
   "notes": [
-    "Obrigatório: categoria agora é exigida em todos os lançamentos (saída, diário, cartão)",
-    "Novo: card \"Próximas Contas\" na Home — clique para ver fluxo de caixa dos próximos 7 dias",
-    "Novo: resumo automático de virada de mês (aparece nos dias 1–5 com resultado do mês anterior)",
-    "Novo: barra de poupança mensal na meta de Liberdade Financeira (GoalsScreen)",
-    "Novo: gráfico ComposedChart na aba Evolução — entradas, saídas e saldo dos últimos 6 meses",
-    "Bot: novos comandos /proximas, /previsao e /economias",
-    "Notificações: N19 (gasto atípico), N20 (progresso metas sexta), N21 (lembrete conferência dia 20)"
+    "Novo: campo 'Quantidade de vezes' nos lançamentos recorrentes — informe quantas vezes e a data fim é calculada automaticamente",
+    "Novo: toggle Data / Qtde disponível para frequências mensal, semanal, diário e tipo Diário",
+    "Melhoria: preview da última ocorrência exibida em tempo real ao digitar a quantidade"
   ]
 }

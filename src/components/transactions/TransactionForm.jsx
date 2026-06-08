@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths } from '../../utils/formatters';
+import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 import { expandOccurrences } from '../../utils/projectionCalc';
@@ -91,6 +91,10 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   const [novoItem, setNovoItem] = useState({ ...EMPTY_ITEM });
   const [editItemIdx, setEditItemIdx] = useState(null);
 
+  // Toggle do campo "Até quando": 'data' = date picker | 'qtde' = quantidade de repetições
+  const [dataFimMode, setDataFimMode] = useState('data');
+  const [dataFimQtde, setDataFimQtde] = useState('');
+
   // Sincroniza o valor total da fatura com a soma dos itens do cartão
   useEffect(() => {
     if (form.tipo === 'cartao' && itens.length > 0) {
@@ -114,6 +118,11 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
     setErro('');
     if (['tipo', 'descricao', 'valor', 'dataInicio', 'frequencia'].includes(key)) {
       clearDuplicateChoice();
+    }
+    // Ao mudar frequência, resetar modo/qtde do dataFim
+    if (key === 'frequencia' || key === 'tipo') {
+      setDataFimMode('data');
+      setDataFimQtde('');
     }
     setForm(f => ({ ...f, [key]: value }));
   };
@@ -617,39 +626,82 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       </div>
 
       {/* Campo dataFim exclusivo para o tipo diário */}
-      {form.tipo === 'diario' && (
-        <div>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
-            Vigente até{' '}
-            <span style={{ color: 'var(--text-muted)' }}>
-              {form.dataFim ? '(projetado até esta data)' : '(vazio = sem data de fim)'}
-            </span>
-          </label>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              type="date"
-              value={form.dataFim}
-              min={form.dataInicio}
-              onChange={e => set('dataFim', e.target.value)}
-              style={{ colorScheme: 'dark', flex: 1 }}
-            />
-            {form.dataFim && (
-              <button
-                type="button"
-                onClick={() => set('dataFim', '')}
-                title="Remover data de fim (para sempre)"
-                style={{
-                  padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-                  color: 'var(--saida)', cursor: 'pointer', whiteSpace: 'nowrap',
-                }}
-              >
-                ✕ Sem fim
-              </button>
+      {form.tipo === 'diario' && (() => {
+        // Calcula a data fim quando no modo "qtde" — diário usa dias
+        const qtdeNum = parseInt(dataFimQtde) || 0;
+        const calcFimDiario = dataFimMode === 'qtde' && qtdeNum > 0 && form.dataInicio
+          ? addDays(form.dataInicio, qtdeNum - 1)
+          : null;
+        const fmtData = (d) => {
+          if (!d) return '';
+          const [y, m, day] = d.split('-');
+          const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          return `${Number(day)} de ${MESES[Number(m)-1]} de ${y}`;
+        };
+        return (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Vigente até <span style={{ color: 'var(--text-muted)' }}>(vazio = sem fim)</span>
+              </label>
+              {/* Toggle Data / Qtde */}
+              <div style={{ display: 'flex', background: 'var(--bg-surface)', borderRadius: 8, padding: 2, gap: 2 }}>
+                {['data','qtde'].map(mode => (
+                  <button key={mode} type="button"
+                    onClick={() => { setDataFimMode(mode); if (mode === 'data') setDataFimQtde(''); }}
+                    style={{
+                      fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                      background: dataFimMode === mode ? 'var(--primary)' : 'transparent',
+                      color: dataFimMode === mode ? '#fff' : 'var(--text-muted)',
+                    }}>
+                    {mode === 'data' ? '📅 Data' : '🔢 Qtde'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {dataFimMode === 'data' ? (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input type="date" value={form.dataFim} min={form.dataInicio}
+                  onChange={e => set('dataFim', e.target.value)}
+                  style={{ colorScheme: 'dark', flex: 1 }} />
+                {form.dataFim && (
+                  <button type="button" onClick={() => set('dataFim', '')}
+                    style={{ padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                      color: 'var(--saida)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                    ✕ Sem fim
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="number" min="1" max="3650" placeholder="Ex: 30"
+                    value={dataFimQtde}
+                    onChange={e => {
+                      setDataFimQtde(e.target.value);
+                      const n = parseInt(e.target.value) || 0;
+                      if (n > 0 && form.dataInicio) set('dataFim', addDays(form.dataInicio, n - 1));
+                      else set('dataFim', '');
+                    }}
+                    style={{ flex: 1 }} />
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>dias</span>
+                </div>
+                {calcFimDiario && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
+                    padding: '7px 10px', borderRadius: 8,
+                    background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)' }}>
+                    <span style={{ fontSize: 13 }}>📅</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      Vigente até <strong style={{ color: 'var(--diario, #f59e0b)' }}>{fmtData(calcFimDiario)}</strong>
+                    </span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {form.tipo === 'diario' && (
         <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '10px 12px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
@@ -728,14 +780,81 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
         );
       })()}
 
-      {form.tipo !== 'diario' && ['diario', 'semanal', 'mensal'].includes(form.frequencia) && (
-        <div>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
-            Até quando <span style={{ color: 'var(--text-muted)' }}>(vazio = sem fim)</span>
-          </label>
-          <input type="date" value={form.dataFim} onChange={e => set('dataFim', e.target.value)} style={{ colorScheme: 'dark' }} />
-        </div>
-      )}
+      {form.tipo !== 'diario' && ['diario', 'semanal', 'mensal'].includes(form.frequencia) && (() => {
+        // Calcula a data fim de acordo com a frequência e quantidade
+        const qtdeNum = parseInt(dataFimQtde) || 0;
+        const calcFimFreq = dataFimMode === 'qtde' && qtdeNum > 0 && form.dataInicio
+          ? form.frequencia === 'mensal'  ? addMonths(form.dataInicio, qtdeNum - 1)
+          : form.frequencia === 'semanal' ? addWeeks(form.dataInicio, qtdeNum - 1)
+          : addDays(form.dataInicio, qtdeNum - 1)
+          : null;
+        const freqLabel = form.frequencia === 'mensal' ? 'meses'
+          : form.frequencia === 'semanal' ? 'semanas' : 'dias';
+        const fmtMesAno = (d) => {
+          if (!d) return '';
+          const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+          const [y, m, day] = d.split('-').map(Number);
+          return form.frequencia === 'mensal'
+            ? `${MESES[m-1]}/${y}`
+            : `${String(day).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+        };
+        return (
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                Até quando <span style={{ color: 'var(--text-muted)' }}>(vazio = sem fim)</span>
+              </label>
+              {/* Toggle Data / Qtde */}
+              <div style={{ display: 'flex', background: 'var(--bg-surface)', borderRadius: 8, padding: 2, gap: 2 }}>
+                {['data','qtde'].map(mode => (
+                  <button key={mode} type="button"
+                    onClick={() => { setDataFimMode(mode); if (mode === 'data') setDataFimQtde(''); }}
+                    style={{
+                      fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                      background: dataFimMode === mode ? 'var(--primary)' : 'transparent',
+                      color: dataFimMode === mode ? '#fff' : 'var(--text-muted)',
+                    }}>
+                    {mode === 'data' ? '📅 Data' : '🔢 Qtde'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {dataFimMode === 'data' ? (
+              <input type="date" value={form.dataFim} onChange={e => set('dataFim', e.target.value)} style={{ colorScheme: 'dark' }} />
+            ) : (
+              <div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input type="number" min="1" max="600" placeholder="Ex: 12"
+                    value={dataFimQtde}
+                    onChange={e => {
+                      setDataFimQtde(e.target.value);
+                      const n = parseInt(e.target.value) || 0;
+                      if (n > 0 && form.dataInicio) {
+                        const fim = form.frequencia === 'mensal'  ? addMonths(form.dataInicio, n - 1)
+                                  : form.frequencia === 'semanal' ? addWeeks(form.dataInicio, n - 1)
+                                  : addDays(form.dataInicio, n - 1);
+                        set('dataFim', fim);
+                      } else set('dataFim', '');
+                    }}
+                    style={{ flex: 1 }} />
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{freqLabel}</span>
+                </div>
+                {calcFimFreq && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6,
+                    padding: '7px 10px', borderRadius: 8,
+                    background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                    <span style={{ fontSize: 14 }}>📅</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                      Última ocorrência em <strong style={{ color: 'var(--primary)' }}>{fmtMesAno(calcFimFreq)}</strong>
+                      <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>· {qtdeNum}× no total</span>
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Cartão selector */}
       {form.tipo === 'cartao' && cards?.length > 0 && (
