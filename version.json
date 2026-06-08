@@ -2,7 +2,7 @@
   "version": "1.6.43",
   "date": "08/06/2026",
   "notes": [
-    "Alerta de vencimento de fatura restaurado na Home com valor da fatura do mês vinculado aos lançamentos",
-    "Alerta muda de cor: azul (>2 dias), laranja (≤2 dias), vermelho (vence hoje)"
+    "Melhoria: alerta de vencimento de fatura restaurado na Home com valor da fatura do mês vinculado",
+    "Melhoria: alerta muda de cor conforme urgência — azul (>2 dias), laranja (≤2 dias), vermelho (hoje)"
   ]
 }
