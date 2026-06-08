@@ -1,8 +1,7 @@
 {
-  "version": "1.6.43",
+  "version": "1.6.44",
   "date": "08/06/2026",
   "notes": [
-    "Melhoria: alerta de vencimento de fatura restaurado na Home com valor da fatura do mês vinculado",
-    "Melhoria: alerta muda de cor conforme urgência — azul (>2 dias), laranja (≤2 dias), vermelho (hoje)"
+    "Fix: Próximas Contas exibe apenas lançamentos concretos — estimativas Diário ficam só na Projeção"
   ]
 }
