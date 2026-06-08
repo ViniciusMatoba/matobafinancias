@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.41';
+export const APP_VERSION = '1.6.42';
 export const APP_VERSION_DATE = '08/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.42',
+    date: '08/06/2026',
+    changes: [
+      'Removido: cards de cartões de crédito da tela inicial (limite/disponível) — não havia integração com bancos, gerava confusão',
+      'Removido: alerta de vencimento de fatura na tela inicial',
+    ],
+  },
   {
     version: '1.6.41',
     date: '08/06/2026',

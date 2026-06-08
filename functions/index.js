@@ -107,13 +107,25 @@ function dateStrFromDate(dt) {
 /**
  * Avança `cur` em 1 mês, travando o dia no último dia do mês destino.
  * Corrige o overflow do JavaScript (ex: 31 jan + 1 mês → 28/29 fev, não 3 mar).
+ * @deprecated Prefira addOneMonthClampedTo(cur, origDay) para preservar o dia original.
  */
 function addOneMonthClamped(cur) {
   const day = cur.getDate();
-  cur.setDate(1); // evita overflow ao mudar o mês
+  cur.setDate(1);
   cur.setMonth(cur.getMonth() + 1);
   const lastDay = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
   cur.setDate(Math.min(day, lastDay));
+}
+
+/**
+ * Avança `cur` em 1 mês usando `origDay` como dia-alvo, fazendo clamp ao último
+ * dia do mês destino. Resolve o drift acumulado: Jan 31 → Fev 28 → Mar 31 (correto).
+ */
+function addOneMonthClampedTo(cur, origDay) {
+  cur.setDate(1);
+  cur.setMonth(cur.getMonth() + 1);
+  const lastDay = new Date(cur.getFullYear(), cur.getMonth() + 1, 0).getDate();
+  cur.setDate(Math.min(origDay, lastDay));
 }
 
 function formatBRL(n) {
@@ -203,12 +215,13 @@ function expandRange(transactions, from, to) {
       }
 
     } else if (tx.frequencia === 'mensal') {
-      const end = tx.dataFim && tx.dataFim < to ? tx.dataFim : to;
+      const end     = tx.dataFim && tx.dataFim < to ? tx.dataFim : to;
+      const origDay = new Date(tx.dataInicio + 'T00:00:00').getDate();
       let cur = new Date(tx.dataInicio + 'T00:00:00');
       while (dateStrFromDate(cur) <= end) {
         const ds = dateStrFromDate(cur);
         if (ds >= from) push(ds);
-        addOneMonthClamped(cur);
+        addOneMonthClampedTo(cur, origDay); // preserva dia original (ex.: 31 → Mar 31)
       }
 
     } else if (tx.frequencia === 'semanal') {
@@ -424,7 +437,8 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
           if (isEnt) entradas += v; else saidas += v;
         }
       } else if (tx.frequencia === 'mensal') {
-        // Expande ocorrências mensais dentro da janela
+        // Expande ocorrências mensais dentro da janela (preservando dia original)
+        const origDay7 = new Date(tx.dataInicio + 'T00:00:00').getDate();
         let cur = new Date(tx.dataInicio + 'T00:00:00');
         const endDate = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
         while (dateStrFromDate(cur) <= endDate) {
@@ -432,7 +446,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
           if (ds >= fromStr) {
             if (isEnt) entradas += v; else saidas += v;
           }
-          addOneMonthClamped(cur);
+          addOneMonthClampedTo(cur, origDay7);
         }
       } else if (tx.frequencia === 'semanal') {
         let cur = new Date(tx.dataInicio + 'T00:00:00');
@@ -468,29 +482,34 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
 
     if (enviarN8) {
     const saldoAtual = calcSaldoSimples(transactions, todayStr, walletInitials);
-    const lancHoje   = transactions.filter(tx =>
-      tx.dataInicio === todayStr && tx.frequencia === 'unico'
-    );
+    // Expande TODAS as ocorrências de hoje (unico, recorrentes, parcelados, diario)
+    const occsHoje   = expandRange(transactions, todayStr, todayStr);
 
     const [, , dd] = todayStr.split('-');
     const nomeMesHoje = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
     let msg = `🌅 *Bom dia! Resumo de ${dd} de ${nomeMesHoje}*\n\n`;
     msg += `💰 Saldo atual: *${formatBRL(saldoAtual)}*\n\n`;
 
-    if (lancHoje.length > 0) {
+    if (occsHoje.length > 0) {
       let entH = 0, saiH = 0;
       msg += `📋 *Lançamentos de hoje:*\n`;
-      for (const tx of lancHoje) {
-        const v    = Number(tx.valor) || 0;
-        const icon = tx.tipo === 'entrada' ? '✅' : '❌';
-        const sign = tx.tipo === 'entrada' ? '+' : '-';
-        msg += `${icon} ${tx.descricao || tx.tipo}: *${sign}${formatBRL(v)}*\n`;
-        if (tx.tipo === 'entrada') entH += v; else saiH += v;
+      for (const o of occsHoje) {
+        const v    = o.valor;
+        const icon = o.tipo === 'entrada' ? '✅' : '❌';
+        const sign = o.tipo === 'entrada' ? '+' : '-';
+        const desc = o.tx?.descricao || o.tipo;
+        // Indica se é recorrente ou parcelado
+        const freqTag = o.tx?.frequencia === 'mensal' ? ' 🔄' :
+                        o.tx?.frequencia === 'semanal' ? ' 🔄' :
+                        o.tx?.frequencia === 'parcelado' ? ` (${o.tx.parcelaAtual}/${o.tx.totalParcelas}x)` :
+                        o.tx?.tipo === 'diario' ? ' (diário)' : '';
+        msg += `${icon} ${desc}${freqTag}: *${sign}${formatBRL(v)}*\n`;
+        if (o.tipo === 'entrada') entH += v; else saiH += v;
       }
-      if (lancHoje.length > 1) msg += `_Saldo do dia: ${formatBRL(entH - saiH)}_\n\n`;
+      if (occsHoje.length > 1) msg += `_Saldo do dia: ${formatBRL(entH - saiH)}_\n\n`;
       else msg += '\n';
     } else {
-      msg += `_Nenhum lançamento avulso para hoje._\n\n`;
+      msg += `_Nenhum lançamento para hoje._\n\n`;
     }
 
     // Inclui faturas só se N1 estiver explicitamente desativado
@@ -524,12 +543,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
           if (tx.dataInicio.startsWith(currentMonth)) totalGasto += v;
         } else if (tx.frequencia === 'mensal') {
           if (tx.dataInicio <= todayStr) {
+            const origDay9 = new Date(tx.dataInicio + 'T00:00:00').getDate();
             const end = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
             let cur = new Date(tx.dataInicio + 'T00:00:00');
             while (dateStrFromDate(cur) <= end) {
               const curStr = dateStrFromDate(cur);
               if (curStr.startsWith(currentMonth)) totalGasto += v;
-              addOneMonthClamped(cur);
+              addOneMonthClampedTo(cur, origDay9);
             }
           }
         }
@@ -645,12 +665,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
           if (tx.dataInicio.startsWith(targetMonth)) total += v;
         } else if (tx.frequencia === 'mensal') {
           if (tx.dataInicio <= todayStr) {
+            const origDay12 = new Date(tx.dataInicio + 'T00:00:00').getDate();
             const end = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
             let cur = new Date(tx.dataInicio + 'T00:00:00');
             while (dateStrFromDate(cur) <= end) {
               const curStr = dateStrFromDate(cur);
               if (curStr.startsWith(targetMonth)) total += v;
-              addOneMonthClamped(cur);
+              addOneMonthClampedTo(cur, origDay12);
             }
           }
         }
@@ -807,10 +828,14 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     if (metasComMeta.length > 0) {
       let msg = `🎯 *Progresso das Metas — Semana*\n\n`;
       metasComMeta.forEach(g => {
-        const pct = Math.min(100, Math.round((g.saldo / g.metaFinal) * 100));
+        // g.saldo não é persistido no Firestore — calcula a partir das transações vinculadas
+        const saldoMeta = transactions
+          .filter(t => t.metaId === g.id)
+          .reduce((acc, t) => t.tipo === 'saida' ? acc - (Number(t.valor) || 0) : acc + (Number(t.valor) || 0), 0);
+        const pct = Math.min(100, Math.round((saldoMeta / g.metaFinal) * 100));
         const barF = Math.round(pct / 10);
         const barLine = '█'.repeat(barF) + '░'.repeat(10 - barF);
-        msg += `${g.nome}: *${formatBRL(g.saldo)}* / ${formatBRL(g.metaFinal)} (${pct}%)\n`;
+        msg += `${g.nome}: *${formatBRL(saldoMeta)}* / ${formatBRL(g.metaFinal)} (${pct}%)\n`;
         msg += `\`[${barLine}]\`\n\n`;
       });
       msgs.push(msg.trim());
@@ -1025,13 +1050,18 @@ async function handleHoje(chatId, uid) {
     for (const o of occs) {
       const sign = o.tipo === 'entrada' ? '+' : '-';
       const icon = o.tipo === 'entrada' ? '✅' : '❌';
-      // Busca descrição na tx original
-      const tx = transactions.find(t => {
-        const v = Number(t.valor) || 0;
-        return Math.abs(v - o.valor) < 0.01 && t.tipo === o.tipo;
-      });
-      const desc = tx?.descricao || o.tipo;
-      text += `${icon} ${desc}: *${sign}${formatBRL(o.valor)}*\n`;
+      // o.tx já contém a transação original — não precisa de find()
+      const desc = o.tx?.descricao || o.tipo;
+      const freqTag = o.tx?.frequencia === 'mensal' ? ' 🔄' :
+                      o.tx?.frequencia === 'semanal' ? ' 🔄' :
+                      o.tx?.frequencia === 'parcelado' ? ` (${o.tx.parcelaAtual}/${o.tx.totalParcelas}x)` :
+                      o.tx?.tipo === 'diario' ? ' (diário)' : '';
+      // Conferido?
+      const isConf = o.tx?.frequencia === 'unico' || o.tx?.frequencia === 'parcelado'
+        ? !!o.tx?.conferido
+        : !!(o.tx?.conferidos && o.tx.conferidos.includes(o.date));
+      const confTag = isConf ? ' ✔️' : ' ⏳';
+      text += `${icon} ${desc}${freqTag}${confTag}: *${sign}${formatBRL(o.valor)}*\n`;
       if (o.tipo === 'entrada') entradas += o.valor; else saidas += o.valor;
     }
     text += `\n─────────────────\n`;

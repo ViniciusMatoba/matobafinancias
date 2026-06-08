@@ -322,8 +322,8 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
         {/* Contas/Carteiras em Scroll Horizontal */}
         {walletsStats.length > 0 && (
-          <div style={{ 
-            display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 16, marginBottom: cardsStats.length > 0 ? 8 : (summaryCards.length > 0 ? 8 : 0),
+          <div style={{
+            display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 16, marginBottom: summaryCards.length > 0 ? 8 : 0,
             scrollbarWidth: 'none' // Firefox
           }}>
             {walletsStats.map(w => (
@@ -337,35 +337,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                 <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: w.saldoAtual >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
                   {formatBRL(w.saldoAtual)}
                 </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Cartões de Crédito em Scroll Horizontal (Limite Comprometido) */}
-        {cardsStats.length > 0 && (
-          <div style={{ 
-            display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 16, marginBottom: summaryCards.length > 0 ? 8 : 0,
-            scrollbarWidth: 'none' // Firefox
-          }}>
-            {cardsStats.map(c => (
-              <div key={c.id} style={{
-                minWidth: 160, background: 'var(--bg-card)', border: `1px solid ${c.cor}40`,
-                borderRadius: 14, padding: '12px 14px', flexShrink: 0,
-                position: 'relative', overflow: 'hidden'
-              }}>
-                <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: c.cor }} />
-                <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                  💳 {c.nome}
-                </p>
-                <p style={{ margin: '0 0 2px', fontSize: 9, color: 'var(--text-muted)' }}>Disponível:</p>
-                <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: 'var(--entrada)' }}>
-                  {formatBRL(c.limiteDisponivel)}
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-secondary)', borderTop: '1px solid var(--border)', paddingTop: 4 }}>
-                  <span>Fatura: {formatBRL(c.faturaAtual)}</span>
-                  <span style={{ color: 'var(--text-muted)' }}>Fração: {Math.round((c.totalComprometido / (c.limite || 1)) * 100)}%</span>
-                </div>
               </div>
             ))}
           </div>
@@ -473,31 +444,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         </div>
       )}
 
-      {/* Alertas de cartão */}
-      {cardAlerts.length > 0 && (
-        <div style={{ padding: '16px 20px 0' }}>
-          {cardAlerts.map(card => (
-            <div key={card.id} style={{
-              display: 'flex', alignItems: 'center', gap: 10,
-              background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)',
-              borderRadius: 12, padding: '12px 14px', marginBottom: 8,
-            }}>
-              <AlertCircle size={16} color="var(--cartao)" />
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)' }}>
-                  Fatura {card.nome} vence dia {card.diaVencimento}
-                </p>
-                {card.limite && (
-                  <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)' }}>Limite: {formatBRL(card.limite)}</p>
-                )}
-              </div>
-              <button onClick={() => onNavigate('settings')} style={{ fontSize: 11, color: 'var(--cartao)', background: 'none' }}>
-                Ver
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Card de Próximas Contas — fluxo dos próximos 7 dias */}
       <div style={{ padding: '0 20px' }}>
