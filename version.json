@@ -2,7 +2,7 @@
   "version": "1.6.42",
   "date": "08/06/2026",
   "notes": [
-    "Removido: cards de cartões de crédito da tela inicial — sem integração bancária, gerava confusão",
+    "Removido: cards de cartões de crédito da tela inicial (limite/disponível) — não havia integração com bancos, gerava confusão",
     "Removido: alerta de vencimento de fatura na tela inicial"
   ]
 }
