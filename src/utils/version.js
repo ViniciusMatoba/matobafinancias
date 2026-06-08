@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.44';
+export const APP_VERSION = '1.6.45';
 export const APP_VERSION_DATE = '08/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.45',
+    date: '08/06/2026',
+    changes: [
+      'Fix: bot Telegram agora exibe o SALDO GLOBAL correto — transações do tipo "Diário" (estimativas) não eram excluídas do saldo passado, gerando valores inflados',
+      'Fix: alertas de orçamento por categoria (N4/N5) continuam contando estimativas diárias para fins de planejamento',
+    ],
+  },
   {
     version: '1.6.44',
     date: '08/06/2026',

@@ -153,14 +153,27 @@ const APP_URL = 'https://viniciusmatoba.github.io/matobafinancias/';
 // Retorna array de { date, valor, tipo }
 const TYPE_SIGN = { entrada: +1, saida: -1, diario: -1, cartao: -1, investimento: -1 };
 
-function expandRange(transactions, from, to) {
+/**
+ * Expande transações no intervalo [from, to].
+ * @param {boolean} historical — quando true, inclui ocorrências passadas de tipo='diario'
+ *   (estimativas diárias). Quando false (padrão), omite-as, espelhando o comportamento
+ *   do frontend: gastos diários são provisões, não saídas reais confirmadas.
+ */
+function expandRange(transactions, from, to, { historical = false } = {}) {
+  const today = todayStrBrasilia();
   const occs = [];
   for (const tx of transactions) {
     if (!tx.dataInicio || tx.dataInicio > to) continue;
     const v       = Number(tx.valor) || 0;
     if (!v) continue;
     const excl    = Array.isArray(tx.exclusoes) ? tx.exclusoes : [];
-    const push    = (ds) => { if (!excl.includes(ds)) occs.push({ date: ds, valor: v, tipo: tx.tipo, tx }); };
+    // Espelha a regra do frontend: ocorrências passadas de tipo 'diario' só entram
+    // em modo histórico — no cálculo de saldo normal são ignoradas.
+    const push    = (ds) => {
+      if (excl.includes(ds)) return;
+      if (!historical && tx.tipo === 'diario' && ds < today) return;
+      occs.push({ date: ds, valor: v, tipo: tx.tipo, tx });
+    };
 
     if (tx.frequencia === 'unico') {
       if (tx.dataInicio >= from && tx.dataInicio <= to) push(tx.dataInicio);
@@ -269,7 +282,9 @@ function computeSpentByCategory(transactions, currentMonth) {
   const from = `${currentMonth}-01`;
   const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
 
-  const occs = expandRange(transactions, from, to);
+  // historical=true: inclui estimativas diárias passadas no cômputo de orçamento,
+  // pois elas representam gastos previstos por categoria (alimentação, moradia, etc.)
+  const occs = expandRange(transactions, from, to, { historical: true });
 
   for (const o of occs) {
     const tx = o.tx;

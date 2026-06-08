@@ -1,7 +1,7 @@
 {
-  "version": "1.6.44",
+  "version": "1.6.45",
   "date": "08/06/2026",
   "notes": [
-    "Fix: Próximas Contas exibe apenas lançamentos concretos — estimativas Diário ficam só na Projeção"
+    "Fix: bot Telegram agora exibe o SALDO GLOBAL correto — estimativas diárias não inflarão mais o saldo passado"
   ]
 }
