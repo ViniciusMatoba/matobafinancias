@@ -72,7 +72,12 @@ export function expandOccurrences(tx, from, to, { historical = false } = {}) {
     return occurrences;
   }
 
+  // Para frequência mensal, preserva o dia original para não perder o "dia 31"
+  // quando passar por meses mais curtos (e.g. Jan 31 → Fev 28 → Mar 31, não Mar 28).
+  const originDay = tx.frequencia === 'mensal' ? parseInt(tx.dataInicio.slice(8, 10), 10) : null;
+
   let current = tx.dataInicio;
+  let monthOffset = 0;
   const limit = tx.dataFim || to;
 
   while (current <= to && current <= limit) {
@@ -83,10 +88,23 @@ export function expandOccurrences(tx, from, to, { historical = false } = {}) {
         }
       }
     }
-    if (tx.frequencia === 'diario')   current = addDays(current, 1);
-    else if (tx.frequencia === 'semanal')  current = addWeeks(current, 1);
-    else if (tx.frequencia === 'mensal')   current = addMonths(current, 1);
-    else break;
+    if (tx.frequencia === 'diario') {
+      current = addDays(current, 1);
+    } else if (tx.frequencia === 'semanal') {
+      current = addWeeks(current, 1);
+    } else if (tx.frequencia === 'mensal') {
+      // Avança sempre a partir da data de início com o dia original preservado,
+      // aplicando clamp ao último dia do mês destino.
+      monthOffset += 1;
+      const [y, m] = tx.dataInicio.split('-').map(Number);
+      const targetYear  = y + Math.floor((m - 1 + monthOffset) / 12);
+      const targetMonth = ((m - 1 + monthOffset) % 12 + 12) % 12; // 0-indexed
+      const lastDay     = new Date(targetYear, targetMonth + 1, 0).getDate();
+      const day         = Math.min(originDay, lastDay);
+      current = `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    } else {
+      break;
+    }
   }
 
   return occurrences;

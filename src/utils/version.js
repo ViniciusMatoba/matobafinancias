@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.40';
+export const APP_VERSION = '1.6.41';
 export const APP_VERSION_DATE = '08/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.41',
+    date: '08/06/2026',
+    changes: [
+      'Fix: lançamentos mensais no dia 31 (ou 30) agora preservam o dia original em todos os meses — quando o mês não tem o dia, usa o último dia do mês; no mês seguinte volta ao dia correto',
+    ],
+  },
   {
     version: '1.6.40',
     date: '08/06/2026',
