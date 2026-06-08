@@ -2,6 +2,7 @@
   "version": "1.6.45",
   "date": "08/06/2026",
   "notes": [
-    "Fix: bot Telegram agora exibe o SALDO GLOBAL correto — estimativas diárias não inflarão mais o saldo passado"
+    "Fix: bot Telegram agora exibe o SALDO GLOBAL correto — transações do tipo \"Diário\" (estimativas) não eram excluídas do saldo passado, gerando valores inflados",
+    "Fix: alertas de orçamento por categoria (N4/N5) continuam contando estimativas diárias para fins de planejamento"
   ]
 }
