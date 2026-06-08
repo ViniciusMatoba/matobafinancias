@@ -1,7 +1,8 @@
 {
-  "version": "1.6.41",
+  "version": "1.6.42",
   "date": "08/06/2026",
   "notes": [
-    "Fix: lançamentos mensais no dia 31 (ou 30) agora preservam o dia original em todos os meses — quando o mês não tem o dia, usa o último dia do mês; no mês seguinte volta ao dia correto"
+    "Removido: cards de cartões de crédito da tela inicial — sem integração bancária, gerava confusão",
+    "Removido: alerta de vencimento de fatura na tela inicial"
   ]
 }
