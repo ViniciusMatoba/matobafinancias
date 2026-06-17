@@ -1,13 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { isConfigured } from './firebase';
 import { useAuth } from './hooks/useAuth';
-import { useVersionCheck, triggerUpdate } from './hooks/useVersionCheck';
-import { useTransactions } from './hooks/useTransactions';
-import { useCards } from './hooks/useCards';
-import { useWallets } from './hooks/useWallets';
-import { useGoals } from './hooks/useGoals';
-import { useConfig } from './hooks/useConfig';
-import { useToast } from './components/shared/Toast';
+import { AppProvider, useAppState } from './context/AppContext';
 import AuthScreen from './components/auth/AuthScreen';
 import SetupScreen from './components/auth/SetupScreen';
 import SetupGoalsScreen from './components/onboarding/SetupGoalsScreen';
@@ -23,123 +17,34 @@ import Modal from './components/shared/Modal';
 import TransactionForm from './components/transactions/TransactionForm';
 import { DollarSign } from 'lucide-react';
 import PaymentModal from './components/projection/PaymentModal';
-import { addMonths, todayStr } from './utils/formatters';
-import { expandOccurrences } from './utils/projectionCalc';
-import { PERCENTUAL_CATEGORIES } from './utils/categories';
 
-export default function App() {
-  const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
-  const { transactions, loading: transactionsLoading, add, update, remove } = useTransactions(user?.uid);
-  const { cards, loading: cardsLoading, add: addCard, update: updateCard, remove: removeCard } = useCards(user?.uid);
-  const { wallets, loading: walletsLoading, add: addWallet, update: updateWallet, remove: removeWallet } = useWallets(user?.uid);
-  const { goals, loading: goalsLoading, add: addGoal, update: updateGoal, remove: removeGoal } = useGoals(user?.uid);
-  const { config, configLoading, saveConfig } = useConfig(user?.uid);
-  const { showToast, ToastNode } = useToast();
-  const { updateAvailable, latestVersion, latestNotes } = useVersionCheck();
+// ── Shell interno — renderiza as telas usando o contexto ──────────────────────
+function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, loginWithGoogle, logout, redirectError }) {
+  const {
+    transactions, cards, wallets, goals, config, saveConfig, dataLoading,
+    addCard, updateCard, removeCard,
+    addWallet, updateWallet, removeWallet,
+    addGoal, updateGoal, removeGoal,
+    updateAvailable, latestVersion, latestNotes, isUpdating, handleUpdate,
+    view,
+    formOpen, setFormOpen,
+    editing, setEditing, setEditingOccDate,
+    recurrenceAction, setRecurrenceAction,
+    cartaoEditScope, setCartaoEditScope,
+    payingItem, setPayingItem,
+    tourActive,
+    showMonthRecap, setShowMonthRecap,
+    monthRecapData,
+    showToast, ToastNode,
+    handleNavigate, handleEdit, handleClone,
+    handleSave, handleDelete, handleAdjustBalance,
+    openPayModal, confirmPayment,
+    confirmCartaoEditScope, confirmRecurrenceAction,
+    handleCompleteTour,
+    getParceladoEndDate,
+    update,
+  } = useAppState();
 
-  const [view, setView] = useState('home');
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [editingOccDate, setEditingOccDate] = useState(null);
-  const [authConfirmed, setAuthConfirmed] = useState(false);
-  const [recurrenceAction, setRecurrenceAction] = useState(null);
-  const [cartaoEditScope, setCartaoEditScope] = useState(null);
-  const [payingItem, setPayingItem] = useState(null); // { item, occDate }
-  const [tourActive, setTourActive] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [showMonthRecap, setShowMonthRecap] = useState(false);
-  const [monthRecapData, setMonthRecapData] = useState(null);
-
-  const handleUpdate = async () => {
-    setIsUpdating(true);
-    setTimeout(() => window.location.reload(), 8000);
-    await triggerUpdate();
-  };
-
-  // Combina todos os status de carregamento do Firestore
-  const dataLoading = configLoading || transactionsLoading || walletsLoading || goalsLoading || cardsLoading;
-
-  // Se o usuário acabou de voltar de um login Google via redirect
-  useEffect(() => {
-    if (justLoggedIn) {
-      Promise.resolve().then(() => {
-        setAuthConfirmed(true);
-      });
-    }
-  }, [justLoggedIn]);
-
-  // Ativa o tour guiado se o onboarding estiver concluído e o tour não tiver sido feito
-  useEffect(() => {
-    if (user && config && config.onboardingDone && !config.tourDone) {
-      Promise.resolve().then(() => {
-        setTourActive(true);
-      });
-    }
-  }, [user, config]);
-
-  const handleCompleteTour = async () => {
-    setTourActive(false);
-    await saveConfig({ tourDone: true });
-    showToast('🏆 Tour guiado concluído! Aproveite o app.');
-  };
-
-  // Resumo automático de virada de mês (aparece uma vez por mês nos dias 1–5)
-  useEffect(() => {
-    if (!user || !transactions.length || dataLoading) return;
-    const today = new Date();
-    if (today.getDate() > 5) return;
-    const recapKey = `matoba:recap:${user.uid}:${today.toISOString().slice(0, 7)}`;
-    if (localStorage.getItem(recapKey)) return;
-
-    // Calcula dados do mês anterior
-    const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const prevY = prevMonth.getFullYear();
-    const prevM = prevMonth.getMonth() + 1;
-    const prevMonthStr = `${prevY}-${String(prevM).padStart(2,'0')}`;
-    const from = `${prevMonthStr}-01`;
-    const lastDay = new Date(prevY, prevM, 0).getDate();
-    const to   = `${prevMonthStr}-${String(lastDay).padStart(2,'0')}`;
-
-    let entradas = 0, saidas = 0;
-    const catTotals = {};
-    transactions.forEach(tx => {
-      expandOccurrences(tx, from, to).forEach(occ => {
-        if (occ.sinal > 0) entradas += occ.valor;
-        else {
-          saidas += occ.valor;
-          const cat = tx.categoria || 'outros';
-          catTotals[cat] = (catTotals[cat] || 0) + occ.valor;
-        }
-      });
-    });
-
-    const rendaMensal = config?.rendaMensal || 0;
-    const budgetPcts  = config?.budgetPcts  || {};
-    let melhorCat = null, piorCat = null;
-    let melhorPct = Infinity, piorPct = -Infinity;
-    Object.entries(catTotals).forEach(([catId, gasto]) => {
-      const budget = rendaMensal > 0 ? (rendaMensal * (budgetPcts[catId] || 0)) / 100 : 0;
-      if (budget > 0) {
-        const pct = gasto / budget;
-        if (pct < melhorPct) { melhorPct = pct; melhorCat = catId; }
-        if (pct > piorPct)   { piorPct  = pct; piorCat  = catId; }
-      }
-    });
-
-    const MONTH_NAMES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-    Promise.resolve().then(() => {
-      setMonthRecapData({
-        mesNome: MONTH_NAMES_FULL[prevM - 1],
-        entradas, saidas, resultado: entradas - saidas,
-        melhorCat: melhorCat ? PERCENTUAL_CATEGORIES[melhorCat]?.label : null,
-        piorCat:   piorCat   ? PERCENTUAL_CATEGORIES[piorCat]?.label   : null,
-        recapKey,
-      });
-      setShowMonthRecap(true);
-    });
-  }, [user, transactions, dataLoading, config?.rendaMensal, config?.budgetPcts]);
-
-  // Função auxiliar para renderizar a tela ativa com base no estado de forma estável
   const renderScreen = () => {
     if (!isConfigured) return <SetupScreen />;
 
@@ -155,9 +60,9 @@ export default function App() {
           }}>
             <DollarSign size={36} color="#fff" />
           </div>
-          <h1 style={{ 
-            margin: 0, fontSize: 24, fontWeight: 700, 
-            background: 'linear-gradient(135deg, #fff, #A1A5C1)', 
+          <h1 style={{
+            margin: 0, fontSize: 24, fontWeight: 700,
+            background: 'linear-gradient(135deg, #fff, #A1A5C1)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             animation: 'fadeIn 1s ease-out'
           }}>
@@ -259,7 +164,7 @@ export default function App() {
             onUpdateWallet={updateWallet}
             onRemoveWallet={removeWallet}
             onLogout={logout}
-            onResetTour={async () => { await saveConfig({ tourDone: false }); setView('home'); }}
+            onResetTour={async () => { await saveConfig({ tourDone: false }); }}
             onUpdateApp={handleUpdate}
           />
         )}
@@ -314,7 +219,7 @@ export default function App() {
               )}
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  onClick={() => { setShowMonthRecap(false); localStorage.setItem(monthRecapData.recapKey, '1'); setView('projection'); }}
+                  onClick={() => { setShowMonthRecap(false); localStorage.setItem(monthRecapData.recapKey, '1'); handleNavigate('projection'); }}
                   style={{ flex: 1, padding: '12px', borderRadius: 12, fontSize: 13, fontWeight: 600, background: 'var(--primary)', color: '#fff', border: 'none', cursor: 'pointer' }}
                 >
                   Ver Histórico
@@ -342,24 +247,15 @@ export default function App() {
               Você deseja aplicar essa alteração apenas nesta ocorrência, ou nas futuras também?
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <button
-                onClick={() => confirmRecurrenceAction('single')}
-                style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
-              >
+              <button onClick={() => confirmRecurrenceAction('single')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}>
                 Apenas nesta ocorrência
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>As outras ocorrências não serão afetadas.</span>
               </button>
-              <button
-                onClick={() => confirmRecurrenceAction('future')}
-                style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
-              >
+              <button onClick={() => confirmRecurrenceAction('future')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}>
                 Nesta e nas futuras
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>Ocorrências passadas continuarão com o valor antigo.</span>
               </button>
-              <button
-                onClick={() => confirmRecurrenceAction('all')}
-                style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
-              >
+              <button onClick={() => confirmRecurrenceAction('all')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}>
                 Em todas as ocorrências
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--saida)', marginTop: 2 }}>Cuidado: isso vai alterar seu histórico passado também.</span>
               </button>
@@ -376,32 +272,20 @@ export default function App() {
             ? new Date(`${endDate}T12:00:00`).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
             : '';
           return (
-            <Modal
-              open
-              onClose={() => setCartaoEditScope(null)}
-              title="Editar fatura parcelada"
-            >
+            <Modal open onClose={() => setCartaoEditScope(null)} title="Editar fatura parcelada">
               <div style={{ padding: '0 4px', color: 'var(--text-secondary)', fontSize: 14, lineHeight: 1.5 }}>
-                <p style={{ marginBottom: 4 }}>
-                  Esta fatura contém compras parceladas.
-                </p>
+                <p style={{ marginBottom: 4 }}>Esta fatura contém compras parceladas.</p>
                 {endFormatted && (
                   <p style={{ marginBottom: 20, fontWeight: 600, color: 'var(--text-primary)' }}>
                     As parcelas vão até <span style={{ color: 'var(--entrada)' }}>{endFormatted}</span>.
                   </p>
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <button
-                    onClick={() => confirmCartaoEditScope('single')}
-                    style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
-                  >
+                  <button onClick={() => confirmCartaoEditScope('single')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}>
                     Somente esta fatura
                     <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>As faturas futuras não serão alteradas.</span>
                   </button>
-                  <button
-                    onClick={() => confirmCartaoEditScope('future')}
-                    style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}
-                  >
+                  <button onClick={() => confirmCartaoEditScope('future')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}>
                     Esta e todas as futuras
                     <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>Todas as faturas a partir de agora serão atualizadas.</span>
                   </button>
@@ -411,7 +295,7 @@ export default function App() {
           );
         })()}
 
-        {/* Modal de pagamento — centralizado, acessível de todas as telas */}
+        {/* Modal de pagamento */}
         {payingItem && (
           <PaymentModal
             item={payingItem.item}
@@ -421,423 +305,14 @@ export default function App() {
           />
         )}
 
-        {/* Tour Guiado */}
-        {tourActive && (
-          <TourGuide onComplete={handleCompleteTour} />
-        )}
+        {tourActive && <TourGuide onComplete={handleCompleteTour} />}
       </>
     );
   };
 
-  // ── Ajuste manual do saldo global ────────────────────────────────────────────
-  const handleAdjustBalance = async (diff, justificativa) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const isPositive = diff > 0;
-    const valor = Math.abs(diff);
-
-    const descricao = isPositive
-      ? 'Ajuste de saldo'
-      : `Ajuste de saldo – ${justificativa}`;
-
-    await add({
-      tipo:       isPositive ? 'entrada' : 'saida',
-      frequencia: 'unico',
-      descricao,
-      valor,
-      dataInicio: today,
-      categoria:  null,
-      dataFim:    null,
-      conferido:  true,
-    });
-
-    showToast(
-      isPositive
-        ? `✅ Saldo ajustado: +${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}`
-        : `✅ Ajuste de saldo registrado: −${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor)}`
-    );
-  };
-
-  const handleNavigate = useCallback((dest) => {
-    if (dest === 'add') { setEditing(null); setFormOpen(true); return; }
-    setView(dest);
-  }, []);
-
-  const handleEdit = useCallback((tx, occDate) => { setEditing(tx); setEditingOccDate(occDate); setFormOpen(true); }, []);
-
-  const handleClone = useCallback((tx) => {
-    // eslint-disable-next-line no-unused-vars
-    const { id, criadoEm, exclusoes, dataFim, ...cloneBase } = tx;
-    const cloned = {
-      ...cloneBase,
-      dataInicio: new Date().toISOString().slice(0, 10),
-    };
-    setEditing(cloned);
-    setEditingOccDate(null);
-    setFormOpen(true);
-  }, []);
-
-  const hasParceladoRestante = (itens) =>
-    itens?.some(i => i.isParcelado && (i.totalParcelas || 1) > (i.parcelaAtual || 1));
-
-  const getParceladoEndDate = (itens, dataInicio) => {
-    let maxRestante = 0;
-    itens?.forEach(i => {
-      if (i.isParcelado) {
-        const restante = (i.totalParcelas || 1) - (i.parcelaAtual || 1);
-        if (restante > maxRestante) maxRestante = restante;
-      }
-    });
-    return addMonths(dataInicio, maxRestante);
-  };
-
-  // Set de IDs reais para lookup O(1) — evita .find() linear a cada operação
-  const txIdSet = useMemo(() => new Set(transactions.map(t => t.id)), [transactions]);
-  const isVirtualTxId = useCallback((id) => !!id && !txIdSet.has(id), [txIdSet]);
-
-  // Verifica se o novo lançamento empurra alguma categoria acima de 80% do orçamento
-  const checkBudgetAlert = (cleanData, currentTransactions) => {
-    const rendaMensal = config?.rendaMensal || 0;
-    const budgetPcts  = config?.budgetPcts  || {};
-    if (rendaMensal <= 0) return null;
-
-    // Determina a categoria afetada
-    const cat = cleanData.tipo === 'cartao' ? null : cleanData.categoria;
-    if (!cat || !(cat in PERCENTUAL_CATEGORIES)) return null;
-
-    const today = todayStr();
-    const monthPrefix = today.slice(0, 7);
-    const from = `${monthPrefix}-01`;
-    const lastDay = new Date(Number(monthPrefix.slice(0,4)), Number(monthPrefix.slice(5,7)), 0).getDate();
-    const to = `${monthPrefix}-${String(lastDay).padStart(2,'0')}`;
-
-    // Soma todos os gastos da categoria no mês atual (incluindo o novo lançamento)
-    const allWithNew = [...currentTransactions, { ...cleanData, id: '__new__', criadoEm: null }];
-    let gasto = 0;
-    allWithNew.forEach(tx => {
-      if (tx.tipo === 'entrada') return;
-      expandOccurrences(tx, from, to).forEach(() => {
-        if (tx.categoria === cat) gasto += Number(tx.valor) || 0;
-      });
-    });
-
-    const budget = (rendaMensal * (Number(budgetPcts[cat]) || 0)) / 100;
-    if (budget <= 0) return null;
-
-    const pct = Math.round((gasto / budget) * 100);
-    if (pct < 80) return null;
-
-    const catLabel = PERCENTUAL_CATEGORIES[cat]?.label || cat;
-    return { catLabel, pct, budget, gasto };
-  };
-
-  const handleSave = async (data) => {
-    const { _overwriteId, ...cleanData } = data;
-
-    // Fatura de cartão com itens parcelados com parcelas restantes → perguntar escopo
-    if (cleanData.tipo === 'cartao' && hasParceladoRestante(cleanData.itens) && editing) {
-      const isVirtualProj = isVirtualTxId(editing.id);
-      const parentId = isVirtualProj ? editing.id.split('-proj-')[0] : null;
-      const parentTx = parentId ? transactions.find(t => t.id === parentId) : null;
-      setCartaoEditScope({ cleanData, isVirtualProj, parentId, parentTx, editing, editingOccDate });
-      setFormOpen(false);
-      setEditing(null);
-      setEditingOccDate(null);
-      return;
-    }
-
-    // Caso de edição de fatura de cartão virtual projetada (sem parcelado restante)
-    if (editing && isVirtualTxId(editing.id) && editingOccDate) {
-      const parentId = editing.id.split('-proj-')[0];
-      const parentTx = transactions.find(t => t.id === parentId);
-      if (parentTx) {
-        const exclusoes = [...(parentTx.exclusoes || [])];
-        if (!exclusoes.includes(editingOccDate)) exclusoes.push(editingOccDate);
-        await update(parentId, { exclusoes });
-        await add({
-          ...cleanData,
-          tipo: 'cartao',
-          frequencia: 'unico',
-          dataInicio: editingOccDate,
-          descricao: cleanData.descricao?.replace(/\s*\(Parcelas restantes\)/i, '').trim() || parentTx.descricao,
-          categoria: null,
-          dataFim: null,
-          itens: (cleanData.itens || editing.itens || []).map(i => ({ ...i, isParcelado: false })),
-          cartaoId: parentTx.cartaoId || editing.cartaoId || null,
-        });
-        showToast('Fatura editada!');
-      }
-      setFormOpen(false);
-      setEditing(null);
-      setEditingOccDate(null);
-      return;
-    }
-
-    if (editing && ['diario','semanal','mensal','parcelado'].includes(editing.frequencia) && editingOccDate) {
-      setRecurrenceAction({ tx: editing, occDate: editingOccDate, newData: cleanData, action: 'edit' });
-      setFormOpen(false);
-      setEditing(null);
-      setEditingOccDate(null);
-      return;
-    }
-
-    if ((editing && editing.id) || _overwriteId) {
-      const id = editing?.id || _overwriteId;
-      await update(id, cleanData);
-      showToast(_overwriteId && !editing ? 'Lançamento substituído!' : 'Lançamento atualizado!');
-    } else {
-      await add(cleanData);
-      showToast('Lançamento adicionado com sucesso!');
-    }
-    setFormOpen(false);
-    setEditing(null);
-    setEditingOccDate(null);
-
-    // Alerta proativo de orçamento (após fechar o formulário)
-    if (cleanData.tipo !== 'entrada') {
-      const alert = checkBudgetAlert(cleanData, transactions);
-      if (alert) {
-        setTimeout(() => {
-          if (alert.pct >= 100) {
-            showToast(`🚨 Orçamento de ${alert.catLabel} estourado! (${alert.pct}% do limite)`, 'error');
-          } else {
-            showToast(`⚠️ ${alert.catLabel} em ${alert.pct}% do orçamento mensal`);
-          }
-        }, 600);
-      }
-    }
-  };
-
-  const confirmCartaoEditScope = async (scope) => {
-    const { cleanData, isVirtualProj, parentId, parentTx, editing: editingSnap, editingOccDate: occDate } = cartaoEditScope;
-    setCartaoEditScope(null);
-
-    if (scope === 'single') {
-      if (isVirtualProj && parentTx) {
-        // Exclui esta data do pai + cria fatura real congelada (sem projeções futuras)
-        const exclusoes = [...(parentTx.exclusoes || [])];
-        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
-        await update(parentId, { exclusoes });
-        await add({
-          ...cleanData,
-          tipo: 'cartao',
-          frequencia: 'unico',
-          dataInicio: occDate,
-          descricao: cleanData.descricao?.replace(/\s*\(Parcelas restantes\)/i, '').trim() || parentTx.descricao,
-          categoria: null,
-          dataFim: null,
-          itens: (cleanData.itens || []).map(i => ({ ...i, isParcelado: false })),
-          cartaoId: parentTx.cartaoId || editingSnap.cartaoId || null,
-        });
-      } else {
-        // Doc real: congela este mês + cria novo doc fonte a partir do mês seguinte com itens originais
-        const originalBase = { ...editingSnap };
-        delete originalBase.id;
-        delete originalBase.criadoEm;
-        const nextDate = addMonths(editingSnap.dataInicio, 1);
-        const continuationItens = (editingSnap.itens || []).map(i =>
-          i.isParcelado ? { ...i, parcelaAtual: (i.parcelaAtual || 1) + 1 } : i
-        );
-        await update(editingSnap.id, {
-          ...cleanData,
-          itens: (cleanData.itens || []).map(i => ({ ...i, isParcelado: false })),
-        });
-        await add({ ...originalBase, dataInicio: nextDate, exclusoes: [], itens: continuationItens });
-      }
-      showToast('Fatura editada (somente esta)!');
-    } else {
-      // 'future' — esta e todas as futuras
-      if (isVirtualProj && parentTx) {
-        // Encerra o pai antes desta data + cria novo doc real que vira nova fonte
-        const d = new Date(`${occDate}T12:00:00`);
-        d.setDate(d.getDate() - 1);
-        const dataFimPai = d.toISOString().slice(0, 10);
-        await update(parentId, { dataFim: dataFimPai });
-        await add({
-          ...cleanData,
-          tipo: 'cartao',
-          frequencia: 'unico',
-          dataInicio: occDate,
-          descricao: cleanData.descricao?.replace(/\s*\(Parcelas restantes\)/i, '').trim() || parentTx.descricao,
-          categoria: null,
-          dataFim: null,
-          itens: cleanData.itens || [],
-          cartaoId: parentTx.cartaoId || editingSnap.cartaoId || null,
-        });
-      } else {
-        // Doc real: atualiza o doc fonte — todas as projeções futuras refletem automaticamente
-        await update(editingSnap.id, cleanData);
-      }
-      showToast('Fatura e futuras atualizadas!');
-    }
-  };
-
-  const handleDelete = useCallback(async (id, occDate) => {
-    // Caso de remoção de fatura de cartão virtual projetada
-    if (isVirtualTxId(id)) {
-      const parentId = id.split('-proj-')[0];
-      const parentTx = transactions.find(t => t.id === parentId);
-      if (parentTx && window.confirm('Remover esta fatura projetada?')) {
-        const exclusoes = [...(parentTx.exclusoes || [])];
-        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
-        await update(parentId, { exclusoes });
-        showToast('Fatura projetada removida.');
-      }
-      return;
-    }
-
-    const tx = transactions.find(t => t.id === id);
-    if (!tx) return;
-    
-    if (['diario','semanal','mensal','parcelado'].includes(tx.frequencia) && occDate) {
-      setRecurrenceAction({ tx, occDate, action: 'delete' });
-      return;
-    }
-
-    if (window.confirm('Remover este lançamento?')) {
-      await remove(id);
-      showToast('Lançamento removido.', 'error');
-    }
-  }, [isVirtualTxId, transactions, update, remove, setRecurrenceAction, showToast]);
-
-  // ── Registrar pagamento (centralizado — usado por todas as telas) ─────────────
-  const openPayModal = (item, occDate) => setPayingItem({ item, occDate });
-
-  const confirmPayment = async ({ paymentDate, valor, scope }) => {
-    if (!payingItem) return;
-    const { item, occDate } = payingItem;
-    setPayingItem(null);
-    const tx        = item.tx;
-    const isCartao  = tx.tipo === 'cartao';
-    const isVirtual = isVirtualTxId(tx.id);
-
-    try {
-      if (isVirtual) {
-        const parentId = tx.id.split('-proj-')[0];
-        const parentTx = transactions.find(t => t.id === parentId);
-        if (!parentTx) {
-          showToast('Erro: Transação pai não encontrada.', 'error');
-          return;
-        }
-
-        // 1. Exclui a projeção virtual na data futura programada
-        const exclusoes = [...(parentTx.exclusoes || [])];
-        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
-        await update(parentId, { exclusoes });
-
-        // 2. Cria a fatura real paga hoje contendo todo o conteúdo (itens) correspondente
-        await add({
-          tipo:       'cartao',
-          frequencia: 'unico',
-          descricao:  tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura',
-          valor,
-          dataInicio: paymentDate,
-          categoria:  null,
-          dataFim:    null,
-          itens:      tx.itens || [],
-          cartaoId:   tx.cartaoId || null,
-          conferido:  true,
-        });
-
-        showToast('✅ Pagamento de fatura antecipado!');
-        return;
-      }
-
-      if (isCartao && !isVirtual) {
-        // Atualiza diretamente a data e o valor da fatura de cartão no banco de dados e marca como pago.
-        // Os itens internos associados permanecem na mesma transação e se movem com ela.
-        await update(tx.id, { dataInicio: paymentDate, valor, conferido: true });
-        showToast('✅ Fatura do cartão movimentada para a data de pagamento!');
-        return;
-      }
-
-      // Lançamento único ou parcela → atualiza a data diretamente e marca como pago
-      if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
-        await update(tx.id, { dataInicio: paymentDate, valor, conferido: true });
-        showToast('✅ Pagamento registrado!');
-        return;
-      }
-
-      // Recorrente (mensal / semanal / diario)
-      if (scope === 'single') {
-        // Cria exceção para esta ocorrência e novo lançamento único na data real e marca como pago
-        const exclusoes = [...(tx.exclusoes || [])];
-        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
-        await update(tx.id, { exclusoes });
-        await add({
-          tipo:       tx.tipo,
-          frequencia: 'unico',
-          descricao:  tx.descricao,
-          valor,
-          dataInicio: paymentDate,
-          categoria:  tx.categoria || null,
-          dataFim:    null,
-          conferido:  true,
-        });
-        showToast('✅ Pagamento registrado (só esta ocorrência)!');
-      } else if (scope === 'future') {
-        // Encerra a série atual no dia anterior à ocorrência
-        const d = new Date(`${occDate}T12:00:00`);
-        d.setDate(d.getDate() - 1);
-        const dataFim = d.toISOString().slice(0, 10);
-        await update(tx.id, { dataFim });
-        // Nova série a partir da data de pagamento (mesmo padrão de frequência) com o primeiro dia pago
-        // eslint-disable-next-line no-unused-vars
-        const { id: _id, exclusoes: _excl, dataFim: _df, ...txBase } = tx;
-        await add({ ...txBase, dataInicio: paymentDate, valor, dataFim: null, exclusoes: [] });
-        showToast('✅ Pagamento e próximas ocorrências atualizados!');
-      }
-    } catch (err) {
-      console.error('[confirmPayment]', err);
-      showToast('Erro ao registrar pagamento.', 'error');
-    }
-  };
-
-  const confirmRecurrenceAction = async (scope) => {
-    const { tx, occDate, newData, action } = recurrenceAction;
-    setRecurrenceAction(null);
-
-    if (action === 'delete') {
-      if (scope === 'single') {
-        const exclusoes = tx.exclusoes || [];
-        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
-        await update(tx.id, { exclusoes });
-        showToast('Ocorrência removida.');
-      } else if (scope === 'future') {
-        const d = new Date(`${occDate}T12:00:00`);
-        d.setDate(d.getDate() - 1);
-        const dataFim = d.toISOString().slice(0, 10);
-        await update(tx.id, { dataFim });
-        showToast('Ocorrências futuras removidas.');
-      } else {
-        await remove(tx.id);
-        showToast('Série completa removida.', 'error');
-      }
-    } else if (action === 'edit') {
-      if (scope === 'single') {
-        const exclusoes = tx.exclusoes || [];
-        if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
-        await update(tx.id, { exclusoes });
-        // Preserva o status de conciliação da ocorrência original
-        const eraConferido = tx.conferidos?.includes(occDate) ?? false;
-        await add({ ...newData, frequencia: 'unico', dataInicio: occDate, dataFim: null, conferido: eraConferido });
-        showToast('Ocorrência editada separadamente!');
-      } else if (scope === 'future') {
-        const d = new Date(`${occDate}T12:00:00`);
-        d.setDate(d.getDate() - 1);
-        const dataFim = d.toISOString().slice(0, 10);
-        await update(tx.id, { dataFim });
-        await add({ ...newData, dataInicio: occDate });
-        showToast('Ocorrências futuras alteradas!');
-      } else {
-        await update(tx.id, newData);
-        showToast('Série completa atualizada!');
-      }
-    }
-  };
-
   return (
     <>
-      {/* ── Banner global de nova versão — visível para todos os usuários ── */}
+      {/* Banner global de nova versão */}
       {updateAvailable && latestVersion && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9500,
@@ -853,10 +328,7 @@ export default function App() {
                 Versão {latestVersion} disponível!
               </p>
               {latestNotes?.[0] && (
-                <p style={{
-                  margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.82)',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
+                <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.82)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {latestNotes[0]}
                 </p>
               )}
@@ -864,13 +336,7 @@ export default function App() {
           </div>
           <button
             onClick={handleUpdate}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: '#fff', color: '#6366f1',
-              padding: '7px 14px', borderRadius: 8,
-              fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer',
-              flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', color: '#6366f1', padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
           >
             🔄 Atualizar
           </button>
@@ -879,53 +345,49 @@ export default function App() {
 
       {renderScreen()}
       <ReloadPrompt />
+
       {isUpdating && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 99999,
-          background: 'var(--bg-primary, #0f0f1a)',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center', gap: 28,
-        }}>
-          {/* Ícone do app */}
-          <div style={{
-            width: 76, height: 76, borderRadius: 22,
-            background: 'linear-gradient(135deg, #6366f1, #a855f7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 40px rgba(99,102,241,0.35)',
-          }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'var(--bg-primary, #0f0f1a)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 28 }}>
+          <div style={{ width: 76, height: 76, borderRadius: 22, background: 'linear-gradient(135deg, #6366f1, #a855f7)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(99,102,241,0.35)' }}>
             <DollarSign size={38} color="#fff" />
           </div>
-
-          {/* Spinner */}
           <div style={{ position: 'relative', width: 52, height: 52 }}>
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: '50%',
-              border: '3px solid rgba(99,102,241,0.12)',
-            }} />
-            <div style={{
-              position: 'absolute', inset: 0, borderRadius: '50%',
-              border: '3px solid transparent',
-              borderTopColor: '#6366f1',
-              animation: 'mf-spin-app 0.75s linear infinite',
-            }} />
+            <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid rgba(99,102,241,0.12)' }} />
+            <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '3px solid transparent', borderTopColor: '#6366f1', animation: 'mf-spin-app 0.75s linear infinite' }} />
           </div>
-
-          {/* Textos */}
           <div style={{ textAlign: 'center', padding: '0 40px' }}>
-            <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary, #f1f1f9)' }}>
-              Atualizando o aplicativo
-            </p>
-            <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--text-secondary, #8b8fa8)', lineHeight: 1.5 }}>
-              Instalando a nova versão…<br />O app será recarregado em instantes.
-            </p>
+            <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text-primary, #f1f1f9)' }}>Atualizando o aplicativo</p>
+            <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--text-secondary, #8b8fa8)', lineHeight: 1.5 }}>Instalando a nova versão…<br />O app será recarregado em instantes.</p>
           </div>
-
-          <style>{`
-            @keyframes mf-spin-app { to { transform: rotate(360deg); } }
-          `}</style>
+          <style>{`@keyframes mf-spin-app { to { transform: rotate(360deg); } }`}</style>
         </div>
       )}
       {ToastNode}
     </>
+  );
+}
+
+// ── Componente raiz — gerencia apenas autenticação ────────────────────────────
+export default function App() {
+  const { user, login, register, loginWithGoogle, logout, justLoggedIn, redirectError } = useAuth();
+  const [authConfirmed, setAuthConfirmed] = useState(false);
+
+  useEffect(() => {
+    if (justLoggedIn) Promise.resolve().then(() => setAuthConfirmed(true));
+  }, [justLoggedIn]);
+
+  return (
+    <AppProvider user={user}>
+      <AppShell
+        user={user}
+        authConfirmed={authConfirmed}
+        setAuthConfirmed={setAuthConfirmed}
+        login={login}
+        register={register}
+        loginWithGoogle={loginWithGoogle}
+        logout={logout}
+        redirectError={redirectError}
+      />
+    </AppProvider>
   );
 }

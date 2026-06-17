@@ -2,6 +2,17 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
+/**
+ * @typedef {Object} Goal
+ * @property {string}  id
+ * @property {string}  nome
+ * @property {number}  valorAlvo       — valor total da meta
+ * @property {number}  [valorAtual]    — progresso atual
+ * @property {string}  [dataAlvo]      — YYYY-MM-DD; prazo desejado
+ * @property {string}  [cor]           — hex color para display
+ * @property {string}  [icone]         — emoji ou nome do ícone
+ */
+
 export function useGoals(userId) {
   const [goals, setGoals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,6 +40,9 @@ export function useGoals(userId) {
         return a.nome.localeCompare(b.nome);
       });
       setGoals(data);
+      setLoading(false);
+    }, (err) => {
+      console.error('[useGoals]', err.code, err.message);
       setLoading(false);
     });
 

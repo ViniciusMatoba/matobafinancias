@@ -4,6 +4,17 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
+/**
+ * @typedef {Object} Card
+ * @property {string}  id
+ * @property {string}  nome
+ * @property {number}  limite
+ * @property {number}  diaFechamento   — dia do mês em que fecha a fatura
+ * @property {number}  diaVencimento   — dia do mês em que vence a fatura
+ * @property {string}  [cor]           — hex color para display
+ * @property {string}  [bandeira]      — 'visa' | 'mastercard' | etc.
+ */
+
 export function useCards(uid) {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);

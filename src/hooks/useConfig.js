@@ -3,6 +3,16 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db, isConfigured } from '../firebase';
 import { DEFAULT_BUDGET_PCTS } from '../utils/categories';
 
+/**
+ * @typedef {Object} Config
+ * @property {number}              metaMensalDiario  — meta diária de gastos (R$)
+ * @property {number}              rendaMensal       — renda mensal declarada (R$)
+ * @property {Record<string,number>} budgetPcts      — percentual de orçamento por categoria
+ * @property {boolean}             onboardingDone
+ * @property {boolean}             [tourDone]
+ * @property {string}              [telegramChatId]
+ */
+
 export const DEFAULT_CONFIG = {
   metaMensalDiario: 0,
   rendaMensal: 0,

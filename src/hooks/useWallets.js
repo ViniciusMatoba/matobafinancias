@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
+/**
+ * @typedef {Object} Wallet
+ * @property {string}  id
+ * @property {string}  nome
+ * @property {number}  saldoInicial    — saldo base que entra no cálculo de sobra segura
+ * @property {string}  [tipo]          — 'corrente' | 'poupanca' | 'investimento' | etc.
+ * @property {string}  [cor]           — hex color para display
+ */
+
 export function useWallets(userId) {
   const [wallets, setWallets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,6 +33,9 @@ export function useWallets(userId) {
       // Sort alphabetically
       data.sort((a, b) => a.nome.localeCompare(b.nome));
       setWallets(data);
+      setLoading(false);
+    }, (err) => {
+      console.error('[useWallets]', err.code, err.message);
       setLoading(false);
     });
 
