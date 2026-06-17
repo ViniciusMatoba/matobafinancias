@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.62';
+export const APP_VERSION = '1.6.63';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.63',
+    date: '17/06/2026',
+    changes: [
+      'Fix: calcFaturaCard agora usa getClosingDate (diaFechamento real) para delimitar o ciclo, alinhando Home e Projeção ao mesmo intervalo de datas',
+      'Refactor: getClosingDate extraída para projectionCalc.js e compartilhada entre Projeção e calcFaturaCard',
+    ],
+  },
   {
     version: '1.6.62',
     date: '17/06/2026',

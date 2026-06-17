@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Pencil, Trash2, BarChart2, Copy, List } from 'lucide-react';
 import TransactionsScreen from '../transactions/TransactionsScreen';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../utils/formatters';
-import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
+import { buildDailyProjection, calcSaldo, expandOccurrences, getClosingDate } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import ProjectionCharts from './ProjectionCharts';
 
@@ -65,21 +65,6 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
   }, [transactions, from, to, saldoInicial, viewTab]);
 
   const toggle = (date) => setExpanded(e => ({ ...e, [date]: !e[date] }));
-
-  // Retorna a data de fechamento real do ciclo que vence em vencStr.
-  // Ex: diaVencimento=3, diaFechamento=11, vencStr='2026-06-03' → '2026-05-11'
-  // Ex: diaVencimento=20, diaFechamento=10, vencStr='2026-06-20' → '2026-06-10'
-  const getClosingDate = (card, vencStr) => {
-    const [y, m] = vencStr.split('-').map(Number);
-    const diaFech = card.diaFechamento || card.diaVencimento;
-    const diaVenc = card.diaVencimento;
-    let cm = m, cy = y;
-    // Quando vencimento < fechamento, o fechamento ocorre no mês anterior ao vencimento
-    if (diaVenc < diaFech) { cm -= 1; if (cm < 1) { cm = 12; cy -= 1; } }
-    const lastDay = new Date(cy, cm, 0).getDate();
-    const dia = Math.min(diaFech, lastDay);
-    return `${cy}-${String(cm).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-  };
 
   // Mapa de badges de fechamento/vencimento por data
   const cardBadges = useMemo(() => {

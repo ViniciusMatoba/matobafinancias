@@ -1,7 +1,7 @@
 {
-  "version": "1.6.61",
+  "version": "1.6.62",
   "date": "17/06/2026",
   "notes": [
-    "Fix notificação de atualização: SW usa NetworkOnly para version.json (sem cache), evento pwa-update-ready liga SW ao banner instantaneamente e onRegistered verifica SW a cada 60s"
+    "Fix: valor da fatura nos badges de vencimento futuros agora usa expandOccurrences, capturando corretamente parcelas de transações cujo dataInicio é anterior à janela do ciclo"
   ]
 }

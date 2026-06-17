@@ -1,6 +1,22 @@
 import { addDays, addWeeks, addMonths, TYPE_CONFIG, todayStr, getProximoVencimento } from './formatters';
 
 /**
+ * Retorna a data de fechamento real do ciclo que vence em `vencStr`.
+ * Leva em conta que quando diaVencimento < diaFechamento, o fechamento
+ * ocorre no mês anterior ao vencimento.
+ */
+export function getClosingDate(card, vencStr) {
+  const [y, m] = vencStr.split('-').map(Number);
+  const diaFech = card.diaFechamento || card.diaVencimento;
+  const diaVenc = card.diaVencimento;
+  let cm = m, cy = y;
+  if (diaVenc < diaFech) { cm -= 1; if (cm < 1) { cm = 12; cy -= 1; } }
+  const lastDay = new Date(cy, cm, 0).getDate();
+  const dia = Math.min(diaFech, lastDay);
+  return `${cy}-${String(cm).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+}
+
+/**
  * Expande uma transação (regra) em ocorrências dentro do intervalo [from, to].
  * Retorna array de { date, valor, sinal, tx }
  */
@@ -183,8 +199,9 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
  */
 export function calcFaturaCard(card, transactions, today) {
   const proximoVenc = getProximoVencimento(card, today);
-  // Vencimento anterior = um ciclo antes do próximo
-  const vencAnterior = addMonths(proximoVenc, -1);
+  // Usa a data de fechamento real (considera diaFechamento) como limite do ciclo
+  const thisClosing = getClosingDate(card, proximoVenc);
+  const prevClosing = addMonths(thisClosing, -1);
 
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
@@ -195,8 +212,8 @@ export function calcFaturaCard(card, transactions, today) {
 
   cardTxs.forEach(tx => {
     const txDate = tx.dataInicio;
-    const isCicloAtual = txDate > vencAnterior && txDate <= proximoVenc;
-    const isFuturo = txDate > proximoVenc;
+    const isCicloAtual = txDate > prevClosing && txDate <= thisClosing;
+    const isFuturo = txDate > thisClosing;
 
     if (tx.itens && tx.itens.length > 0) {
       tx.itens.forEach(item => {
