@@ -1,8 +1,7 @@
 {
-  "version": "1.6.63",
+  "version": "1.6.65",
   "date": "17/06/2026",
   "notes": [
-    "Fix: calcFaturaCard agora usa getClosingDate (diaFechamento real) para delimitar o ciclo, alinhando Home e Projeção ao mesmo intervalo de datas",
-    "Refactor: getClosingDate extraída para projectionCalc.js e compartilhada entre Projeção e calcFaturaCard"
+    "Fix: fatura do cartão na Projeção e Home agora filtra por data de vencimento exata (dataInicio === vencimento), corrigindo deslocamento de 1 mês causado por filtro de ciclo de fechamento"
   ]
 }
