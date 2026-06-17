@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Pencil, Trash2, BarChart2, Copy, List } from 'lucide-react';
 import TransactionsScreen from '../transactions/TransactionsScreen';
-import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../utils/formatters';
-import { buildDailyProjection, calcSaldo, expandOccurrences, getClosingDate } from '../../utils/projectionCalc';
+import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
+import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import ProjectionCharts from './ProjectionCharts';
 
@@ -80,15 +80,12 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
         const vencFaturas = {};
         const vencPago   = {};
         vencimentos.forEach(c => {
-          const thisVenc    = day.date;
-          const thisClosing = getClosingDate(c, thisVenc);
-          const prevClosing = getClosingDate(c, addMonths(thisVenc, -1));
-          const cycleStart  = addDays(prevClosing, 1);
-          // Usa expandOccurrences para capturar parcelas cujo dataInicio é de ciclos
-          // anteriores mas cujas parcelas intermediárias caem nesta janela
+          const thisVenc = day.date;
+          // dataInicio dos lançamentos de cartão É a data de vencimento,
+          // então filtramos exatamente pelo dia do vencimento
           const cicloOccs = transactions
             .filter(t => t.tipo === 'cartao' && t.cartaoId === c.id)
-            .flatMap(t => expandOccurrences(t, cycleStart, thisClosing));
+            .flatMap(t => expandOccurrences(t, thisVenc, thisVenc));
           const totalCiclo = cicloOccs.reduce((sum, occ) => sum + occ.valor, 0);
           const pendente   = cicloOccs
             .filter(occ => !occ.tx.conferido)

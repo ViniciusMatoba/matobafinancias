@@ -1,12 +1,12 @@
-export const APP_VERSION = '1.6.64';
+export const APP_VERSION = '1.6.65';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
   {
-    version: '1.6.64',
+    version: '1.6.65',
     date: '17/06/2026',
     changes: [
-      'Fix: prevClosing calculado via getClosingDate(card, addMonths(venc, -1)) em vez de addMonths(thisClosing, -1), eliminando gap/overlap causado por clamping de dias no fim do mês',
+      'Fix: fatura do cartão na Projeção e Home agora filtra por data de vencimento exata (dataInicio === vencimento), corrigindo deslocamento de 1 mês causado por filtro de ciclo de fechamento',
     ],
   },
   {

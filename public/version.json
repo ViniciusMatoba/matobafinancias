@@ -1,8 +1,7 @@
 {
-  "version": "1.6.63",
+  "version": "1.6.64",
   "date": "17/06/2026",
   "notes": [
-    "Fix: calcFaturaCard agora usa getClosingDate (diaFechamento real) para delimitar o ciclo, alinhando Home e Projeção ao mesmo intervalo de datas",
-    "Refactor: getClosingDate extraída para projectionCalc.js e compartilhada entre Projeção e calcFaturaCard"
+    "Fix: prevClosing calculado via getClosingDate(card, addMonths(venc, -1)) em vez de addMonths(thisClosing, -1), eliminando gap/overlap causado por clamping de dias no fim do mês"
   ]
 }

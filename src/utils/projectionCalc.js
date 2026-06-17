@@ -199,10 +199,9 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
  */
 export function calcFaturaCard(card, transactions, today) {
   const proximoVenc = getProximoVencimento(card, today);
-  // Usa a data de fechamento real (considera diaFechamento) como limite do ciclo
-  const thisClosing = getClosingDate(card, proximoVenc);
-  const prevClosing = getClosingDate(card, addMonths(proximoVenc, -1));
 
+  // dataInicio dos lançamentos de cartão É a data de vencimento,
+  // então o ciclo atual é exatamente txDate === proximoVenc
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
   );
@@ -212,8 +211,8 @@ export function calcFaturaCard(card, transactions, today) {
 
   cardTxs.forEach(tx => {
     const txDate = tx.dataInicio;
-    const isCicloAtual = txDate > prevClosing && txDate <= thisClosing;
-    const isFuturo = txDate > thisClosing;
+    const isCicloAtual = txDate === proximoVenc;
+    const isFuturo = txDate > proximoVenc;
 
     if (tx.itens && tx.itens.length > 0) {
       tx.itens.forEach(item => {
