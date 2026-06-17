@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Pencil, Trash2, BarChart2, Copy, List } from 'lucide-react';
 import TransactionsScreen from '../transactions/TransactionsScreen';
-import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
-import { buildDailyProjection, calcSaldo, calcFaturaCard } from '../../utils/projectionCalc';
+import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../utils/formatters';
+import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import ProjectionCharts from './ProjectionCharts';
 
@@ -69,21 +69,34 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
   // Mapa de badges de fechamento/vencimento por data
   const cardBadges = useMemo(() => {
     if (!cards?.length || !days.length) return {};
-    const today = todayStr();
-    const faturaMap = Object.fromEntries(
-      cards.map(c => [c.id, calcFaturaCard(c, transactions, today).faturaAtual])
-    );
     const map = {};
     days.forEach(day => {
       const d = parseInt(day.date.split('-')[2], 10);
       const fechamentos = cards.filter(c => c.diaFechamento === d);
       const vencimentos = cards.filter(c => c.diaVencimento === d);
       if (fechamentos.length || vencimentos.length) {
-        map[day.date] = { fechamentos, vencimentos, faturaMap };
+        // Para cada vencimento neste dia, calcula a fatura do ciclo
+        // que fecha NESTA data: (thisVenc - 1 mês, thisVenc]
+        const vencFaturas = {};
+        vencimentos.forEach(c => {
+          const thisVenc = day.date;
+          const prevVenc = addMonths(thisVenc, -1);
+          vencFaturas[c.id] = transactions
+            .filter(t =>
+              t.tipo === 'cartao' && t.cartaoId === c.id && !t.conferido &&
+              t.dataInicio > prevVenc && t.dataInicio <= thisVenc
+            )
+            .reduce((sum, t) => {
+              if (t.itens?.length > 0)
+                return sum + t.itens.reduce((s, i) => s + (Number(i.valor) || 0), 0);
+              return sum + (Number(t.valor) || 0);
+            }, 0);
+        });
+        map[day.date] = { fechamentos, vencimentos, vencFaturas };
       }
     });
     return map;
-  }, [cards, days]);
+  }, [cards, days, transactions]);
 
   const saldoFim = days.length > 0 ? days[days.length - 1].saldo : saldoInicial;
   const minSaldo = days.length > 0 ? Math.min(...days.map(d => d.saldo)) : saldoInicial;
@@ -433,7 +446,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
                                   borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600,
                                   display: 'flex', alignItems: 'center', gap: 3,
                                 }}>
-                                  💳 Vence {c.nome}{cardBadges[day.date].faturaMap[c.id] > 0 ? ` · ${formatBRL(cardBadges[day.date].faturaMap[c.id])}` : ''}
+                                  💳 Vence {c.nome}{cardBadges[day.date].vencFaturas[c.id] > 0 ? ` · ${formatBRL(cardBadges[day.date].vencFaturas[c.id])}` : ''}
                                 </span>
                               ))}
                             </div>

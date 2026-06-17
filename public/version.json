@@ -1,7 +1,7 @@
 {
-  "version": "1.6.57",
+  "version": "1.6.58",
   "date": "17/06/2026",
   "notes": [
-    "Fix: notificação de atualização restaurada — SW aguarda confirmação do usuário antes de recarregar, garantindo que o banner sempre apareça"
+    "Fix: valor da fatura no badge de vencimento da Projeção agora exibe o valor correto do ciclo daquela data"
   ]
 }

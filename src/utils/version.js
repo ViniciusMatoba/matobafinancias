@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.57';
+export const APP_VERSION = '1.6.58';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.58',
+    date: '17/06/2026',
+    changes: [
+      'Fix: valor da fatura no badge de vencimento da Projeção agora exibe o valor correto do ciclo daquela data específica, não o ciclo atual',
+    ],
+  },
   {
     version: '1.6.57',
     date: '17/06/2026',
