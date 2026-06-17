@@ -218,11 +218,12 @@ export function calcFaturaCard(card, transactions, today) {
   let faturaAtual = 0;
   let comprometidoFuturo = 0;
 
-  // Usa tx.valor do lançamento de cartão diretamente (igual ao filtro do componente)
+  // Fatura atual = somente lançamentos com dataInicio === proximoVenc
+  // Comprometido futuro = lançamentos além do próximo vencimento
   cardTxs.forEach(tx => {
     const val = Number(tx.valor) || 0;
-    if (tx.dataInicio <= proximoVenc) faturaAtual      += val;
-    else                              comprometidoFuturo += val;
+    if (tx.dataInicio === proximoVenc) faturaAtual        += val;
+    else if (tx.dataInicio > proximoVenc) comprometidoFuturo += val;
   });
 
   const limite = card.limite || 0;

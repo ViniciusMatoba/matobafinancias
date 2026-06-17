@@ -1,7 +1,7 @@
 {
-  "version": "1.6.68",
+  "version": "1.6.69",
   "date": "17/06/2026",
   "notes": [
-    "Fix: calcFaturaCard usa dataInicio do lançamento (dia do pagamento) para determinar fatura atual, evitando conflito com parcelas passadas de transações recorrentes"
+    "Fix: calcFaturaCard usa tx.valor do lançamento cartão diretamente, sem iterar tx.itens — alinhado com filtro do componente Home"
   ]
 }

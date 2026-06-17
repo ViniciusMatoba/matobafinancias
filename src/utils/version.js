@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.69';
+export const APP_VERSION = '1.6.70';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.70',
+    date: '17/06/2026',
+    changes: [
+      'Fix: faturaAtual usa dataInicio === proximoVenc (igualdade exata), evitando somar faturas anteriores abertas na fatura corrente',
+    ],
+  },
   {
     version: '1.6.69',
     date: '17/06/2026',
