@@ -1,7 +1,7 @@
 {
-  "version": "1.6.60",
+  "version": "1.6.62",
   "date": "17/06/2026",
   "notes": [
-    "Fix: badge de vencimento na Projeção agora usa o diaFechamento real do cartão para delimitar o ciclo, corrigindo casos onde a fatura paga não aparecia como \"Pago\" quando o fechamento é distante do vencimento (ex: fecha dia 11, vence dia 3)"
+    "Fix: valor da fatura nos badges de vencimento futuros agora usa expandOccurrences, capturando corretamente parcelas de transações cujo dataInicio é anterior à janela do ciclo"
   ]
 }
