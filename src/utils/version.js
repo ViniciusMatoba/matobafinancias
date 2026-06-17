@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.45';
-export const APP_VERSION_DATE = '08/06/2026';
+export const APP_VERSION = '1.6.46';
+export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.46',
+    date: '17/06/2026',
+    changes: [
+      'Fix: cálculo de limite geral de gastos (N9) e relatório comparativo mensal (N12) corrigidos para incluir lançamentos recorrentes semanais/diários e respeitar exclusões',
+      'Segurança: verificação de segredo de webhook (secret_token) adicionada para evitar spoofing no bot do Telegram',
+      'Melhoria: detecção automática de bloqueios do bot (erro 403) ou chats inexistentes para limpar e desativar alertas do Telegram dos respectivos usuários',
+    ],
+  },
   {
     version: '1.6.45',
     date: '08/06/2026',

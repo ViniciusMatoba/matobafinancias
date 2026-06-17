@@ -547,44 +547,15 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   if (tipos.n9 !== false) {
     const rendaMensal = config?.rendaMensal || 0;
     if (rendaMensal > 0) {
-      let totalGasto = 0;
-      // 1. Saídas avulsas do mês atual
-      for (const tx of transactions) {
-        if (tx.tipo === 'entrada' || tx.tipo === 'cartao') continue;
-        const v = Number(tx.valor) || 0;
-        if (!v || !tx.dataInicio) continue;
-        
-        if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
-          if (tx.dataInicio.startsWith(currentMonth)) totalGasto += v;
-        } else if (tx.frequencia === 'mensal') {
-          if (tx.dataInicio <= todayStr) {
-            const origDay9 = new Date(tx.dataInicio + 'T00:00:00').getDate();
-            const end = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
-            let cur = new Date(tx.dataInicio + 'T00:00:00');
-            while (dateStrFromDate(cur) <= end) {
-              const curStr = dateStrFromDate(cur);
-              if (curStr.startsWith(currentMonth)) totalGasto += v;
-              addOneMonthClampedTo(cur, origDay9);
-            }
-          }
-        }
-      }
-      // 2. Faturas de cartões do mês atual
-      for (const card of cards) {
-        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
-        cardTxs.forEach(tx => {
-          const txMonth = tx.dataInicio.slice(0, 7);
-          if (txMonth === currentMonth) {
-            if (tx.itens && tx.itens.length > 0) {
-              tx.itens.forEach(item => {
-                totalGasto += Number(item.valor) || 0;
-              });
-            } else {
-              totalGasto += Number(tx.valor) || 0;
-            }
-          }
-        });
-      }
+      const fromStr = `${currentMonth}-01`;
+      const [y, m] = currentMonth.split('-').map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      const toStr = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
+      
+      const occsMes = expandRange(transactions, fromStr, toStr);
+      const totalGasto = occsMes
+        .filter(o => o.tipo !== 'entrada')
+        .reduce((sum, o) => sum + o.valor, 0);
 
       const pct = (totalGasto / rendaMensal) * 100;
       if (pct > 100) {
@@ -670,43 +641,14 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const mesRetrasadoStr = `${dtRetrasado.getFullYear()}-${String(dtRetrasado.getMonth()+1).padStart(2,'0')}`;
 
     const calcGastoMes = (targetMonth) => {
-      let total = 0;
-      for (const tx of transactions) {
-        if (tx.tipo === 'entrada' || tx.tipo === 'cartao') continue;
-        const v = Number(tx.valor) || 0;
-        if (!v || !tx.dataInicio) continue;
-        
-        if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
-          if (tx.dataInicio.startsWith(targetMonth)) total += v;
-        } else if (tx.frequencia === 'mensal') {
-          if (tx.dataInicio <= todayStr) {
-            const origDay12 = new Date(tx.dataInicio + 'T00:00:00').getDate();
-            const end = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
-            let cur = new Date(tx.dataInicio + 'T00:00:00');
-            while (dateStrFromDate(cur) <= end) {
-              const curStr = dateStrFromDate(cur);
-              if (curStr.startsWith(targetMonth)) total += v;
-              addOneMonthClampedTo(cur, origDay12);
-            }
-          }
-        }
-      }
-      for (const card of cards) {
-        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
-        cardTxs.forEach(tx => {
-          const txMonth = tx.dataInicio.slice(0, 7);
-          if (txMonth === targetMonth) {
-            if (tx.itens && tx.itens.length > 0) {
-              tx.itens.forEach(item => {
-                total += Number(item.valor) || 0;
-              });
-            } else {
-              total += Number(tx.valor) || 0;
-            }
-          }
-        });
-      }
-      return total;
+      const fromStr = `${targetMonth}-01`;
+      const [y, m] = targetMonth.split('-').map(Number);
+      const lastDay = new Date(y, m, 0).getDate();
+      const toStr = `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
+      const occs = expandRange(transactions, fromStr, toStr);
+      return occs
+        .filter(o => o.tipo !== 'entrada')
+        .reduce((sum, o) => sum + o.valor, 0);
     };
 
     const spentPassado = calcGastoMes(mesPassadoStr);
@@ -2255,12 +2197,49 @@ async function processUpdate(update) {
   }
 }
 
+// Desativa a integração do Telegram para um usuário que bloqueou o bot ou cujo chat não existe mais
+async function disableTelegramForUser(uid) {
+  try {
+    await db.collection('users').doc(uid).set({
+      telegramChatId: admin.firestore.FieldValue.delete(),
+      telegramName: admin.firestore.FieldValue.delete(),
+      telegramLinkedAt: admin.firestore.FieldValue.delete(),
+    }, { merge: true });
+
+    const configDoc = await db.collection('config').doc(uid).get();
+    if (configDoc.exists) {
+      const prefs = configDoc.data().notificacoes || {};
+      await db.collection('config').doc(uid).set({
+        notificacoes: {
+          ...prefs,
+          telegramEnabled: false,
+        }
+      }, { merge: true });
+    }
+    logger.info(`[TELEGRAM] Integração desativada com sucesso para o usuário uid=${uid}`);
+  } catch (err) {
+    logger.error(`[TELEGRAM] Erro ao desativar integração para o usuário uid=${uid}:`, err);
+  }
+}
+
 // ─── EXPORT 1: Webhook HTTPS ──────────────────────────────────────────────────
 // invoker: 'public' — permite chamadas não autenticadas (necessário para o Telegram)
 exports.telegramWebhook = onRequest(
   { region: REGION, timeoutSeconds: 30, invoker: 'public' },
   async (req, res) => {
     if (req.method !== 'POST') { res.sendStatus(405); return; }
+
+    // Validação de token secreto para segurança do webhook (evita spoofing)
+    const secretToken = process.env.TELEGRAM_SECRET_TOKEN;
+    if (secretToken) {
+      const headerToken = req.headers['x-telegram-bot-api-secret-token'];
+      if (headerToken !== secretToken) {
+        logger.warn('[TG webhook] Requisição não autorizada — secret token incorreto ou ausente.');
+        res.sendStatus(403);
+        return;
+      }
+    }
+
     try {
       await processUpdate(req.body);
     } catch (err) {
@@ -2352,11 +2331,22 @@ exports.dailyNotifications = onSchedule(
             const tgTipos = prefs.telegramTipos !== undefined ? prefs.telegramTipos : (prefs.tipos || {});
             const tgPrefs = { ...prefs, tipos: tgTipos };
             const tgMsgs  = checkNotifications(cards, transactions, config, tgPrefs, goals, walletInitials);
+            let tgBlocked = false;
             for (const msg of tgMsgs) {
-              await sendMessage(chatId, msg);
+              const tgRes = await sendMessage(chatId, msg);
+              if (tgRes && tgRes.ok === false) {
+                const isBlocked = tgRes.error_code === 403 || 
+                  (tgRes.error_code === 400 && tgRes.description?.includes('chat not found'));
+                if (isBlocked) {
+                  logger.warn(`[TELEGRAM] Envio falhou (bot bloqueado/chat não encontrado) para uid=${uid}. Desativando.`);
+                  await disableTelegramForUser(uid);
+                  tgBlocked = true;
+                  break;
+                }
+              }
               await new Promise(r => setTimeout(r, 100));
             }
-            if (tgMsgs.length > 0)
+            if (tgMsgs.length > 0 && !tgBlocked)
               logger.info(`[TELEGRAM] uid=${uid}: ${tgMsgs.length} alerta(s) enviado(s)`);
           }
         }
@@ -2379,11 +2369,22 @@ exports.dailyNotifications = onSchedule(
 
           if (telegramEnabled) {
             const n18Msgs = checkN18(transactions, config, tgN18Tipos);
+            let tgBlocked = false;
             for (const msg of n18Msgs) {
-              await sendMessage(chatId, msg);
+              const tgRes = await sendMessage(chatId, msg);
+              if (tgRes && tgRes.ok === false) {
+                const isBlocked = tgRes.error_code === 403 || 
+                  (tgRes.error_code === 400 && tgRes.description?.includes('chat not found'));
+                if (isBlocked) {
+                  logger.warn(`[TELEGRAM] Envio N18 falhou (bot bloqueado/chat não encontrado) para uid=${uid}. Desativando.`);
+                  await disableTelegramForUser(uid);
+                  tgBlocked = true;
+                  break;
+                }
+              }
               await new Promise(r => setTimeout(r, 100));
             }
-            if (n18Msgs.length > 0)
+            if (n18Msgs.length > 0 && !tgBlocked)
               logger.info(`[N18] uid=${uid}: economia do dia enviada`);
           }
         }
@@ -2477,6 +2478,7 @@ exports.setTelegramWebhook = onRequest(
       const webhookResult = await tgFetch('setWebhook', {
         url:             req.body.url,
         allowed_updates: ['message', 'callback_query'],
+        secret_token:    process.env.TELEGRAM_SECRET_TOKEN || undefined,
       });
       // Registra comandos no BotFather junto com o webhook
       const cmdsResult = await tgFetch('setMyCommands', { commands: BOT_COMMANDS });

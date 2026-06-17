@@ -28,15 +28,13 @@ npm run release -- "Título"  # idem, com descrição no commit
 [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, 'E. South America Standard Time').ToString('dd/MM/yyyy HH:mm')
 ```
 
----
-
 ## Comandos Essenciais
 
 ```bash
 npm run dev       # Servidor local (Vite HMR) — porta 5173
 npm run build     # Build de produção
 npm run deploy    # ⚠️ Só deploy — NÃO commita código
-npm run release   # ✅ USAR ESTE — fluxo completo
+npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHub Pages e Firebase Cloud Functions)
 ```
 
 ---
@@ -44,11 +42,12 @@ npm run release   # ✅ USAR ESTE — fluxo completo
 ## Stack
 
 - **React 19** + **Vite 8**
-- **Firebase**: Auth (email/senha) + Firestore (saves) + FCM (notificações push)
+- **Firebase**: Auth (email/senha) + Firestore (saves) + FCM (notificações push) + Cloud Functions (backend/bot)
 - **Tailwind CSS v4** via PostCSS
 - **PWA**: `vite-plugin-pwa` com `injectManifest` no `firebase-messaging-sw.js`
-- **Deploy**: GitHub Pages via `gh-pages`
+- **Deploy Duplo**: Código no GitHub, frontend no GitHub Pages via `gh-pages` e backend no Firebase Cloud Functions via Firebase CLI
 - **Repositório**: `https://github.com/ViniciusMatoba/matobafinancias.git`
+
 
 ---
 
