@@ -1,9 +1,7 @@
 {
-  "version": "1.6.53",
+  "version": "1.6.52",
   "date": "17/06/2026",
   "notes": [
-    "Novo: dashboard de cartões de crédito na Home — card por cartão com fatura aberta, barra de limite, disponível e badges de fechamento/vencimento iminente",
-    "Novo: card expansível mostra todos os lançamentos e itens da fatura atual ao tocar",
-    "Melhoria: alertas simples de vencimento substituídos pelo novo painel de cartões"
+    "Fix: cálculo de fatura atual agora usa o próximo vencimento real do cartão (baseado em diaFechamento + diaVencimento) em vez do mês calendário, corrigindo casos onde a fatura vence no início do mês seguinte (ex: vence dia 3)"
   ]
 }
