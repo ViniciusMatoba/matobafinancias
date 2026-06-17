@@ -1,7 +1,7 @@
 {
-  "version": "1.6.68",
+  "version": "1.6.70",
   "date": "17/06/2026",
   "notes": [
-    "Fix: calcFaturaCard usa dataInicio do lançamento (dia do pagamento) para determinar fatura atual, evitando conflito com parcelas passadas de transações recorrentes"
+    "Fix: faturaAtual usa dataInicio === proximoVenc (igualdade exata), evitando somar faturas anteriores abertas na fatura corrente"
   ]
 }
