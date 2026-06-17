@@ -2,9 +2,8 @@
   "version": "1.6.56",
   "date": "17/06/2026",
   "notes": [
-    "Performance: code splitting — bundle inicial cai de 1,4 MB para ~840 KB; telas secundárias carregadas sob demanda",
-    "Projeção: badge de vencimento de cartão agora exibe o valor da fatura aberta",
-    "Cartão: cada item da fatura pode ser marcado como Conferido (opcional) no formulário",
-    "Cartão: botão \"Histórico\" na Home exibe faturas pagas agrupadas por mês"
+    "Performance: bundle inicial −41%; telas secundárias carregadas sob demanda",
+    "Projeção: badge de vencimento de cartão agora mostra valor da fatura",
+    "Cartão: histórico de faturas pagas e conferência por item"
   ]
 }
