@@ -1,7 +1,8 @@
 {
-  "version": "1.6.52",
+  "version": "1.6.54",
   "date": "17/06/2026",
   "notes": [
-    "Fix: cálculo de fatura atual agora usa o próximo vencimento real do cartão (baseado em diaFechamento + diaVencimento) em vez do mês calendário, corrigindo casos onde a fatura vence no início do mês seguinte (ex: vence dia 3)"
+    "Fix: fatura atual agora usa apenas o ciclo corrente (entre o vencimento anterior e o próximo), evitando que faturas de meses passados não conferidas inflassem o valor",
+    "Refactor: cálculo de fatura centralizado em calcFaturaCard() — elimina 4 cópias duplicadas da mesma lógica"
   ]
 }
