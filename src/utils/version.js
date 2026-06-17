@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.61';
+export const APP_VERSION = '1.6.62';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.62',
+    date: '17/06/2026',
+    changes: [
+      'Fix: valor da fatura nos badges de vencimento futuros agora usa expandOccurrences, capturando corretamente parcelas de transações cujo dataInicio é anterior à janela do ciclo',
+    ],
+  },
   {
     version: '1.6.61',
     date: '17/06/2026',

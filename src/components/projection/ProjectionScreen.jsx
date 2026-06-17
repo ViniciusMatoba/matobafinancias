@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Pencil, Trash2, BarChart2, Copy, List } from 'lucide-react';
 import TransactionsScreen from '../transactions/TransactionsScreen';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays, addMonths } from '../../utils/formatters';
-import { buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
+import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import ProjectionCharts from './ProjectionCharts';
 
@@ -98,20 +98,16 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
           const thisVenc    = day.date;
           const thisClosing = getClosingDate(c, thisVenc);
           const prevClosing = addMonths(thisClosing, -1);
-          const ciclo = transactions.filter(t =>
-            t.tipo === 'cartao' && t.cartaoId === c.id &&
-            t.dataInicio > prevClosing && t.dataInicio <= thisClosing
-          );
-          const totalCiclo = ciclo.reduce((sum, t) => {
-            if (t.itens?.length > 0) return sum + t.itens.reduce((s, i) => s + (Number(i.valor) || 0), 0);
-            return sum + (Number(t.valor) || 0);
-          }, 0);
-          const pendente = ciclo
-            .filter(t => !t.conferido)
-            .reduce((sum, t) => {
-              if (t.itens?.length > 0) return sum + t.itens.reduce((s, i) => s + (Number(i.valor) || 0), 0);
-              return sum + (Number(t.valor) || 0);
-            }, 0);
+          const cycleStart  = addDays(prevClosing, 1);
+          // Usa expandOccurrences para capturar parcelas cujo dataInicio é de ciclos
+          // anteriores mas cujas parcelas intermediárias caem nesta janela
+          const cicloOccs = transactions
+            .filter(t => t.tipo === 'cartao' && t.cartaoId === c.id)
+            .flatMap(t => expandOccurrences(t, cycleStart, thisClosing));
+          const totalCiclo = cicloOccs.reduce((sum, occ) => sum + occ.valor, 0);
+          const pendente   = cicloOccs
+            .filter(occ => !occ.tx.conferido)
+            .reduce((sum, occ) => sum + occ.valor, 0);
           vencFaturas[c.id] = pendente;
           // Pago = houve despesas no ciclo e nenhuma pendente
           vencPago[c.id] = totalCiclo > 0 && pendente === 0;
