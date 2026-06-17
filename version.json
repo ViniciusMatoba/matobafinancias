@@ -1,7 +1,7 @@
 {
-  "version": "1.6.67",
+  "version": "1.6.69",
   "date": "17/06/2026",
   "notes": [
-    "Fix: calcFaturaCard determina fatura atual pela data do próprio lançamento (expandOccurrences), sem depender da config diaVencimento do cartão"
+    "Fix: calcFaturaCard usa tx.valor do lançamento cartão diretamente, sem iterar tx.itens — alinhado com filtro do componente Home"
   ]
 }
