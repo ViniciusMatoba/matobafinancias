@@ -1,12 +1,12 @@
-export const APP_VERSION = '1.6.68';
+export const APP_VERSION = '1.6.69';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
   {
-    version: '1.6.68',
+    version: '1.6.69',
     date: '17/06/2026',
     changes: [
-      'Fix: calcFaturaCard usa dataInicio do lançamento (dia do pagamento) para determinar fatura atual, evitando conflito com parcelas passadas de transações recorrentes',
+      'Fix: calcFaturaCard usa tx.valor do lançamento cartão diretamente, sem iterar tx.itens — alinhado com filtro do componente Home',
     ],
   },
   {
