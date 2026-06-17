@@ -1,0 +1,7 @@
+{
+  "version": "1.6.70",
+  "date": "17/06/2026",
+  "notes": [
+    "Fix: faturaAtual usa dataInicio === proximoVenc (igualdade exata), evitando somar faturas anteriores abertas na fatura corrente"
+  ]
+}
