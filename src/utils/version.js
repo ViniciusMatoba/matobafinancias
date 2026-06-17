@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.55';
+export const APP_VERSION = '1.6.56';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.56',
+    date: '17/06/2026',
+    changes: [
+      'Performance: code splitting — bundle inicial cai de 1,4 MB para ~840 KB; telas secundárias carregadas sob demanda',
+      'Projeção: badge de vencimento de cartão agora exibe o valor da fatura aberta',
+      'Cartão: cada item da fatura pode ser marcado como Conferido (opcional) no formulário',
+      'Cartão: botão "Histórico" na Home exibe faturas pagas agrupadas por mês',
+    ],
+  },
   {
     version: '1.6.55',
     date: '17/06/2026',

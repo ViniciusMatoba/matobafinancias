@@ -67,7 +67,7 @@ const EMPTY = {
   categoria: '',
 };
 
-const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '' };
+const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '', conferido: false };
 
 export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [], config }) {
   const [form, setForm] = useState(initial ? {
@@ -1123,10 +1123,16 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
               </select>
             </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, cursor: 'pointer' }}>
-              <input type="checkbox" checked={novoItem.isParcelado} onChange={e => setNovoItem(i => ({ ...i, isParcelado: e.target.checked }))} />
-              É parcelado?
-            </label>
+            <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={novoItem.isParcelado} onChange={e => setNovoItem(i => ({ ...i, isParcelado: e.target.checked }))} />
+                É parcelado?
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                <input type="checkbox" checked={novoItem.conferido || false} onChange={e => setNovoItem(i => ({ ...i, conferido: e.target.checked }))} />
+                Conferido
+              </label>
+            </div>
             {novoItem.isParcelado && (
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <input type="number" min="1" placeholder="Parcela atual (ex: 1)" value={novoItem.parcelaAtual} onChange={e => setNovoItem(i => ({ ...i, parcelaAtual: e.target.value }))} style={{ flex: 1, fontSize: 13 }} />

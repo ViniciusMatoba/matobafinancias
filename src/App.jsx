@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { isConfigured } from './firebase';
 import { useAuth } from './hooks/useAuth';
 import { AppProvider, useAppState } from './context/AppContext';
@@ -6,10 +6,12 @@ import AuthScreen from './components/auth/AuthScreen';
 import SetupScreen from './components/auth/SetupScreen';
 import SetupGoalsScreen from './components/onboarding/SetupGoalsScreen';
 import HomeScreen from './components/home/HomeScreen';
-import ProjectionScreen from './components/projection/ProjectionScreen';
-import GoalsScreen from './components/goals/GoalsScreen';
-import SettingsScreen from './components/settings/SettingsScreen';
-import ReportsScreen from './components/reports/ReportsScreen';
+
+// Telas secundárias carregadas sob demanda (lazy) para reduzir bundle inicial
+const ProjectionScreen = lazy(() => import('./components/projection/ProjectionScreen'));
+const GoalsScreen      = lazy(() => import('./components/goals/GoalsScreen'));
+const SettingsScreen   = lazy(() => import('./components/settings/SettingsScreen'));
+const ReportsScreen    = lazy(() => import('./components/reports/ReportsScreen'));
 import TourGuide from './components/shared/TourGuide';
 import BottomNav from './components/shared/BottomNav';
 import ReloadPrompt from './components/shared/ReloadPrompt';
@@ -94,8 +96,22 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
       return <SetupGoalsScreen onSave={saveConfig} />;
     }
 
+    const lazyFallback = (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 14,
+          background: 'linear-gradient(135deg, var(--primary), var(--investimento))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        }}>
+          <DollarSign size={24} color="#fff" />
+        </div>
+      </div>
+    );
+
     return (
       <>
+      <Suspense fallback={lazyFallback}>
         {view === 'home' && (
           <HomeScreen
             transactions={transactions}
@@ -170,6 +186,8 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             onUpdateTransaction={update}
           />
         )}
+
+      </Suspense>
 
         <BottomNav view={view} onNavigate={handleNavigate} />
 

@@ -3,7 +3,7 @@ import { CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatBRL, formatDate, todayStr, getProximoVencimento, addMonths } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
-export default function CartaoFaturaCard({ cardsStats, transactions }) {
+export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistorico }) {
   const [expandedId, setExpandedId] = useState(null);
 
   if (!cardsStats?.length) return null;
@@ -111,6 +111,18 @@ export default function CartaoFaturaCard({ cardsStats, transactions }) {
                       {vencLabel}
                     </span>
                   )}
+                  {onVerHistorico && (
+                    <button
+                      onClick={e => { e.stopPropagation(); onVerHistorico(card); }}
+                      style={{
+                        background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                        borderRadius: 6, padding: '2px 8px', fontSize: 10, fontWeight: 600,
+                        color: 'var(--text-secondary)', cursor: 'pointer',
+                      }}
+                    >
+                      Histórico
+                    </button>
+                  )}
                   {isExpanded ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
                 </div>
               </div>
@@ -211,9 +223,12 @@ export default function CartaoFaturaCard({ cardsStats, transactions }) {
                                     </p>
                                   )}
                                 </div>
-                                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--saida)', flexShrink: 0 }}>
-                                  {formatBRL(Number(item.valor) || 0)}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                                  {item.conferido && <span style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>✓</span>}
+                                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--saida)' }}>
+                                    {formatBRL(Number(item.valor) || 0)}
+                                  </span>
+                                </div>
                               </div>
                             );
                           })}

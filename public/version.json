@@ -1,7 +1,9 @@
 {
-  "version": "1.6.55",
+  "version": "1.6.56",
   "date": "17/06/2026",
   "notes": [
-    "Fix: notificação de atualização restaurada — polling de 60 segundos garante que o banner apareça enquanto o app está aberto"
+    "Performance: bundle inicial −41%; telas secundárias carregadas sob demanda",
+    "Projeção: badge de vencimento de cartão agora mostra valor da fatura",
+    "Cartão: histórico de faturas pagas e conferência por item"
   ]
 }

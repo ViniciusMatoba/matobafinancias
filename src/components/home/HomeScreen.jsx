@@ -7,6 +7,7 @@ import BudgetSummaryCard from './BudgetSummaryCard';
 import AdjustBalanceModal from './AdjustBalanceModal';
 import ProximasContasCard from './ProximasContasCard';
 import CartaoFaturaCard from './CartaoFaturaCard';
+import FaturaHistoricoModal from './FaturaHistoricoModal';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -30,6 +31,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [historyCard, setHistoryCard] = useState(null);
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem('matoba:sobra-banner-dismissed') === todayStr()
   );
@@ -193,6 +195,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   ].filter(i => i.value > 0);
 
   return (
+    <>
     <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
 
       {/* Header */}
@@ -403,7 +406,11 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
             Cartões de Crédito
           </p>
-          <CartaoFaturaCard cardsStats={cardsStats} transactions={transactions} />
+          <CartaoFaturaCard
+            cardsStats={cardsStats}
+            transactions={transactions}
+            onVerHistorico={setHistoryCard}
+          />
         </div>
       )}
 
@@ -576,5 +583,12 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       </div>
 
     </div>
+      <FaturaHistoricoModal
+        card={historyCard}
+        transactions={transactions}
+        open={!!historyCard}
+        onClose={() => setHistoryCard(null)}
+      />
+    </>
   );
 }
