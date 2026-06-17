@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.49';
+export const APP_VERSION = '1.6.50';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.50',
+    date: '17/06/2026',
+    changes: [
+      'Fix: revínculo em massa agora detecta lançamentos com frequência "cartao" além do tipo "cartao", cobrindo lançamentos antigos criados antes da integração completa',
+    ],
+  },
   {
     version: '1.6.49',
     date: '17/06/2026',

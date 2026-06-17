@@ -69,7 +69,7 @@ export default function CardManager({ cards, transactions = [], onAdd, onUpdate,
   const [vinculoMap, setVinculoMap] = useState({});
   const [vinculando, setVinculando] = useState({});
 
-  const semVinculo = transactions.filter(t => t.tipo === 'cartao' && !t.cartaoId);
+  const semVinculo = transactions.filter(t => (t.tipo === 'cartao' || t.frequencia === 'cartao') && !t.cartaoId);
 
   const handleVincular = async (txId) => {
     const cardId = vinculoMap[txId];
