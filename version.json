@@ -1,8 +1,9 @@
 {
-  "version": "1.6.54",
+  "version": "1.6.53",
   "date": "17/06/2026",
   "notes": [
-    "Fix: fatura atual agora usa apenas o ciclo corrente (entre o vencimento anterior e o próximo), evitando que faturas de meses passados não conferidas inflassem o valor",
-    "Refactor: cálculo de fatura centralizado em calcFaturaCard() — elimina 4 cópias duplicadas da mesma lógica"
+    "Novo: dashboard de cartões de crédito na Home — card por cartão com fatura aberta, barra de limite, disponível e badges de fechamento/vencimento iminente",
+    "Novo: card expansível mostra todos os lançamentos e itens da fatura atual ao tocar",
+    "Melhoria: alertas simples de vencimento substituídos pelo novo painel de cartões"
   ]
 }
