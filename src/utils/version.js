@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.46';
+export const APP_VERSION = '1.6.47';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.47',
+    date: '17/06/2026',
+    changes: [
+      'Novo: agrupamento dinâmico de despesas por descrição (como subcategorias implícitas) no modal de drill-down de orçamentos',
+      'Melhoria: integração das principais despesas do mês nos alertas de orçamento push (N4/N5)',
+      'Melhoria: integração dos maiores gastos por categoria nos comandos do bot do Telegram (/categoria e /insight)',
+    ],
+  },
   {
     version: '1.6.46',
     date: '17/06/2026',

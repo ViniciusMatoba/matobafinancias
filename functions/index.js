@@ -318,6 +318,51 @@ function computeSpentByCategory(transactions, currentMonth) {
   return totals;
 }
 
+// Retorna as duas maiores subcategorias (descrições) de gastos no mês para uma categoria
+function getTopExpensesForCategory(transactions, category, currentMonth) {
+  const [year, mon] = currentMonth.split('-').map(Number);
+  const from = `${currentMonth}-01`;
+  const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
+  
+  // Expande transações no período (historical=true para ser consistente com computeSpentByCategory)
+  const occs = expandRange(transactions, from, to, { historical: true });
+  
+  const groups = {};
+  for (const o of occs) {
+    const tx = o.tx;
+    if (!tx || tx.tipo === 'entrada') continue;
+    
+    // Tratamento para cartão com itens
+    if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+      for (const item of tx.itens) {
+        if (item.categoria === category) {
+          const valor = Number(item.valor) || 0;
+          if (item.isParcelado || item.dataCompra?.startsWith(currentMonth)) {
+            const desc = item.descricao?.trim() || tx.descricao?.trim() || 'Despesa Cartão';
+            groups[desc] = (groups[desc] || 0) + valor;
+          }
+        }
+      }
+      continue;
+    }
+    
+    // Tratamento para demais lançamentos
+    const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
+    if (cat === category) {
+      const desc = tx.descricao?.trim() || tx.tipo;
+      groups[desc] = (groups[desc] || 0) + o.valor;
+    }
+  }
+  
+  // Ordena por valor decrescente e pega os 2 principais
+  const sorted = Object.entries(groups)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2);
+    
+  if (sorted.length === 0) return '';
+  return sorted.map(([desc, val]) => `${desc}: ${formatBRL(val)}`).join(', ');
+}
+
 // ─── Verificações de notificação (N1-N17) ───────────────────────────────────
 function checkNotifications(cards, transactions, config, prefs, goals = [], walletInitials = 0) {
   const msgs  = [];
@@ -377,9 +422,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         const s   = spent[catId] || 0;
         const pct = (s / budget) * 100;
         if (tipos.n5 !== false && pct > 100) {
-          msgs.push(`🚨 *${LABELS[catId]} estourou!*\nGasto ${formatBRL(s)} de ${formatBRL(budget)} — excedeu em *${formatBRL(s - budget)}*.`);
+          const top = getTopExpensesForCategory(transactions, catId, currentMonth);
+          const topStr = top ? `\nPrincipais gastos: _${top}_.` : '';
+          msgs.push(`🚨 *${LABELS[catId]} estourou!*\nGasto ${formatBRL(s)} de ${formatBRL(budget)} — excedeu em *${formatBRL(s - budget)}*.${topStr}`);
         } else if (tipos.n4 !== false && pct >= 80 && pct <= 100) {
-          msgs.push(`⚠️ *${LABELS[catId]} em ${Math.round(pct)}%*\n${formatBRL(s)} de ${formatBRL(budget)} utilizados este mês.`);
+          const top = getTopExpensesForCategory(transactions, catId, currentMonth);
+          const topStr = top ? `\nPrincipais gastos: _${top}_.` : '';
+          msgs.push(`⚠️ *${LABELS[catId]} em ${Math.round(pct)}%*\n${formatBRL(s)} de ${formatBRL(budget)} utilizados este mês.${topStr}`);
         }
       }
     }
@@ -1169,9 +1218,19 @@ async function handleCategoria(chatId, uid) {
       const { bar, pct } = barra(s, budget);
       const status = pct > 100 ? ' ⚠️' : pct >= 80 ? ' ❕' : '';
       text += `${icon} *${label}*${status}\n`;
-      text += `\`[${bar}] ${pct}%\`  ${formatBRL(s)} de ${formatBRL(budget)}\n\n`;
+      text += `\`[${bar}] ${pct}%\`  ${formatBRL(s)} de ${formatBRL(budget)}\n`;
+      if (s > 0) {
+        const top = getTopExpensesForCategory(txs, catId, mesStr);
+        if (top) text += `_(${top})_\n`;
+      }
+      text += `\n`;
     } else {
-      text += `${icon} *${label}*: ${formatBRL(s)}\n\n`;
+      text += `${icon} *${label}*: ${formatBRL(s)}\n`;
+      if (s > 0) {
+        const top = getTopExpensesForCategory(txs, catId, mesStr);
+        if (top) text += `_(${top})_\n`;
+      }
+      text += `\n`;
     }
   }
 
@@ -1314,11 +1373,13 @@ async function handleInsight(chatId, uid) {
   let text = '💡 *Insight Financeiro Matoba*\n\n';
   if (worst.catId) {
     const label = LABELS[worst.catId];
+    const top = getTopExpensesForCategory(txs, worst.catId, mesStr);
+    const topStr = top ? `\nPrincipais despesas que pesaram: _${top}_.\n` : '';
     if (worst.pct > 100) {
-      text += `🚨 A categoria *${label}* já estourou em *${formatBRL(worst.s - worst.budget)}* (${Math.round(worst.pct)}% do planejado).\n\n`;
+      text += `🚨 A categoria *${label}* já estourou em *${formatBRL(worst.s - worst.budget)}* (${Math.round(worst.pct)}% do planejado).${topStr}\n`;
       text += `👉 _Recomendação: Para compensar, tente reduzir saídas em outras categorias ou remanejar o saldo até o fim do mês._`;
     } else if (worst.pct >= 80) {
-      text += `⚠️ Alerta: *${label}* consumiu *${Math.round(worst.pct)}%* do limite. Você tem apenas *${formatBRL(worst.budget - worst.s)}* para os próximos ${restDias} dias.\n\n`;
+      text += `⚠️ Alerta: *${label}* consumiu *${Math.round(worst.pct)}%* do limite. Você tem apenas *${formatBRL(worst.budget - worst.s)}* para os próximos ${restDias} dias. ${topStr}\n`;
       text += `👉 _Recomendação: Tente evitar compras impulsivas e adiar despesas nessa categoria para o mês seguinte._`;
     } else {
       text += `✅ Excelente! Todas as categorias de orçamento estão saudáveis e abaixo de 80% do limite.\n\n`;

@@ -359,6 +359,40 @@ export default function BudgetSummaryCard({
                 </div>
               ) : (
                 <>
+                  {/* Resumo agrupado por Descrição (Subcategoria) */}
+                  <div style={{
+                    background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                    borderRadius: 12, padding: '12px 14px', marginBottom: 16,
+                  }}>
+                    <p style={{
+                      margin: '0 0 8px', fontSize: 11, fontWeight: 600,
+                      color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em',
+                    }}>
+                      Resumo por Subcategoria
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {Object.entries(
+                        activeItems.reduce((acc, item) => {
+                          const desc = item.descricao?.trim() || 'Sem descrição';
+                          acc[desc] = (acc[desc] || 0) + item.valor;
+                          return acc;
+                        }, {})
+                      )
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([desc, total]) => {
+                        const pctSub = activeTotal > 0 ? Math.round((total / activeTotal) * 100) : 0;
+                        return (
+                          <div key={desc} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>• {desc}</span>
+                            <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
+                              {formatBRL(total)} <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 400, marginLeft: 4 }}>({pctSub}%)</span>
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <p style={{
                     margin: '0 0 10px', fontSize: 11, fontWeight: 600,
                     color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em',
