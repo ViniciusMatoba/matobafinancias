@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.54';
+export const APP_VERSION = '1.6.55';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.55',
+    date: '17/06/2026',
+    changes: [
+      'Fix: notificação de atualização restaurada — polling de 60 segundos no useVersionCheck garante que o banner apareça enquanto o app está aberto',
+    ],
+  },
   {
     version: '1.6.54',
     date: '17/06/2026',

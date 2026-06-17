@@ -97,16 +97,20 @@ export function useVersionCheck() {
   }, []);
 
   useEffect(() => {
-    Promise.resolve().then(() => {
-      check();
-    });
+    // Verificação inicial (após microtask para não bloquear render)
+    Promise.resolve().then(() => check());
 
+    // Polling a cada 60 segundos enquanto o app está aberto
+    const interval = setInterval(check, 60_000);
+
+    // Verificação ao voltar ao foco
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') check();
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
+      clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [check]);
