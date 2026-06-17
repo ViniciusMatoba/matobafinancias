@@ -198,32 +198,27 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
  * @returns {{ faturaAtual: number, comprometidoFuturo: number, limiteDisponivel: number, proximoVenc: string }}
  */
 export function calcFaturaCard(card, transactions, today) {
+  const proximoVenc = getProximoVencimento(card, today);
+  // Intervalo de fechamento do ciclo atual: (fechamento anterior, fechamento atual]
+  const thisClosing = getClosingDate(card, proximoVenc);
+  const prevClosing = getClosingDate(card, addMonths(proximoVenc, -1));
+
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
   );
 
-  if (cardTxs.length === 0) {
-    const proximoVenc = getProximoVencimento(card, today);
-    return { faturaAtual: 0, comprometidoFuturo: 0, limiteDisponivel: card.limite || 0, proximoVenc };
-  }
-
-  // Determina proximoVenc pelo próprio lançamento (dataInicio = dia de pagamento da fatura),
-  // sem depender da config diaVencimento do cartão.
-  // Prioriza a data mais próxima >= hoje; se todas são passadas, usa a mais recente.
-  const txDates = cardTxs.map(t => t.dataInicio).sort();
-  const upcoming = txDates.filter(d => d >= today);
-  const past     = txDates.filter(d => d < today);
-  const proximoVenc = upcoming[0] ?? past[past.length - 1] ?? getProximoVencimento(card, today);
-
   let faturaAtual = 0;
   let comprometidoFuturo = 0;
 
-  // Fatura atual = somente lançamentos com dataInicio === proximoVenc
-  // Comprometido futuro = lançamentos além do próximo vencimento
   cardTxs.forEach(tx => {
     const val = Number(tx.valor) || 0;
-    if (tx.dataInicio === proximoVenc) faturaAtual        += val;
-    else if (tx.dataInicio > proximoVenc) comprometidoFuturo += val;
+    const d   = tx.dataInicio;
+    // Fatura atual = lançamentos dentro do ciclo de fechamento corrente
+    if (d > prevClosing && d <= thisClosing) {
+      faturaAtual += val;
+    } else if (d > thisClosing) {
+      comprometidoFuturo += val;
+    }
   });
 
   const limite = card.limite || 0;

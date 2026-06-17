@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.70';
+export const APP_VERSION = '1.6.71';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.71',
+    date: '17/06/2026',
+    changes: [
+      'Fix: calcFaturaCard soma lançamentos cartão dentro do período (fechamento anterior, fechamento atual] — ciclo real de fechamento do cartão',
+    ],
+  },
   {
     version: '1.6.70',
     date: '17/06/2026',
