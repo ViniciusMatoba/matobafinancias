@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks, getProximoVencimento } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
-import { expandOccurrences } from '../../utils/projectionCalc';
+import { expandOccurrences, calcFaturaCard } from '../../utils/projectionCalc';
 
 const TIPOS = Object.entries(TYPE_CONFIG).map(([id, cfg]) => ({ id, ...cfg }));
 const FREQS = Object.entries(FREQ_LABELS).map(([id, label]) => ({ id, label }));
@@ -859,26 +859,12 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       {/* Cartão selector + painel de limite */}
       {form.tipo === 'cartao' && cards?.length > 0 && (() => {
         const selectedCard = cards.find(c => c.id === form.cartaoId) || null;
-        const proximoVenc = selectedCard ? getProximoVencimento(selectedCard, todayStr()) : null;
-        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === form.cartaoId && t.id !== initial?.id && !t.conferido);
-        let faturaAtual = 0, comprometidoFuturo = 0;
-        cardTxs.forEach(tx => {
-          const txDate = tx.dataInicio;
-          if (tx.itens && tx.itens.length > 0) {
-            tx.itens.forEach(item => {
-              const val = Number(item.valor) || 0;
-              if (!proximoVenc || txDate <= proximoVenc) faturaAtual += val;
-              else comprometidoFuturo += val;
-              if (item.isParcelado) comprometidoFuturo += Math.max(0, item.totalParcelas - (item.parcelaAtual || 1)) * val;
-            });
-          } else {
-            const val = Number(tx.valor) || 0;
-            if (!proximoVenc || txDate <= proximoVenc) faturaAtual += val;
-            else comprometidoFuturo += val;
-          }
-        });
+        // Exclui o lançamento sendo editado para não contar duas vezes
+        const txsParaCalculo = transactions.filter(t => t.id !== initial?.id);
+        const { faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc } = selectedCard
+          ? calcFaturaCard(selectedCard, txsParaCalculo, todayStr())
+          : { faturaAtual: 0, comprometidoFuturo: 0, limiteDisponivel: 0, proximoVenc: null };
         const limiteTotal = selectedCard?.limite || 0;
-        const limiteDisponivel = Math.max(0, limiteTotal - faturaAtual - comprometidoFuturo);
         const pctUsado = limiteTotal > 0 ? (faturaAtual + comprometidoFuturo) / limiteTotal : 0;
         const corDisponivel = pctUsado < 0.5 ? 'var(--entrada)' : pctUsado < 0.8 ? '#f59e0b' : 'var(--saida)';
 

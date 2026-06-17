@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal } from 'lucide-react';
-import { formatBRL, TYPE_CONFIG, todayStr, addDays, getProximoVencimento } from '../../utils/formatters';
-import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
+import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
+import { expandOccurrences, calcSaldo, calcularSobraSegura, calcFaturaCard } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import BudgetSummaryCard from './BudgetSummaryCard';
 import AdjustBalanceModal from './AdjustBalanceModal';
@@ -66,47 +66,10 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   // Estatísticas de limite e saldo dos cartões
   const cardsStats = useMemo(() => {
     if (!cards?.length) return [];
+    const today = todayStr();
     return cards.map(card => {
-      const proximoVenc = getProximoVencimento(card, todayStr());
-      const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido);
-      let faturaAtual = 0;
-      let comprometidoFuturo = 0;
-
-      cardTxs.forEach(tx => {
-        const txDate = tx.dataInicio;
-        if (tx.itens && tx.itens.length > 0) {
-          tx.itens.forEach(item => {
-            const val = Number(item.valor) || 0;
-            if (txDate <= proximoVenc) {
-              faturaAtual += val;
-            } else {
-              comprometidoFuturo += val;
-            }
-            if (item.isParcelado) {
-              const remaining = Math.max(0, item.totalParcelas - (item.parcelaAtual || 1));
-              comprometidoFuturo += remaining * val;
-            }
-          });
-        } else {
-          const val = Number(tx.valor) || 0;
-          if (txDate <= proximoVenc) {
-            faturaAtual += val;
-          } else {
-            comprometidoFuturo += val;
-          }
-        }
-      });
-
-      const totalComprometido = faturaAtual + comprometidoFuturo;
-      const limiteDisponivel = Math.max(0, (card.limite || 0) - totalComprometido);
-
-      return {
-        ...card,
-        faturaAtual,
-        comprometidoFuturo,
-        totalComprometido,
-        limiteDisponivel
-      };
+      const stats = calcFaturaCard(card, transactions, today);
+      return { ...card, ...stats, totalComprometido: stats.faturaAtual + stats.comprometidoFuturo };
     });
   }, [cards, transactions]);
 

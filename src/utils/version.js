@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.53';
+export const APP_VERSION = '1.6.54';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.54',
+    date: '17/06/2026',
+    changes: [
+      'Fix: fatura atual agora usa apenas o ciclo corrente (entre o vencimento anterior e o próximo), evitando que faturas de meses passados não conferidas inflassem o valor',
+      'Refactor: cálculo de fatura centralizado em calcFaturaCard() — elimina 4 cópias duplicadas da mesma lógica',
+    ],
+  },
   {
     version: '1.6.53',
     date: '17/06/2026',

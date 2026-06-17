@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CreditCard, Plus, Trash2, Pencil, Link } from 'lucide-react';
-import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, formatDate, getProximoVencimento, todayStr } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, formatDate, todayStr } from '../../utils/formatters';
+import { calcFaturaCard } from '../../utils/projectionCalc';
 
 const CARD_COLORS = ['#3b82f6','#6366f1','#a855f7','#ec4899','#10b981','#f59e0b','#ef4444','#14b8a6'];
 
@@ -100,39 +101,7 @@ export default function CardManager({ cards, transactions = [], onAdd, onUpdate,
 
       {cards.map(card => {
         // Calcular estatísticas de limite comprometido
-        const hoje = todayStr();
-        const proximoVenc = getProximoVencimento(card, hoje);
-        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido);
-        let faturaAtual = 0;
-        let comprometidoFuturo = 0;
-
-        cardTxs.forEach(tx => {
-          const txDate = tx.dataInicio;
-          if (tx.itens && tx.itens.length > 0) {
-            tx.itens.forEach(item => {
-              const val = Number(item.valor) || 0;
-              if (txDate <= proximoVenc) {
-                faturaAtual += val;
-              } else {
-                comprometidoFuturo += val;
-              }
-              if (item.isParcelado) {
-                const remaining = Math.max(0, item.totalParcelas - (item.parcelaAtual || 1));
-                comprometidoFuturo += remaining * val;
-              }
-            });
-          } else {
-            const val = Number(tx.valor) || 0;
-            if (txDate <= proximoVenc) {
-              faturaAtual += val;
-            } else {
-              comprometidoFuturo += val;
-            }
-          }
-        });
-
-        const totalComprometido = faturaAtual + comprometidoFuturo;
-        const limiteDisponivel = Math.max(0, (card.limite || 0) - totalComprometido);
+        const { faturaAtual, comprometidoFuturo, limiteDisponivel } = calcFaturaCard(card, transactions, todayStr());
 
         return editing === card.id ? (
           <CardForm

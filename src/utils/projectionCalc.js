@@ -1,4 +1,4 @@
-import { addDays, addWeeks, addMonths, TYPE_CONFIG, todayStr } from './formatters';
+import { addDays, addWeeks, addMonths, TYPE_CONFIG, todayStr, getProximoVencimento } from './formatters';
 
 /**
  * Expande uma transação (regra) em ocorrências dentro do intervalo [from, to].
@@ -169,4 +169,60 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
     sobra: minSaldo > 0 ? minSaldo : 0,
     dataVerificada: to
   };
+}
+
+/**
+ * Calcula fatura atual e comprometido futuro de um cartão.
+ * "Fatura atual" = ciclo corrente: transações com dataInicio no intervalo
+ * (vencimento anterior, próximo vencimento]. Exclui lançamentos conferidos.
+ *
+ * @param {{ diaFechamento?: number, diaVencimento: number, limite?: number }} card
+ * @param {Array} transactions - todas as transações do usuário
+ * @param {string} today - 'YYYY-MM-DD'
+ * @returns {{ faturaAtual: number, comprometidoFuturo: number, limiteDisponivel: number, proximoVenc: string }}
+ */
+export function calcFaturaCard(card, transactions, today) {
+  const proximoVenc = getProximoVencimento(card, today);
+  // Vencimento anterior = um ciclo antes do próximo
+  const vencAnterior = addMonths(proximoVenc, -1);
+
+  const cardTxs = transactions.filter(
+    t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
+  );
+
+  let faturaAtual = 0;
+  let comprometidoFuturo = 0;
+
+  cardTxs.forEach(tx => {
+    const txDate = tx.dataInicio;
+    const isCicloAtual = txDate > vencAnterior && txDate <= proximoVenc;
+    const isFuturo = txDate > proximoVenc;
+
+    if (tx.itens && tx.itens.length > 0) {
+      tx.itens.forEach(item => {
+        const val = Number(item.valor) || 0;
+        if (isCicloAtual) {
+          faturaAtual += val;
+        } else if (isFuturo) {
+          comprometidoFuturo += val;
+        }
+        if (item.isParcelado) {
+          const remaining = Math.max(0, item.totalParcelas - (item.parcelaAtual || 1));
+          comprometidoFuturo += remaining * val;
+        }
+      });
+    } else {
+      const val = Number(tx.valor) || 0;
+      if (isCicloAtual) {
+        faturaAtual += val;
+      } else if (isFuturo) {
+        comprometidoFuturo += val;
+      }
+    }
+  });
+
+  const limite = card.limite || 0;
+  const limiteDisponivel = Math.max(0, limite - faturaAtual - comprometidoFuturo);
+
+  return { faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc };
 }

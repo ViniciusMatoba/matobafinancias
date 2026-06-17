@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
-import { formatBRL, formatDate, todayStr, getProximoVencimento } from '../../utils/formatters';
+import { formatBRL, formatDate, todayStr, getProximoVencimento, addMonths } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
 export default function CartaoFaturaCard({ cardsStats, transactions }) {
@@ -48,9 +48,11 @@ export default function CartaoFaturaCard({ cardsStats, transactions }) {
         const urgFech = diasFech <= 0;
         const avFech  = diasFech <= 2;
 
-        // Lançamentos do ciclo atual (não conferidos, dentro do próximo vencimento)
+        // Lançamentos do ciclo atual (não conferidos, dentro do intervalo (vencAnterior, proximoVenc])
+        const vencAnterior = addMonths(proximoVenc, -1);
         const lançamentos = transactions.filter(
-          t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido && t.dataInicio <= proximoVenc
+          t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
+            && t.dataInicio > vencAnterior && t.dataInicio <= proximoVenc
         );
 
         return (
