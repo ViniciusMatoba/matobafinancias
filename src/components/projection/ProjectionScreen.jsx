@@ -66,6 +66,21 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
 
   const toggle = (date) => setExpanded(e => ({ ...e, [date]: !e[date] }));
 
+  // Retorna a data de fechamento real do ciclo que vence em vencStr.
+  // Ex: diaVencimento=3, diaFechamento=11, vencStr='2026-06-03' → '2026-05-11'
+  // Ex: diaVencimento=20, diaFechamento=10, vencStr='2026-06-20' → '2026-06-10'
+  const getClosingDate = (card, vencStr) => {
+    const [y, m] = vencStr.split('-').map(Number);
+    const diaFech = card.diaFechamento || card.diaVencimento;
+    const diaVenc = card.diaVencimento;
+    let cm = m, cy = y;
+    // Quando vencimento < fechamento, o fechamento ocorre no mês anterior ao vencimento
+    if (diaVenc < diaFech) { cm -= 1; if (cm < 1) { cm = 12; cy -= 1; } }
+    const lastDay = new Date(cy, cm, 0).getDate();
+    const dia = Math.min(diaFech, lastDay);
+    return `${cy}-${String(cm).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+  };
+
   // Mapa de badges de fechamento/vencimento por data
   const cardBadges = useMemo(() => {
     if (!cards?.length || !days.length) return {};
@@ -75,16 +90,17 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
       const fechamentos = cards.filter(c => c.diaFechamento === d);
       const vencimentos = cards.filter(c => c.diaVencimento === d);
       if (fechamentos.length || vencimentos.length) {
-        // Para cada vencimento neste dia, calcula a fatura do ciclo
-        // que fecha NESTA data: (thisVenc - 1 mês, thisVenc]
+        // Para cada vencimento, usa o fechamento real como limite do ciclo:
+        // (fechamento anterior, fechamento deste ciclo]
         const vencFaturas = {};
         const vencPago   = {};
         vencimentos.forEach(c => {
-          const thisVenc = day.date;
-          const prevVenc = addMonths(thisVenc, -1);
+          const thisVenc    = day.date;
+          const thisClosing = getClosingDate(c, thisVenc);
+          const prevClosing = addMonths(thisClosing, -1);
           const ciclo = transactions.filter(t =>
             t.tipo === 'cartao' && t.cartaoId === c.id &&
-            t.dataInicio > prevVenc && t.dataInicio <= thisVenc
+            t.dataInicio > prevClosing && t.dataInicio <= thisClosing
           );
           const totalCiclo = ciclo.reduce((sum, t) => {
             if (t.itens?.length > 0) return sum + t.itens.reduce((s, i) => s + (Number(i.valor) || 0), 0);

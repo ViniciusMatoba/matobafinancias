@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.59';
+export const APP_VERSION = '1.6.60';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.60',
+    date: '17/06/2026',
+    changes: [
+      'Fix: badge de vencimento na Projeção agora usa o diaFechamento real do cartão para delimitar o ciclo, corrigindo casos onde a fatura paga não aparecia como "Pago" quando o fechamento é distante do vencimento (ex: fecha dia 11, vence dia 3)',
+    ],
+  },
   {
     version: '1.6.59',
     date: '17/06/2026',
