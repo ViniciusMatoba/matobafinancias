@@ -2,6 +2,6 @@
   "version": "1.6.58",
   "date": "17/06/2026",
   "notes": [
-    "Fix: valor da fatura no badge de vencimento da Projeção agora exibe o valor correto do ciclo daquela data específica, não o ciclo atual"
+    "Fix: valor da fatura no badge de vencimento da Projeção agora exibe o valor correto do ciclo daquela data"
   ]
 }
