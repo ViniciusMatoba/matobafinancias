@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.56';
+export const APP_VERSION = '1.6.57';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.57',
+    date: '17/06/2026',
+    changes: [
+      'Fix: notificação de atualização restaurada corretamente — SW agora aguarda confirmação do usuário antes de recarregar, garantindo que o banner "Nova versão disponível" sempre apareça',
+    ],
+  },
   {
     version: '1.6.56',
     date: '17/06/2026',

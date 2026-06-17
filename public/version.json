@@ -1,9 +1,7 @@
 {
-  "version": "1.6.56",
+  "version": "1.6.57",
   "date": "17/06/2026",
   "notes": [
-    "Performance: bundle inicial −41%; telas secundárias carregadas sob demanda",
-    "Projeção: badge de vencimento de cartão agora mostra valor da fatura",
-    "Cartão: histórico de faturas pagas e conferência por item"
+    "Fix: notificação de atualização restaurada — SW aguarda confirmação do usuário antes de recarregar, garantindo que o banner sempre apareça"
   ]
 }

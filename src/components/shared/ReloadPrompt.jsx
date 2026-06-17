@@ -6,18 +6,21 @@ export default function ReloadPrompt() {
   const [updating, setUpdating] = useState(false);
 
   useRegisterSW({
-    // onNeedRefresh: disparado pelo vite-plugin-pwa (autoUpdate) quando
-    // um novo SW está esperando. Mostramos a tela de loading e garantimos
-    // o reload com um fallback de segurança caso o autoUpdate trave.
+    // onNeedRefresh: disparado quando um novo SW está instalado e aguardando.
+    // Com registerType 'prompt', o SW NÃO ativa sozinho — o banner do
+    // useVersionCheck aparece em até 60s e o usuário clica "Atualizar".
+    // O fallback de 10 min garante que o app eventualmente atualize mesmo
+    // se o usuário ignorar o banner.
     onNeedRefresh() {
-      setUpdating(true);
-      // Safeguard: se o autoUpdate não recarregar em 8s, forçamos o reload
-      setTimeout(() => window.location.reload(), 8_000);
+      setTimeout(() => {
+        setUpdating(true);
+        setTimeout(() => window.location.reload(), 8_000);
+      }, 10 * 60 * 1000);
     },
     onRegistered(r) {
       if (!r) return;
       const check = () => r.update().catch(() => {});
-      // Verifica atualização ao abrir e ao voltar ao foco — sem polling periódico
+      // Verifica atualização ao abrir e ao voltar ao foco
       check();
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check();
