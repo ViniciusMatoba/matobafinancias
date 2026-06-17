@@ -133,6 +133,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
           <ProjectionScreen
             transactions={transactions}
             wallets={wallets}
+            cards={cards}
             onEdit={handleEdit}
             onClone={handleClone}
             onDelete={handleDelete}
@@ -166,6 +167,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             onLogout={logout}
             onResetTour={async () => { await saveConfig({ tourDone: false }); }}
             onUpdateApp={handleUpdate}
+            onUpdateTransaction={update}
           />
         )}
 

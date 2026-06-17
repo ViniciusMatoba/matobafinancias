@@ -23,7 +23,7 @@ function formatDayNum(dateStr) {
   return dateStr.split('-')[2];
 }
 
-export default function ProjectionScreen({ transactions, wallets, onEdit, onClone, onDelete, onPay, onUpdate }) {
+export default function ProjectionScreen({ transactions, wallets, cards = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
   const [viewTab, setViewTab] = useState('mensal'); // 'mensal' | 'resumo' | 'anual'
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -65,6 +65,21 @@ export default function ProjectionScreen({ transactions, wallets, onEdit, onClon
   }, [transactions, from, to, saldoInicial, viewTab]);
 
   const toggle = (date) => setExpanded(e => ({ ...e, [date]: !e[date] }));
+
+  // Mapa de badges de fechamento/vencimento por data
+  const cardBadges = useMemo(() => {
+    if (!cards?.length || !days.length) return {};
+    const map = {};
+    days.forEach(day => {
+      const d = parseInt(day.date.split('-')[2], 10);
+      const fechamentos = cards.filter(c => c.diaFechamento === d);
+      const vencimentos = cards.filter(c => c.diaVencimento === d);
+      if (fechamentos.length || vencimentos.length) {
+        map[day.date] = { fechamentos, vencimentos };
+      }
+    });
+    return map;
+  }, [cards, days]);
 
   const saldoFim = days.length > 0 ? days[days.length - 1].saldo : saldoInicial;
   const minSaldo = days.length > 0 ? Math.min(...days.map(d => d.saldo)) : saldoInicial;
@@ -381,7 +396,7 @@ export default function ProjectionScreen({ transactions, wallets, onEdit, onClon
                       >
                         {/* Esquerda: data + eventos */}
                         <div style={{ flex: 1, padding: '8px 10px', textAlign: 'left' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: hasItems ? 4 : 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: (hasItems || cardBadges[day.date]) ? 4 : 0 }}>
                             <span style={{
                               fontSize: 15, fontWeight: 700,
                               color: isDayToday ? 'var(--primary)' : 'var(--text-primary)',
@@ -396,6 +411,29 @@ export default function ProjectionScreen({ transactions, wallets, onEdit, onClon
                               {dName}{isDayToday ? ' · Hoje' : ''}
                             </span>
                           </div>
+
+                          {cardBadges[day.date] && (
+                            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: hasItems ? 4 : 0 }}>
+                              {cardBadges[day.date].fechamentos.map(c => (
+                                <span key={`f-${c.id}`} style={{
+                                  background: 'rgba(245,158,11,0.15)', color: '#f59e0b',
+                                  borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600,
+                                  display: 'flex', alignItems: 'center', gap: 3,
+                                }}>
+                                  📅 Fecha {c.nome}
+                                </span>
+                              ))}
+                              {cardBadges[day.date].vencimentos.map(c => (
+                                <span key={`v-${c.id}`} style={{
+                                  background: 'rgba(239,68,68,0.15)', color: '#ef4444',
+                                  borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600,
+                                  display: 'flex', alignItems: 'center', gap: 3,
+                                }}>
+                                  💳 Vence {c.nome}
+                                </span>
+                              ))}
+                            </div>
+                          )}
 
                           {hasItems && !isOpen && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

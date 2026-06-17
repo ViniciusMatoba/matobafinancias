@@ -856,16 +856,95 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
         );
       })()}
 
-      {/* Cartão selector */}
-      {form.tipo === 'cartao' && cards?.length > 0 && (
-        <div>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Cartão</label>
-          <select value={form.cartaoId} onChange={e => set('cartaoId', e.target.value)}>
-            <option value="">Selecione um cartão</option>
-            {cards.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
-          </select>
-        </div>
-      )}
+      {/* Cartão selector + painel de limite */}
+      {form.tipo === 'cartao' && cards?.length > 0 && (() => {
+        const selectedCard = cards.find(c => c.id === form.cartaoId) || null;
+        const todayMonth = todayStr().slice(0, 7);
+        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === form.cartaoId && t.id !== initial?.id);
+        let faturaAtual = 0, comprometidoFuturo = 0;
+        cardTxs.forEach(tx => {
+          const txMonth = tx.dataInicio.slice(0, 7);
+          if (tx.itens && tx.itens.length > 0) {
+            tx.itens.forEach(item => {
+              const val = Number(item.valor) || 0;
+              if (txMonth === todayMonth) faturaAtual += val;
+              else if (txMonth > todayMonth) comprometidoFuturo += val;
+              if (item.isParcelado) comprometidoFuturo += Math.max(0, item.totalParcelas - (item.parcelaAtual || 1)) * val;
+            });
+          } else {
+            const val = Number(tx.valor) || 0;
+            if (txMonth === todayMonth) faturaAtual += val;
+            else if (txMonth > todayMonth) comprometidoFuturo += val;
+          }
+        });
+        const limiteTotal = selectedCard?.limite || 0;
+        const limiteDisponivel = Math.max(0, limiteTotal - faturaAtual - comprometidoFuturo);
+        const pctUsado = limiteTotal > 0 ? (faturaAtual + comprometidoFuturo) / limiteTotal : 0;
+        const corDisponivel = pctUsado < 0.5 ? 'var(--entrada)' : pctUsado < 0.8 ? '#f59e0b' : 'var(--saida)';
+
+        const handleCartaoChange = (cardId) => {
+          set('cartaoId', cardId);
+          if (initial?.id) return; // edição: não sobrescreve a data existente
+          const card = cards.find(c => c.id === cardId);
+          if (!card?.diaVencimento) return;
+          const today = todayStr();
+          const [y, m, d] = today.split('-').map(Number);
+          const diaFech = card.diaFechamento || card.diaVencimento;
+          const diaVenc = card.diaVencimento;
+          let mes = m, ano = y;
+          if (d > diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }
+          if (diaVenc < diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }
+          const lastDay = new Date(ano, mes, 0).getDate();
+          const dia = Math.min(diaVenc, lastDay);
+          set('dataInicio', `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`);
+        };
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div>
+              <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Cartão</label>
+              <select value={form.cartaoId} onChange={e => handleCartaoChange(e.target.value)}>
+                <option value="">Selecione um cartão</option>
+                {cards.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+              {selectedCard && !initial?.id && (
+                <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                  Data preenchida com o próximo vencimento (dia {selectedCard.diaVencimento})
+                </p>
+              )}
+            </div>
+
+            {selectedCard && limiteTotal > 0 && (
+              <div style={{
+                background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                borderRadius: 10, padding: '10px 12px',
+                display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: 'var(--text-muted)' }}>Fatura atual</span>
+                  <span style={{ fontWeight: 600, color: 'var(--saida)' }}>{formatBRL(faturaAtual)}</span>
+                </div>
+                {comprometidoFuturo > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Futuros/parcelas</span>
+                    <span style={{ color: 'var(--text-muted)' }}>{formatBRL(comprometidoFuturo)}</span>
+                  </div>
+                )}
+                <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.min(pctUsado * 100, 100)}%`, background: corDisponivel, transition: 'width 0.3s' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Disponível</span>
+                  <span style={{ color: corDisponivel }}>{formatBRL(limiteDisponivel)}</span>
+                </div>
+                <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                  Fecha dia {selectedCard.diaFechamento} · Vence dia {selectedCard.diaVencimento}
+                </p>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Carteira selector */}
       {form.tipo !== 'cartao' && wallets?.length > 0 && (

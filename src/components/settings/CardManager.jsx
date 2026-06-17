@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { CreditCard, Plus, Trash2, Pencil } from 'lucide-react';
-import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
+import { CreditCard, Plus, Trash2, Pencil, Link } from 'lucide-react';
+import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, formatDate } from '../../utils/formatters';
 
 const CARD_COLORS = ['#3b82f6','#6366f1','#a855f7','#ec4899','#10b981','#f59e0b','#ef4444','#14b8a6'];
 
@@ -63,9 +63,21 @@ function CardForm({ initial, onSave, onCancel }) {
   );
 }
 
-export default function CardManager({ cards, transactions = [], onAdd, onUpdate, onRemove }) {
+export default function CardManager({ cards, transactions = [], onAdd, onUpdate, onRemove, onUpdateTransaction }) {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [vinculoMap, setVinculoMap] = useState({});
+  const [vinculando, setVinculando] = useState({});
+
+  const semVinculo = transactions.filter(t => t.tipo === 'cartao' && !t.cartaoId);
+
+  const handleVincular = async (txId) => {
+    const cardId = vinculoMap[txId];
+    if (!cardId || !onUpdateTransaction) return;
+    setVinculando(v => ({ ...v, [txId]: true }));
+    await onUpdateTransaction(txId, { cartaoId: cardId });
+    setVinculando(v => ({ ...v, [txId]: false }));
+  };
 
   return (
     <div>
@@ -189,6 +201,70 @@ export default function CardManager({ cards, transactions = [], onAdd, onUpdate,
         <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: 13, margin: '20px 0' }}>
           Nenhum cartão cadastrado
         </p>
+      )}
+
+      {/* Seção de revínculo em massa */}
+      {semVinculo.length > 0 && cards.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <Link size={15} color="var(--primary)" />
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+              Lançamentos sem cartão vinculado
+            </p>
+            <span style={{
+              background: 'rgba(239,68,68,0.15)', color: '#ef4444',
+              borderRadius: 20, padding: '1px 8px', fontSize: 11, fontWeight: 700,
+            }}>
+              {semVinculo.length}
+            </span>
+          </div>
+          <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-muted)' }}>
+            Esses lançamentos foram criados sem selecionar o cartão. Vincule cada um ao cartão correto para que o limite e os alertas funcionem.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {semVinculo.map(tx => (
+              <div key={tx.id} style={{
+                background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: 12, padding: '12px 14px',
+                display: 'flex', flexDirection: 'column', gap: 8,
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {tx.descricao || 'Fatura sem descrição'}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                      {formatDate(tx.dataInicio)} · {formatBRL(tx.valor)}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <select
+                    value={vinculoMap[tx.id] || ''}
+                    onChange={e => setVinculoMap(m => ({ ...m, [tx.id]: e.target.value }))}
+                    style={{ flex: 1, fontSize: 13 }}
+                  >
+                    <option value="">Selecione o cartão…</option>
+                    {cards.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                  <button
+                    onClick={() => handleVincular(tx.id)}
+                    disabled={!vinculoMap[tx.id] || vinculando[tx.id]}
+                    style={{
+                      padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                      background: vinculoMap[tx.id] ? 'var(--primary)' : 'var(--bg-surface)',
+                      color: vinculoMap[tx.id] ? '#fff' : 'var(--text-muted)',
+                      border: '1px solid var(--border)', cursor: vinculoMap[tx.id] ? 'pointer' : 'default',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {vinculando[tx.id] ? '…' : 'Vincular'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

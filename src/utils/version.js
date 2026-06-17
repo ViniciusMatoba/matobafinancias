@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.48';
+export const APP_VERSION = '1.6.49';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.49',
+    date: '17/06/2026',
+    changes: [
+      'Novo: lançamentos de cartão sem vínculo agora aparecem em Config > Cartões para revínculo em massa',
+      'Novo: ao selecionar o cartão no formulário, a data é preenchida automaticamente com o próximo vencimento',
+      'Novo: painel de limite disponível, fatura atual e parcelados futuros exibido no formulário ao selecionar o cartão',
+      'Novo: badges de fechamento (📅) e vencimento (💳) de cada cartão aparecem nos dias correspondentes na tela de Projeção',
+    ],
+  },
   {
     version: '1.6.48',
     date: '17/06/2026',

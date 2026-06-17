@@ -138,7 +138,7 @@ const CHANGELOG_DATA = [
   }
 ];
 
-export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour, onUpdateApp }) {
+export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour, onUpdateApp, onUpdateTransaction }) {
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [walletsOpen, setWalletsOpen] = useState(false);
@@ -479,7 +479,7 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
           {cardsOpen && (
             <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
               <div style={{ paddingTop: 14 }}>
-                <CardManager cards={cards} transactions={transactions} onAdd={onAddCard} onUpdate={onUpdateCard} onRemove={onRemoveCard} />
+                <CardManager cards={cards} transactions={transactions} onAdd={onAddCard} onUpdate={onUpdateCard} onRemove={onRemoveCard} onUpdateTransaction={onUpdateTransaction} />
               </div>
             </div>
           )}
