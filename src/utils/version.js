@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.58';
+export const APP_VERSION = '1.6.59';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.59',
+    date: '17/06/2026',
+    changes: [
+      'Fix: badge de vencimento de cartão na Projeção muda para verde "✓ Pago" quando a fatura do ciclo já foi quitada antes do vencimento',
+    ],
+  },
   {
     version: '1.6.58',
     date: '17/06/2026',

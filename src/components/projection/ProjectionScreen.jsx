@@ -78,21 +78,29 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
         // Para cada vencimento neste dia, calcula a fatura do ciclo
         // que fecha NESTA data: (thisVenc - 1 mês, thisVenc]
         const vencFaturas = {};
+        const vencPago   = {};
         vencimentos.forEach(c => {
           const thisVenc = day.date;
           const prevVenc = addMonths(thisVenc, -1);
-          vencFaturas[c.id] = transactions
-            .filter(t =>
-              t.tipo === 'cartao' && t.cartaoId === c.id && !t.conferido &&
-              t.dataInicio > prevVenc && t.dataInicio <= thisVenc
-            )
+          const ciclo = transactions.filter(t =>
+            t.tipo === 'cartao' && t.cartaoId === c.id &&
+            t.dataInicio > prevVenc && t.dataInicio <= thisVenc
+          );
+          const totalCiclo = ciclo.reduce((sum, t) => {
+            if (t.itens?.length > 0) return sum + t.itens.reduce((s, i) => s + (Number(i.valor) || 0), 0);
+            return sum + (Number(t.valor) || 0);
+          }, 0);
+          const pendente = ciclo
+            .filter(t => !t.conferido)
             .reduce((sum, t) => {
-              if (t.itens?.length > 0)
-                return sum + t.itens.reduce((s, i) => s + (Number(i.valor) || 0), 0);
+              if (t.itens?.length > 0) return sum + t.itens.reduce((s, i) => s + (Number(i.valor) || 0), 0);
               return sum + (Number(t.valor) || 0);
             }, 0);
+          vencFaturas[c.id] = pendente;
+          // Pago = houve despesas no ciclo e nenhuma pendente
+          vencPago[c.id] = totalCiclo > 0 && pendente === 0;
         });
-        map[day.date] = { fechamentos, vencimentos, vencFaturas };
+        map[day.date] = { fechamentos, vencimentos, vencFaturas, vencPago };
       }
     });
     return map;
@@ -440,15 +448,22 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
                                   📅 Fecha {c.nome}
                                 </span>
                               ))}
-                              {cardBadges[day.date].vencimentos.map(c => (
-                                <span key={`v-${c.id}`} style={{
-                                  background: 'rgba(239,68,68,0.15)', color: '#ef4444',
-                                  borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600,
-                                  display: 'flex', alignItems: 'center', gap: 3,
-                                }}>
-                                  💳 Vence {c.nome}{cardBadges[day.date].vencFaturas[c.id] > 0 ? ` · ${formatBRL(cardBadges[day.date].vencFaturas[c.id])}` : ''}
-                                </span>
-                              ))}
+                              {cardBadges[day.date].vencimentos.map(c => {
+                                const pago    = cardBadges[day.date].vencPago[c.id];
+                                const valor   = cardBadges[day.date].vencFaturas[c.id];
+                                return (
+                                  <span key={`v-${c.id}`} style={{
+                                    background: pago ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)',
+                                    color: pago ? '#10b981' : '#ef4444',
+                                    borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600,
+                                    display: 'flex', alignItems: 'center', gap: 3,
+                                  }}>
+                                    {pago
+                                      ? `✓ ${c.nome} · Pago`
+                                      : `💳 Vence ${c.nome}${valor > 0 ? ` · ${formatBRL(valor)}` : ''}`}
+                                  </span>
+                                );
+                              })}
                             </div>
                           )}
 

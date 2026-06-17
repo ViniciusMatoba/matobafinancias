@@ -1,7 +1,7 @@
 {
-  "version": "1.6.58",
+  "version": "1.6.59",
   "date": "17/06/2026",
   "notes": [
-    "Fix: valor da fatura no badge de vencimento da Projeção agora exibe o valor correto do ciclo daquela data"
+    "Fix: badge de vencimento na Projeção muda para verde \"✓ Pago\" quando a fatura do ciclo já foi quitada antes do vencimento"
   ]
 }
