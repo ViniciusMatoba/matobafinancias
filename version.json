@@ -1,7 +1,0 @@
-{
-  "version": "1.6.71",
-  "date": "17/06/2026",
-  "notes": [
-    "Fix: calcFaturaCard soma lançamentos cartão dentro do período (fechamento anterior, fechamento atual"
-  ]
-}
