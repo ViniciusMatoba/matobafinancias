@@ -1,7 +1,11 @@
 {
-  "version": "1.6.45",
-  "date": "08/06/2026",
+  "version": "1.6.48",
+  "date": "17/06/2026",
   "notes": [
-    "Fix: bot Telegram agora exibe o SALDO GLOBAL correto — estimativas diárias não inflarão mais o saldo passado"
+    "Melhoria: tratamento de erros com toast nas operações de salvar, excluir, pagar e editar recorrências — o usuário agora é informado quando uma operação falha",
+    "Novo: testes automatizados (Vitest) para as funções críticas de cálculo financeiro e datas (54 casos cobrindo expandOccurrences, calcSaldo, addMonths, etc.)",
+    "Refactor: lógica de estado e handlers extraída de App.jsx para AppContext — manutenção simplificada sem alteração de comportamento",
+    "Docs: JSDoc com shapes completos (Transaction, Card, Wallet, Goal, Config) nos hooks de dados",
+    "Segurança: limite de 10.000 documentos por usuário no Firestore para evitar leituras excessivas em caso de volume muito alto de transações"
   ]
 }
