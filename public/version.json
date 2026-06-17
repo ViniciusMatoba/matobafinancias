@@ -1,7 +1,7 @@
 {
-  "version": "1.6.65",
+  "version": "1.6.66",
   "date": "17/06/2026",
   "notes": [
-    "Fix: fatura do cartão na Projeção e Home agora filtra por data de vencimento exata (dataInicio === vencimento), corrigindo deslocamento de 1 mês causado por filtro de ciclo de fechamento"
+    "Fix: calcFaturaCard usa txDate <= proximoVenc para fatura atual, corrigindo zero na Home para cartões onde diaVencimento < diaFechamento"
   ]
 }

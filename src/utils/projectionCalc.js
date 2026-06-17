@@ -198,43 +198,38 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
  * @returns {{ faturaAtual: number, comprometidoFuturo: number, limiteDisponivel: number, proximoVenc: string }}
  */
 export function calcFaturaCard(card, transactions, today) {
-  const proximoVenc = getProximoVencimento(card, today);
-
-  // dataInicio dos lançamentos de cartão É a data de vencimento.
-  // Fatura atual = qualquer vencimento não-pago até proximoVenc (inclusive).
-  // Comprometido futuro = vencimentos além do próximo.
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
   );
 
+  if (cardTxs.length === 0) {
+    const proximoVenc = getProximoVencimento(card, today);
+    return { faturaAtual: 0, comprometidoFuturo: 0, limiteDisponivel: card.limite || 0, proximoVenc };
+  }
+
+  // Expande todas as ocorrências dos lançamentos (janela ampla para capturar vencidos recentes)
+  const horizon = addMonths(today, 24);
+  const pastWindow = addMonths(today, -3);
+  const allOccs = cardTxs.flatMap(t => expandOccurrences(t, pastWindow, horizon));
+
+  if (allOccs.length === 0) {
+    const proximoVenc = getProximoVencimento(card, today);
+    return { faturaAtual: 0, comprometidoFuturo: 0, limiteDisponivel: card.limite || 0, proximoVenc };
+  }
+
+  // Determina a data da fatura atual pelo próprio lançamento (não pela config do cartão):
+  // a data mais antiga entre as ocorrências é a fatura corrente (vencida ou mais próxima)
+  const sortedDates = [...new Set(allOccs.map(o => o.date))].sort();
+  const proximoVenc = sortedDates[0];
+
   let faturaAtual = 0;
   let comprometidoFuturo = 0;
 
-  cardTxs.forEach(tx => {
-    const txDate = tx.dataInicio;
-    const isCicloAtual = txDate <= proximoVenc;
-    const isFuturo = txDate > proximoVenc;
-
-    if (tx.itens && tx.itens.length > 0) {
-      tx.itens.forEach(item => {
-        const val = Number(item.valor) || 0;
-        if (isCicloAtual) {
-          faturaAtual += val;
-        } else if (isFuturo) {
-          comprometidoFuturo += val;
-        }
-        if (item.isParcelado) {
-          const remaining = Math.max(0, item.totalParcelas - (item.parcelaAtual || 1));
-          comprometidoFuturo += remaining * val;
-        }
-      });
+  allOccs.forEach(occ => {
+    if (occ.date === proximoVenc) {
+      faturaAtual += occ.valor;
     } else {
-      const val = Number(tx.valor) || 0;
-      if (isCicloAtual) {
-        faturaAtual += val;
-      } else if (isFuturo) {
-        comprometidoFuturo += val;
-      }
+      comprometidoFuturo += occ.valor;
     }
   });
 
