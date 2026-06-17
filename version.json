@@ -1,7 +1,10 @@
 {
-  "version": "1.6.45",
-  "date": "08/06/2026",
+  "version": "1.6.49",
+  "date": "17/06/2026",
   "notes": [
-    "Fix: bot Telegram agora exibe o SALDO GLOBAL correto — estimativas diárias não inflarão mais o saldo passado"
+    "Novo: lançamentos de cartão sem vínculo agora aparecem em Config > Cartões para revínculo em massa",
+    "Novo: ao selecionar o cartão no formulário, a data é preenchida automaticamente com o próximo vencimento",
+    "Novo: painel de limite disponível, fatura atual e parcelados futuros exibido no formulário ao selecionar o cartão",
+    "Novo: badges de fechamento (📅) e vencimento (💳) de cada cartão aparecem nos dias correspondentes na tela de Projeção"
   ]
 }
