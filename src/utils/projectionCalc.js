@@ -189,8 +189,17 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
 
 /**
  * Calcula fatura atual e comprometido futuro de um cartão.
- * "Fatura atual" = ciclo corrente: transações com dataInicio no intervalo
- * (vencimento anterior, próximo vencimento]. Exclui lançamentos conferidos.
+ *
+ * Regras:
+ *  1. dataInicio dos lançamentos de cartão é sempre a DATA DE VENCIMENTO da fatura
+ *     a que pertencem (o formulário preenche automaticamente com o próximo vencimento,
+ *     já considerando a data de fechamento). Por isso o filtro usa limites de vencimento,
+ *     NÃO de fechamento.
+ *
+ *  2. Itens parcelados: tx.valor contém apenas a parcela do mês corrente.
+ *     As parcelas futuras (m+1 … totalParcelas) são projeções virtuais que não existem
+ *     no Firestore — precisam ser somadas manualmente ao comprometidoFuturo para que o
+ *     limite disponível reflita o comprometimento real do cartão.
  *
  * @param {{ diaFechamento?: number, diaVencimento: number, limite?: number }} card
  * @param {Array} transactions - todas as transações do usuário
@@ -199,25 +208,42 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
  */
 export function calcFaturaCard(card, transactions, today) {
   const proximoVenc = getProximoVencimento(card, today);
-  // Intervalo de fechamento do ciclo atual: (fechamento anterior, fechamento atual]
-  const thisClosing = getClosingDate(card, proximoVenc);
-  const prevClosing = getClosingDate(card, addMonths(proximoVenc, -1));
+  // Ciclo atual: (vencimento anterior, próximo vencimento]
+  const prevVenc = addMonths(proximoVenc, -1);
 
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
   );
 
-  let faturaAtual = 0;
+  let faturaAtual        = 0;
   let comprometidoFuturo = 0;
 
   cardTxs.forEach(tx => {
     const val = Number(tx.valor) || 0;
     const d   = tx.dataInicio;
-    // Fatura atual = lançamentos dentro do ciclo de fechamento corrente
-    if (d > prevClosing && d <= thisClosing) {
+
+    // 1. Classifica o lançamento base pelo seu vencimento
+    if (d > prevVenc && d <= proximoVenc) {
       faturaAtual += val;
-    } else if (d > thisClosing) {
+    } else if (d > proximoVenc) {
       comprometidoFuturo += val;
+    }
+
+    // 2. Acumula parcelas futuras de itens parcelados desta fatura
+    //    (não existem como documentos no Firestore, são projeções virtuais)
+    if (tx.itens?.length > 0) {
+      tx.itens.forEach(item => {
+        if (!item.isParcelado) return;
+        const itemVal  = Number(item.valor) || 0;
+        const parAtual = item.parcelaAtual || 1;
+        const parTotal = item.totalParcelas || 1;
+        const remaining = parTotal - parAtual; // quantidade de parcelas ainda por vir
+        if (remaining <= 0) return;
+
+        // Cada parcela futura é cobrada em addMonths(d, m), que sempre será
+        // > proximoVenc (pois d ≤ proximoVenc e m ≥ 1), portanto vai a comprometidoFuturo
+        comprometidoFuturo += remaining * itemVal;
+      });
     }
   });
 

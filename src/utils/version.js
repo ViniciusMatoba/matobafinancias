@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.71';
+export const APP_VERSION = '1.6.72';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.72',
+    date: '17/06/2026',
+    changes: [
+      'Fix crítico: calcFaturaCard agora filtra lançamentos pelo vencimento (dataInicio) e não pelo fechamento — alinha o valor da fatura exibido no cabeçalho com a lista de lançamentos expandida',
+      'Fix: parcelas futuras de itens parcelados agora são somadas ao comprometidoFuturo — limite disponível reflete o real comprometimento de todas as parcelas pendentes',
+    ],
+  },
   {
     version: '1.6.71',
     date: '17/06/2026',
