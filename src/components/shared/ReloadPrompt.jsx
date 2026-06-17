@@ -12,6 +12,9 @@ export default function ReloadPrompt() {
     // O fallback de 10 min garante que o app eventualmente atualize mesmo
     // se o usuário ignorar o banner.
     onNeedRefresh() {
+      // Avisa useVersionCheck para checar version.json imediatamente
+      window.dispatchEvent(new CustomEvent('pwa-update-ready'));
+      // Fallback: força reload após 10 min caso o usuário ignore o banner
       setTimeout(() => {
         setUpdating(true);
         setTimeout(() => window.location.reload(), 8_000);
@@ -20,11 +23,12 @@ export default function ReloadPrompt() {
     onRegistered(r) {
       if (!r) return;
       const check = () => r.update().catch(() => {});
-      // Verifica atualização ao abrir e ao voltar ao foco
+      // Verifica ao abrir, ao voltar ao foco e a cada 60s (sincronizado com useVersionCheck)
       check();
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check();
       });
+      setInterval(check, 60_000);
     },
     onRegisterError(err) {
       console.log('SW registration error', err);

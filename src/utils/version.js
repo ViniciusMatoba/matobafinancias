@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.60';
+export const APP_VERSION = '1.6.61';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.61',
+    date: '17/06/2026',
+    changes: [
+      'Fix notificação de atualização: SW usa NetworkOnly para version.json (sem cache), evento pwa-update-ready liga SW ao banner instantaneamente e onRegistered verifica SW a cada 60s',
+    ],
+  },
   {
     version: '1.6.60',
     date: '17/06/2026',

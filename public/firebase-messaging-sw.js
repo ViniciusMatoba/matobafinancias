@@ -5,7 +5,7 @@
 
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { NetworkFirst, CacheFirst } from 'workbox-strategies';
+import { NetworkOnly, CacheFirst } from 'workbox-strategies';
 import { initializeApp } from 'firebase/app';
 import { getMessaging } from 'firebase/messaging/sw';
 
@@ -13,10 +13,10 @@ import { getMessaging } from 'firebase/messaging/sw';
 precacheAndRoute(self.__WB_MANIFEST || []);
 cleanupOutdatedCaches();
 
-// NetworkFirst para version.json — sempre busca a versão mais recente
+// NetworkOnly para version.json — nunca usa cache, sempre busca da rede
 registerRoute(
   ({ url }) => url.pathname.endsWith('version.json'),
-  new NetworkFirst({ cacheName: 'version-check', networkTimeoutSeconds: 3 })
+  new NetworkOnly()
 );
 
 // CacheFirst para imagens

@@ -109,9 +109,14 @@ export function useVersionCheck() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
+    // Verificação imediata quando o SW detecta nova versão (disparo pelo ReloadPrompt)
+    const handlePwaReady = () => check();
+    window.addEventListener('pwa-update-ready', handlePwaReady);
+
     return () => {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('pwa-update-ready', handlePwaReady);
     };
   }, [check]);
 
