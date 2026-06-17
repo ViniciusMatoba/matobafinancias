@@ -82,7 +82,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
         vencimentos.forEach(c => {
           const thisVenc    = day.date;
           const thisClosing = getClosingDate(c, thisVenc);
-          const prevClosing = addMonths(thisClosing, -1);
+          const prevClosing = getClosingDate(c, addMonths(thisVenc, -1));
           const cycleStart  = addDays(prevClosing, 1);
           // Usa expandOccurrences para capturar parcelas cujo dataInicio é de ciclos
           // anteriores mas cujas parcelas intermediárias caem nesta janela

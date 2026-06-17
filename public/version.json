@@ -1,7 +1,8 @@
 {
-  "version": "1.6.62",
+  "version": "1.6.63",
   "date": "17/06/2026",
   "notes": [
-    "Fix: valor da fatura nos badges de vencimento futuros agora usa expandOccurrences, capturando corretamente parcelas de transações cujo dataInicio é anterior à janela do ciclo"
+    "Fix: calcFaturaCard agora usa getClosingDate (diaFechamento real) para delimitar o ciclo, alinhando Home e Projeção ao mesmo intervalo de datas",
+    "Refactor: getClosingDate extraída para projectionCalc.js e compartilhada entre Projeção e calcFaturaCard"
   ]
 }

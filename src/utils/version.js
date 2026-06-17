@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.63';
+export const APP_VERSION = '1.6.64';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.64',
+    date: '17/06/2026',
+    changes: [
+      'Fix: prevClosing calculado via getClosingDate(card, addMonths(venc, -1)) em vez de addMonths(thisClosing, -1), eliminando gap/overlap causado por clamping de dias no fim do mês',
+    ],
+  },
   {
     version: '1.6.63',
     date: '17/06/2026',

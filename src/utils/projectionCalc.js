@@ -201,7 +201,7 @@ export function calcFaturaCard(card, transactions, today) {
   const proximoVenc = getProximoVencimento(card, today);
   // Usa a data de fechamento real (considera diaFechamento) como limite do ciclo
   const thisClosing = getClosingDate(card, proximoVenc);
-  const prevClosing = addMonths(thisClosing, -1);
+  const prevClosing = getClosingDate(card, addMonths(proximoVenc, -1));
 
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
