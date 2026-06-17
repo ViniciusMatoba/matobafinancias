@@ -1,12 +1,12 @@
-export const APP_VERSION = '1.6.67';
+export const APP_VERSION = '1.6.68';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
   {
-    version: '1.6.67',
+    version: '1.6.68',
     date: '17/06/2026',
     changes: [
-      'Fix: calcFaturaCard determina fatura atual pela data do próprio lançamento (expandOccurrences), sem depender da config diaVencimento do cartão',
+      'Fix: calcFaturaCard usa dataInicio do lançamento (dia do pagamento) para determinar fatura atual, evitando conflito com parcelas passadas de transações recorrentes',
     ],
   },
   {
