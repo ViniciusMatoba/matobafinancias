@@ -1,12 +1,12 @@
-export const APP_VERSION = '1.6.65';
+export const APP_VERSION = '1.6.66';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
   {
-    version: '1.6.65',
+    version: '1.6.66',
     date: '17/06/2026',
     changes: [
-      'Fix: fatura do cartão na Projeção e Home agora filtra por data de vencimento exata (dataInicio === vencimento), corrigindo deslocamento de 1 mês causado por filtro de ciclo de fechamento',
+      'Fix: calcFaturaCard usa txDate <= proximoVenc para fatura atual, corrigindo zero na Home para cartões onde diaVencimento < diaFechamento',
     ],
   },
   {
