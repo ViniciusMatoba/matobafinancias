@@ -1,7 +1,7 @@
 {
-  "version": "1.6.60",
+  "version": "1.6.61",
   "date": "17/06/2026",
   "notes": [
-    "Fix: ciclo do badge de vencimento na Projeção agora usa o diaFechamento real, corrigindo detecção de fatura paga quando fechamento e vencimento têm datas distantes"
+    "Fix notificação de atualização: SW usa NetworkOnly para version.json (sem cache), evento pwa-update-ready liga SW ao banner instantaneamente e onRegistered verifica SW a cada 60s"
   ]
 }
