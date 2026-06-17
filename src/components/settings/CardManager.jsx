@@ -101,7 +101,7 @@ export default function CardManager({ cards, transactions = [], onAdd, onUpdate,
       {cards.map(card => {
         // Calcular estatísticas de limite comprometido
         const todayMonth = new Date().toISOString().slice(0, 7);
-        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido);
         let faturaAtual = 0;
         let comprometidoFuturo = 0;
 

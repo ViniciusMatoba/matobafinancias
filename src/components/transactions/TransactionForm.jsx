@@ -860,7 +860,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       {form.tipo === 'cartao' && cards?.length > 0 && (() => {
         const selectedCard = cards.find(c => c.id === form.cartaoId) || null;
         const todayMonth = todayStr().slice(0, 7);
-        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === form.cartaoId && t.id !== initial?.id);
+        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === form.cartaoId && t.id !== initial?.id && !t.conferido);
         let faturaAtual = 0, comprometidoFuturo = 0;
         cardTxs.forEach(tx => {
           const txMonth = tx.dataInicio.slice(0, 7);

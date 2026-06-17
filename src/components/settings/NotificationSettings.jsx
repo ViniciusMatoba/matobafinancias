@@ -392,7 +392,7 @@ export default function NotificationSettings({ user, cards, transactions, config
             break;
           }
           const todayMonth = todayStr().slice(0, 7);
-          const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+          const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido);
           let faturaAtual = 0;
           cardTxs.forEach(tx => {
             if (tx.dataInicio.slice(0, 7) === todayMonth) {

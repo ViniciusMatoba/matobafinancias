@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.50';
+export const APP_VERSION = '1.6.51';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.51',
+    date: '17/06/2026',
+    changes: [
+      'Fix: fatura atual do cartão não considera mais lançamentos já pagos (conferido), evitando que faturas quitadas inflassem o limite comprometido',
+    ],
+  },
   {
     version: '1.6.50',
     date: '17/06/2026',

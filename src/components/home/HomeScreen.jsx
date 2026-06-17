@@ -66,7 +66,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   const cardsStats = useMemo(() => {
     if (!cards?.length) return [];
     return cards.map(card => {
-      const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+      const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido);
       let faturaAtual = 0;
       let comprometidoFuturo = 0;
 
