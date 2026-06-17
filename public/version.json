@@ -1,7 +1,7 @@
 {
-  "version": "1.6.51",
+  "version": "1.6.52",
   "date": "17/06/2026",
   "notes": [
-    "Fix: fatura atual do cartão não considera mais lançamentos já pagos (conferido), evitando que faturas quitadas inflassem o limite comprometido"
+    "Fix: cálculo de fatura atual agora usa o próximo vencimento real do cartão (baseado em diaFechamento + diaVencimento) em vez do mês calendário, corrigindo casos onde a fatura vence no início do mês seguinte (ex: vence dia 3)"
   ]
 }

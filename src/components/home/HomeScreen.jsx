@@ -6,6 +6,7 @@ import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import BudgetSummaryCard from './BudgetSummaryCard';
 import AdjustBalanceModal from './AdjustBalanceModal';
 import ProximasContasCard from './ProximasContasCard';
+import CartaoFaturaCard from './CartaoFaturaCard';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -124,17 +125,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     return t;
   }, [dayOccs]);
 
-  // Alertas de cartão (somente quando hoje)
-  const cardAlerts = useMemo(() => {
-    if (!isToday) return [];
-    const weekTo = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.toISOString().slice(0, 10); })();
-    return cards.filter(card => {
-      const d = new Date();
-      const thisMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const vencDate = `${thisMonth}-${String(card.diaVencimento).padStart(2, '0')}`;
-      return vencDate >= today && vencDate <= weekTo;
-    });
-  }, [cards, today, isToday]);
 
   // Cálculo de Sobra Segura (apenas quando é "Hoje")
   const sobraSegura = useMemo(() => {
@@ -444,53 +434,18 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       )}
 
 
-      {/* Alertas de vencimento de fatura (próximos 7 dias) */}
-      {cardAlerts.length > 0 && (
+      {/* Cards de Fatura por Cartão — dashboard + expansão de lançamentos */}
+      {cardsStats.length > 0 && (
         <div style={{ padding: '16px 20px 0' }}>
-          {cardAlerts.map(card => {
-            // Busca fatura calculada via cardsStats
-            const stats = cardsStats.find(c => c.id === card.id);
-            const faturaAtual = stats?.faturaAtual || 0;
-
-            // Calcula quantos dias faltam para o vencimento
-            const todayDate = new Date(today + 'T00:00:00');
-            const thisMonth = today.slice(0, 7);
-            const vencStr = `${thisMonth}-${String(card.diaVencimento).padStart(2, '0')}`;
-            const vencDate = new Date(vencStr + 'T00:00:00');
-            const diffDias = Math.round((vencDate - todayDate) / 86400000);
-
-            const urgente  = diffDias === 0;
-            const acento   = diffDias <= 2;
-            const cor      = urgente ? 'var(--saida)' : acento ? '#f59e0b' : 'var(--cartao)';
-            const bgCor    = urgente ? 'rgba(239,68,68,0.08)' : acento ? 'rgba(245,158,11,0.08)' : 'rgba(59,130,246,0.08)';
-            const bordaCor = urgente ? 'rgba(239,68,68,0.3)'  : acento ? 'rgba(245,158,11,0.3)'  : 'rgba(59,130,246,0.3)';
-            const diaLabel = urgente ? 'Vence HOJE' : diffDias === 1 ? 'Vence amanhã' : `Vence em ${diffDias} dias (dia ${card.diaVencimento})`;
-
-            return (
-              <div key={card.id} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                background: bgCor, border: `1px solid ${bordaCor}`,
-                borderRadius: 12, padding: '12px 14px', marginBottom: 8,
-              }}>
-                <CreditCard size={16} color={cor} style={{ flexShrink: 0 }} />
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    💳 {card.nome} — <span style={{ color: cor }}>{diaLabel}</span>
-                  </p>
-                  <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-                    {faturaAtual > 0
-                      ? `Fatura do mês: ${formatBRL(faturaAtual)}`
-                      : 'Nenhum lançamento registrado nesta fatura'}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
+          <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Cartões de Crédito
+          </p>
+          <CartaoFaturaCard cardsStats={cardsStats} transactions={transactions} />
         </div>
       )}
 
       {/* Card de Próximas Contas — fluxo dos próximos 7 dias */}
-      <div style={{ padding: '0 20px' }}>
+      <div style={{ padding: '16px 20px 0' }}>
         <ProximasContasCard transactions={transactions} wallets={wallets} />
       </div>
 

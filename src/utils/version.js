@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.52';
+export const APP_VERSION = '1.6.53';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.53',
+    date: '17/06/2026',
+    changes: [
+      'Novo: dashboard de cartões de crédito na Home — card por cartão com fatura aberta, barra de limite, disponível e badges de fechamento/vencimento iminente',
+      'Novo: card expansível mostra todos os lançamentos e itens da fatura atual ao tocar',
+      'Melhoria: alertas simples de vencimento substituídos pelo novo painel de cartões',
+    ],
+  },
   {
     version: '1.6.52',
     date: '17/06/2026',
