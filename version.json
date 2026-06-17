@@ -2,6 +2,6 @@
   "version": "1.6.55",
   "date": "17/06/2026",
   "notes": [
-    "Fix: notificação de atualização restaurada — polling de 60 segundos no useVersionCheck garante que o banner apareça enquanto o app está aberto"
+    "Fix: notificação de atualização restaurada — polling de 60 segundos garante que o banner apareça enquanto o app está aberto"
   ]
 }
