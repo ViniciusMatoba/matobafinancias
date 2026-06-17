@@ -52,6 +52,25 @@ export const endOfMonth = (dateStr) => {
   return `${dateStr.slice(0, 7)}-${String(last).padStart(2,'0')}`;
 };
 
+/**
+ * Calcula a data do próximo vencimento de um cartão a partir de hoje.
+ * Leva em conta diaFechamento e diaVencimento para determinar a qual ciclo pertence a fatura atual.
+ * @param {{ diaFechamento?: number, diaVencimento: number }} card
+ * @param {string} today - 'YYYY-MM-DD'
+ * @returns {string} 'YYYY-MM-DD'
+ */
+export const getProximoVencimento = (card, today) => {
+  const [y, m, d] = today.split('-').map(Number);
+  const diaFech = card.diaFechamento || card.diaVencimento;
+  const diaVenc = card.diaVencimento;
+  let mes = m, ano = y;
+  if (d > diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }
+  if (diaVenc < diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }
+  const lastDay = new Date(ano, mes, 0).getDate();
+  const dia = Math.min(diaVenc, lastDay);
+  return `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+};
+
 export const TYPE_CONFIG = {
   entrada:      { label: 'Entrada',       color: '#10b981', bg: 'rgba(16,185,129,0.15)',  sign: +1 },
   saida:        { label: 'Saída',         color: '#ef4444', bg: 'rgba(239,68,68,0.15)',   sign: -1 },

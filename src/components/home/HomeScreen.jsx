@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal } from 'lucide-react';
-import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
+import { formatBRL, TYPE_CONFIG, todayStr, addDays, getProximoVencimento } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import BudgetSummaryCard from './BudgetSummaryCard';
@@ -66,20 +66,19 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   const cardsStats = useMemo(() => {
     if (!cards?.length) return [];
     return cards.map(card => {
+      const proximoVenc = getProximoVencimento(card, todayStr());
       const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido);
       let faturaAtual = 0;
       let comprometidoFuturo = 0;
 
       cardTxs.forEach(tx => {
-        const txMonth = tx.dataInicio.slice(0, 7);
-        const isCurrentInvoice = txMonth === currentMonth;
-
+        const txDate = tx.dataInicio;
         if (tx.itens && tx.itens.length > 0) {
           tx.itens.forEach(item => {
             const val = Number(item.valor) || 0;
-            if (isCurrentInvoice) {
+            if (txDate <= proximoVenc) {
               faturaAtual += val;
-            } else if (txMonth > currentMonth) {
+            } else {
               comprometidoFuturo += val;
             }
             if (item.isParcelado) {
@@ -89,9 +88,9 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           });
         } else {
           const val = Number(tx.valor) || 0;
-          if (isCurrentInvoice) {
+          if (txDate <= proximoVenc) {
             faturaAtual += val;
-          } else if (txMonth > currentMonth) {
+          } else {
             comprometidoFuturo += val;
           }
         }
@@ -108,7 +107,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         limiteDisponivel
       };
     });
-  }, [cards, transactions, currentMonth]);
+  }, [cards, transactions]);
 
   // Ocorrências apenas do dia selecionado
   const dayOccs = useMemo(() =>

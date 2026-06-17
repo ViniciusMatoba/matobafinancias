@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useToast } from '../shared/Toast';
 import { Bell, BellOff, CheckCircle, XCircle, Play, Loader, RefreshCw, Send } from 'lucide-react';
-import { formatBRL, todayStr } from '../../utils/formatters';
+import { formatBRL, todayStr, getProximoVencimento } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { expandOccurrences, buildDailyProjection, calcSaldo } from '../../utils/projectionCalc';
 import { useNotifications } from '../../hooks/useNotifications';
@@ -391,11 +391,11 @@ export default function NotificationSettings({ user, cards, transactions, config
             await showNotif('💳 Notificação N11', 'Cadastre um cartão de crédito para receber este alerta.');
             break;
           }
-          const todayMonth = todayStr().slice(0, 7);
+          const proximoVenc = getProximoVencimento(card, todayStr());
           const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido);
           let faturaAtual = 0;
           cardTxs.forEach(tx => {
-            if (tx.dataInicio.slice(0, 7) === todayMonth) {
+            if (tx.dataInicio <= proximoVenc) {
               if (tx.itens) tx.itens.forEach(item => { faturaAtual += Number(item.valor) || 0; });
               else faturaAtual += Number(tx.valor) || 0;
             }

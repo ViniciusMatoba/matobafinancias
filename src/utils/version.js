@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.51';
+export const APP_VERSION = '1.6.52';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.52',
+    date: '17/06/2026',
+    changes: [
+      'Fix: cálculo de fatura atual agora usa o próximo vencimento real do cartão (baseado em diaFechamento + diaVencimento) em vez do mês calendário, corrigindo casos onde a fatura vence no início do mês seguinte (ex: vence dia 3)',
+    ],
+  },
   {
     version: '1.6.51',
     date: '17/06/2026',

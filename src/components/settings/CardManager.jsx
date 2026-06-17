@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { CreditCard, Plus, Trash2, Pencil, Link } from 'lucide-react';
-import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, formatDate } from '../../utils/formatters';
+import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, formatDate, getProximoVencimento, todayStr } from '../../utils/formatters';
 
 const CARD_COLORS = ['#3b82f6','#6366f1','#a855f7','#ec4899','#10b981','#f59e0b','#ef4444','#14b8a6'];
 
@@ -100,19 +100,20 @@ export default function CardManager({ cards, transactions = [], onAdd, onUpdate,
 
       {cards.map(card => {
         // Calcular estatísticas de limite comprometido
-        const todayMonth = new Date().toISOString().slice(0, 7);
+        const hoje = todayStr();
+        const proximoVenc = getProximoVencimento(card, hoje);
         const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido);
         let faturaAtual = 0;
         let comprometidoFuturo = 0;
 
         cardTxs.forEach(tx => {
-          const txMonth = tx.dataInicio.slice(0, 7);
+          const txDate = tx.dataInicio;
           if (tx.itens && tx.itens.length > 0) {
             tx.itens.forEach(item => {
               const val = Number(item.valor) || 0;
-              if (txMonth === todayMonth) {
+              if (txDate <= proximoVenc) {
                 faturaAtual += val;
-              } else if (txMonth > todayMonth) {
+              } else {
                 comprometidoFuturo += val;
               }
               if (item.isParcelado) {
@@ -122,9 +123,9 @@ export default function CardManager({ cards, transactions = [], onAdd, onUpdate,
             });
           } else {
             const val = Number(tx.valor) || 0;
-            if (txMonth === todayMonth) {
+            if (txDate <= proximoVenc) {
               faturaAtual += val;
-            } else if (txMonth > todayMonth) {
+            } else {
               comprometidoFuturo += val;
             }
           }

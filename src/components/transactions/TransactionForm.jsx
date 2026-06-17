@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks } from '../../utils/formatters';
+import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks, getProximoVencimento } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 import { expandOccurrences } from '../../utils/projectionCalc';
@@ -859,22 +859,22 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       {/* Cartão selector + painel de limite */}
       {form.tipo === 'cartao' && cards?.length > 0 && (() => {
         const selectedCard = cards.find(c => c.id === form.cartaoId) || null;
-        const todayMonth = todayStr().slice(0, 7);
+        const proximoVenc = selectedCard ? getProximoVencimento(selectedCard, todayStr()) : null;
         const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === form.cartaoId && t.id !== initial?.id && !t.conferido);
         let faturaAtual = 0, comprometidoFuturo = 0;
         cardTxs.forEach(tx => {
-          const txMonth = tx.dataInicio.slice(0, 7);
+          const txDate = tx.dataInicio;
           if (tx.itens && tx.itens.length > 0) {
             tx.itens.forEach(item => {
               const val = Number(item.valor) || 0;
-              if (txMonth === todayMonth) faturaAtual += val;
-              else if (txMonth > todayMonth) comprometidoFuturo += val;
+              if (!proximoVenc || txDate <= proximoVenc) faturaAtual += val;
+              else comprometidoFuturo += val;
               if (item.isParcelado) comprometidoFuturo += Math.max(0, item.totalParcelas - (item.parcelaAtual || 1)) * val;
             });
           } else {
             const val = Number(tx.valor) || 0;
-            if (txMonth === todayMonth) faturaAtual += val;
-            else if (txMonth > todayMonth) comprometidoFuturo += val;
+            if (!proximoVenc || txDate <= proximoVenc) faturaAtual += val;
+            else comprometidoFuturo += val;
           }
         });
         const limiteTotal = selectedCard?.limite || 0;

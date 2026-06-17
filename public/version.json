@@ -1,7 +1,7 @@
 {
-  "version": "1.6.50",
+  "version": "1.6.51",
   "date": "17/06/2026",
   "notes": [
-    "Fix: revínculo em massa agora detecta lançamentos com frequência \"cartao\" além do tipo \"cartao\", cobrindo lançamentos antigos criados antes da integração completa"
+    "Fix: fatura atual do cartão não considera mais lançamentos já pagos (conferido), evitando que faturas quitadas inflassem o limite comprometido"
   ]
 }
