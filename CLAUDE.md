@@ -105,16 +105,15 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 | `src/utils/version.js` | Versão e changelog |
 | `src/utils/categories.js` | `PERCENTUAL_CATEGORIES`, `CATEGORY_ORDER` |
 | `src/utils/formatters.js` | `formatBRL`, `todayStr`, `TYPE_CONFIG` |
-| `src/utils/projectionCalc.js` | `expandOccurrences`, `calcSaldo`, `calcularSobraSegura` |
+| `src/utils/projectionCalc.js` | `getClosingDate`, `expandOccurrences`, `calcSaldo`, `calcularSobraSegura`, `calcFaturaCard` |
 
 ---
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.5 — 01/06/2026
+**Versão**: v1.6.71 — 17/06/2026
 
 **Últimas features**:
-- v1.6.5 — Drill-down de orçamento por categoria com modal de lançamentos detalhados
-- v1.6.4 — Fix orçamento mês corrente + data final parcelas + CSV por período
-- v1.6.3 — Ajuste manual de saldo global com justificativa
-- v1.6.2 — Fix overflow de addMonths para dias 29-31
+- v1.6.71 — Fix calcFaturaCard: soma lançamentos no período (prevClosing, thisClosing] usando getClosingDate real do cartão
+- v1.6.65 — Fix projeção: badge de vencimento filtra ocorrências por data exata do lançamento (expandOccurrences thisVenc→thisVenc)
+- v1.6.61 — Fix notificação de atualização: SW NetworkOnly + evento pwa-update-ready + polling 60s

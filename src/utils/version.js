@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.71';
+export const APP_VERSION = '1.6.72';
 export const APP_VERSION_DATE = '17/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.72',
+    date: '18/06/2026',
+    changes: [
+      'Fix: CartaoFaturaCard lista lançamentos usando período de fechamento real (getClosingDate), alinhado com calcFaturaCard',
+    ],
+  },
   {
     version: '1.6.71',
     date: '17/06/2026',

@@ -1,7 +1,7 @@
 {
-  "version": "1.6.70",
+  "version": "1.6.71",
   "date": "17/06/2026",
   "notes": [
-    "Fix: faturaAtual usa dataInicio === proximoVenc (igualdade exata), evitando somar faturas anteriores abertas na fatura corrente"
+    "Fix: calcFaturaCard soma lançamentos cartão dentro do período (fechamento anterior, fechamento atual"
   ]
 }
