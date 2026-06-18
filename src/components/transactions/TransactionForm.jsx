@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks, getProximoVencimento } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
@@ -249,10 +249,19 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
     setNovoItem({ ...EMPTY_ITEM });
   };
 
+  const editFormRef = useRef(null);
+
   const editItem = (idx) => {
     setNovoItem({ ...itens[idx], dataCompra: itens[idx].dataCompra || todayStr() });
     setEditItemIdx(idx);
   };
+
+  // Rola até o formulário de edição após o estado atualizar (modal tem scroll próprio)
+  useEffect(() => {
+    if (editItemIdx !== null && editFormRef.current) {
+      editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [editItemIdx]);
 
   const removeItem = (idx) => {
     clearDuplicateChoice();
@@ -1041,7 +1050,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
           })}
 
           {/* Formulário de novo item */}
-          <div style={{
+          <div ref={editFormRef} style={{
             background: 'var(--bg-card)', border: '1px dashed var(--border)',
             borderRadius: 12, padding: '10px 12px',
           }}>

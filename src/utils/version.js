@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.75';
+export const APP_VERSION = '1.6.76';
 export const APP_VERSION_DATE = '18/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.76',
+    date: '18/06/2026',
+    changes: [
+      'Fix: clicar no lápis de item de fatura agora rola automaticamente até o formulário de edição (modal tem scroll próprio e o form ficava fora do viewport)',
+    ],
+  },
   {
     version: '1.6.75',
     date: '18/06/2026',
