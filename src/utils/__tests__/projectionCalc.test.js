@@ -6,7 +6,8 @@ vi.mock('../formatters', async (importOriginal) => {
   return { ...real, todayStr: () => '2026-06-17' }
 })
 
-import { expandOccurrences, calcSaldo, buildDailyProjection, calcularSobraSegura } from '../projectionCalc'
+import { expandOccurrences, calcSaldo, buildDailyProjection, calcularSobraSegura, getClosingDate, calcFaturaCard } from '../projectionCalc'
+import { getProximoVencimento } from '../formatters'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 const tx = (overrides) => ({
@@ -193,6 +194,149 @@ describe('buildDailyProjection', () => {
     const days = buildDailyProjection([], '2026-06-01', '2026-06-03', 500)
     expect(days[0].saldo).toBe(500)
     expect(days[2].saldo).toBe(500)
+  })
+})
+
+// ── getProximoVencimento ─────────────────────────────────────────────────────
+describe('getProximoVencimento', () => {
+  // card com diaFech=20, diaVenc=25: hoje=17 < fech=20 → vence no mês corrente (Jun/25)
+  it('retorna vencimento do mês corrente quando hoje < diaFechamento', () => {
+    const card = { diaFechamento: 20, diaVencimento: 25 }
+    expect(getProximoVencimento(card, '2026-06-17')).toBe('2026-06-25')
+  })
+
+  // hoje=21 > fech=20 → ciclo passou, vence mês seguinte (Jul/25)
+  it('retorna vencimento do próximo mês quando hoje > diaFechamento', () => {
+    const card = { diaFechamento: 20, diaVencimento: 25 }
+    expect(getProximoVencimento(card, '2026-06-21')).toBe('2026-07-25')
+  })
+
+  // diaVenc=1, diaFech=15: fechou em Jun/15 mas vence Jul/1
+  // hoje=10 < fech=15 → mes=Jun; diaVenc(1) < diaFech(15) → +1 mês → Jul/1
+  it('adiciona mês extra quando diaVencimento < diaFechamento (venc no mês seguinte ao fechamento)', () => {
+    const card = { diaFechamento: 15, diaVencimento: 1 }
+    expect(getProximoVencimento(card, '2026-06-10')).toBe('2026-07-01')
+  })
+
+  // hoje=16 > fech=15 → +1; diaVenc(1) < diaFech(15) → +1 → Ago/1
+  it('combina ambos os avanços quando hoje > fech e diaVenc < diaFech', () => {
+    const card = { diaFechamento: 15, diaVencimento: 1 }
+    expect(getProximoVencimento(card, '2026-06-16')).toBe('2026-08-01')
+  })
+
+  // diaVenc=31 em mês com 30 dias → clampado para 30
+  it('clampeia diaVencimento ao último dia do mês', () => {
+    const card = { diaFechamento: 20, diaVencimento: 31 }
+    expect(getProximoVencimento(card, '2026-05-15')).toBe('2026-05-31')
+    expect(getProximoVencimento(card, '2026-05-21')).toBe('2026-06-30') // jun tem 30 dias
+  })
+
+  // cartão sem diaFechamento: usa diaVencimento como fechamento
+  it('usa diaVencimento como fechamento quando diaFechamento não definido', () => {
+    const card = { diaVencimento: 10 }
+    expect(getProximoVencimento(card, '2026-06-05')).toBe('2026-06-10')
+    expect(getProximoVencimento(card, '2026-06-11')).toBe('2026-07-10')
+  })
+})
+
+// ── getClosingDate ────────────────────────────────────────────────────────────
+describe('getClosingDate', () => {
+  it('fechamento no mesmo mês quando diaVenc >= diaFech', () => {
+    const card = { diaFechamento: 20, diaVencimento: 25 }
+    expect(getClosingDate(card, '2026-07-25')).toBe('2026-07-20')
+  })
+
+  it('fechamento no mês anterior quando diaVenc < diaFech', () => {
+    const card = { diaFechamento: 15, diaVencimento: 1 }
+    expect(getClosingDate(card, '2026-07-01')).toBe('2026-06-15')
+  })
+
+  it('clampeia diaFechamento ao último dia do mês', () => {
+    const card = { diaFechamento: 31, diaVencimento: 5 }
+    // venc=Fev/05 → fecha em Jan (diaVenc < diaFech) → Jan/31
+    expect(getClosingDate(card, '2026-02-05')).toBe('2026-01-31')
+    // venc=Jun/05 → fecha em Mai → Mai/31
+    expect(getClosingDate(card, '2026-06-05')).toBe('2026-05-31')
+  })
+
+  it('atravessa virada de ano corretamente', () => {
+    const card = { diaFechamento: 15, diaVencimento: 1 }
+    expect(getClosingDate(card, '2026-01-01')).toBe('2025-12-15')
+  })
+})
+
+// ── calcFaturaCard ────────────────────────────────────────────────────────────
+describe('calcFaturaCard', () => {
+  const card = { id: 'c1', diaFechamento: 20, diaVencimento: 25, limite: 5000 }
+
+  // Hoje=2026-06-17 → getProximoVencimento → 2026-06-25, prevVenc=2026-05-25
+  const makeTx = (dataInicio, valor = 100, extra = {}) => ({
+    id: `tx-${dataInicio}`,
+    tipo: 'cartao',
+    cartaoId: 'c1',
+    frequencia: 'unico',
+    dataInicio,
+    valor,
+    conferido: false,
+    ...extra,
+  })
+
+  it('inclui na faturaAtual lançamento com dataInicio = proximoVenc', () => {
+    const { faturaAtual } = calcFaturaCard(card, [makeTx('2026-06-25')], '2026-06-17')
+    expect(faturaAtual).toBe(100)
+  })
+
+  it('inclui na faturaAtual lançamento no intervalo (prevVenc, proximoVenc]', () => {
+    const { faturaAtual } = calcFaturaCard(card, [makeTx('2026-06-01')], '2026-06-17')
+    expect(faturaAtual).toBe(100)
+  })
+
+  it('NÃO inclui lançamento exatamente em prevVenc (limite exclusivo)', () => {
+    const { faturaAtual } = calcFaturaCard(card, [makeTx('2026-05-25')], '2026-06-17')
+    expect(faturaAtual).toBe(0)
+  })
+
+  it('envia para comprometidoFuturo lançamento > proximoVenc', () => {
+    const { comprometidoFuturo } = calcFaturaCard(card, [makeTx('2026-07-25')], '2026-06-17')
+    expect(comprometidoFuturo).toBe(100)
+  })
+
+  it('ignora lançamentos conferidos', () => {
+    const { faturaAtual } = calcFaturaCard(card, [makeTx('2026-06-25', 100, { conferido: true })], '2026-06-17')
+    expect(faturaAtual).toBe(0)
+  })
+
+  it('ignora lançamentos de outro cartão', () => {
+    const { faturaAtual } = calcFaturaCard(card, [makeTx('2026-06-25', 100, { cartaoId: 'outro' })], '2026-06-17')
+    expect(faturaAtual).toBe(0)
+  })
+
+  it('calcula limiteDisponivel corretamente', () => {
+    const txs = [makeTx('2026-06-25', 1000), makeTx('2026-07-25', 500)]
+    const { limiteDisponivel } = calcFaturaCard(card, txs, '2026-06-17')
+    // limite 5000 - faturaAtual 1000 - comprometido 500 = 3500
+    expect(limiteDisponivel).toBe(3500)
+  })
+
+  it('acumula parcelas futuras de itens parcelados em comprometidoFuturo', () => {
+    const txComItens = makeTx('2026-06-25', 200, {
+      itens: [{
+        descricao: 'Compra parcelada',
+        valor: 200,
+        isParcelado: true,
+        parcelaAtual: 1,
+        totalParcelas: 3,
+      }],
+    })
+    const { comprometidoFuturo } = calcFaturaCard(card, [txComItens], '2026-06-17')
+    // 2 parcelas restantes × 200 = 400
+    expect(comprometidoFuturo).toBe(400)
+  })
+
+  it('soma múltiplos lançamentos na fatura atual', () => {
+    const txs = [makeTx('2026-06-10', 300), makeTx('2026-06-25', 200)]
+    const { faturaAtual } = calcFaturaCard(card, txs, '2026-06-17')
+    expect(faturaAtual).toBe(500)
   })
 })
 

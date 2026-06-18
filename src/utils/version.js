@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.72';
-export const APP_VERSION_DATE = '17/06/2026';
+export const APP_VERSION = '1.6.73';
+export const APP_VERSION_DATE = '18/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.73',
+    date: '18/06/2026',
+    changes: [
+      'Testes: cobertura de getProximoVencimento, getClosingDate e calcFaturaCard (73 testes passando)',
+    ],
+  },
   {
     version: '1.6.72',
     date: '18/06/2026',
