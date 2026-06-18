@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.76';
+export const APP_VERSION = '1.6.77';
 export const APP_VERSION_DATE = '18/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.77',
+    date: '18/06/2026',
+    changes: [
+      'Fix: editar fatura real de cartão com itens parcelados não duplica mais o lançamento no mês seguinte — dialog de escopo só aparece para faturas virtuais projetadas',
+    ],
+  },
   {
     version: '1.6.76',
     date: '18/06/2026',

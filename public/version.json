@@ -1,8 +1,7 @@
 {
-  "version": "1.6.75",
+  "version": "1.6.76",
   "date": "18/06/2026",
   "notes": [
-    "Fix: botão lápis de editar item de fatura agora abre corretamente — editItem usa cópia do objeto evitando bailout do React por referência igual",
-    "Fix: dataCompra undefined em item não causa input de data descontrolado"
+    "Fix: clicar no lápis de item de fatura agora rola automaticamente até o formulário de edição (modal tem scroll próprio e o form ficava fora do viewport)"
   ]
 }

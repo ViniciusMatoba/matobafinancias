@@ -212,8 +212,8 @@ export function AppProvider({ user, children }) {
   const handleSave = async (data) => {
     const { _overwriteId, ...cleanData } = data;
 
-    if (cleanData.tipo === 'cartao' && hasParceladoRestante(cleanData.itens) && editing) {
-      const isVirtualProj = isVirtualTxId(editing.id);
+    if (cleanData.tipo === 'cartao' && hasParceladoRestante(cleanData.itens) && editing && isVirtualTxId(editing.id)) {
+      const isVirtualProj = true;
       const parentId = isVirtualProj ? editing.id.split('-proj-')[0] : null;
       const parentTx = parentId ? transactions.find(t => t.id === parentId) : null;
       setCartaoEditScope({ cleanData, isVirtualProj, parentId, parentTx, editing, editingOccDate });
