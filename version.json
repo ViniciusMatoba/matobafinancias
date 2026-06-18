@@ -1,7 +1,8 @@
 {
-  "version": "1.6.73",
+  "version": "1.6.75",
   "date": "18/06/2026",
   "notes": [
-    "Testes: cobertura de getProximoVencimento, getClosingDate e calcFaturaCard (73 testes passando)"
+    "Fix: botão lápis de editar item de fatura agora abre corretamente — editItem usa cópia do objeto evitando bailout do React por referência igual",
+    "Fix: dataCompra undefined em item não causa input de data descontrolado"
   ]
 }
