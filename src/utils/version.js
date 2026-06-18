@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.73';
+export const APP_VERSION = '1.6.74';
 export const APP_VERSION_DATE = '18/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.74',
+    date: '18/06/2026',
+    changes: [
+      'Fix: número de parcela (X/Yx) exibido mesmo quando isParcelado não estava salvo no item — retrocompatível com dados antigos',
+      'Fix: campo conferido dos itens preservado ao re-salvar transação de cartão',
+      'Fix: save de itens infere isParcelado automaticamente se parcelaAtual e totalParcelas estão preenchidos',
+    ],
+  },
   {
     version: '1.6.73',
     date: '18/06/2026',

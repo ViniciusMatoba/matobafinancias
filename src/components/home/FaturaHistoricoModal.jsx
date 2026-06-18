@@ -84,7 +84,7 @@ export default function FaturaHistoricoModal({ card, transactions, open, onClose
                                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                                   }}>
                                     {item.descricao || 'Item'}
-                                    {item.isParcelado && (
+                                    {(item.isParcelado || (item.parcelaAtual && item.totalParcelas)) && (
                                       <span style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>
                                         {item.parcelaAtual}/{item.totalParcelas}x
                                       </span>

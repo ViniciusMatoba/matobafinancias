@@ -281,17 +281,23 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
     if (!valor || isNaN(valor)) { setErro('Informe o valor principal válido.'); return; }
 
     if (useItens) {
-      itensToSave = itens.map(item => ({
-        descricao: item.descricao.trim() || 'Item',
-        valor: parseBRLInput(item.valor),
-        categoria: item.categoria || null,
-        dataCompra: item.dataCompra,
-        ...(item.isParcelado ? {
-          isParcelado: true,
-          parcelaAtual: parseInt(item.parcelaAtual) || 1,
-          totalParcelas: parseInt(item.totalParcelas) || 1,
-        } : {})
-      }));
+      itensToSave = itens.map(item => {
+        const pAtual = parseInt(item.parcelaAtual) || 0;
+        const pTotal = parseInt(item.totalParcelas) || 0;
+        const isParc = item.isParcelado || (pAtual >= 1 && pTotal >= 2);
+        return {
+          descricao: item.descricao.trim() || 'Item',
+          valor: parseBRLInput(item.valor),
+          categoria: item.categoria || null,
+          dataCompra: item.dataCompra,
+          conferido: item.conferido || false,
+          ...(isParc ? {
+            isParcelado: true,
+            parcelaAtual: pAtual || 1,
+            totalParcelas: pTotal || 1,
+          } : {})
+        };
+      });
       // Cartão com itens: todos os itens precisam de categoria
       const itensSemCat = itensToSave.filter(i => !i.categoria);
       if (itensSemCat.length > 0) {
@@ -1009,7 +1015,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.dataCompra && <span style={{ color: 'var(--text-muted)', fontSize: 11, marginRight: 4 }}>{item.dataCompra.slice(8, 10)}/{item.dataCompra.slice(5, 7)} ·</span>}
                     {item.descricao || 'Sem descrição'}
-                    {item.isParcelado && <span style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>· {item.parcelaAtual}/{item.totalParcelas}x</span>}
+                    {(item.isParcelado || (item.parcelaAtual && item.totalParcelas)) && <span style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>· {item.parcelaAtual}/{item.totalParcelas}x</span>}
                   </p>
                   {cat && (
                     <p style={{ margin: 0, fontSize: 11, color: cat.color }}>
