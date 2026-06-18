@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatBRL, formatDate, todayStr, getProximoVencimento, addMonths } from '../../utils/formatters';
+import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
 export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistorico }) {
@@ -50,10 +51,19 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
 
         // Lançamentos do ciclo atual — mesma janela de calcFaturaCard: (prevVenc, proximoVenc]
         const prevVenc = addMonths(proximoVenc, -1);
-        const lançamentos = transactions.filter(
+        const realLançamentos = transactions.filter(
           t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
             && t.dataInicio > prevVenc && t.dataInicio <= proximoVenc
         );
+        // Sem lançamento real: mostra parcelas futuras projetadas de transações passadas
+        const lançamentos = realLançamentos.length > 0
+          ? realLançamentos
+          : transactions
+              .filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido && t.dataInicio <= prevVenc)
+              .flatMap(t => expandOccurrences(t, prevVenc, proximoVenc))
+              .filter(o => o.date > prevVenc && o.date <= proximoVenc)
+              .map(o => ({ ...o.tx, dataInicio: o.date }));
+        const isVirtual = realLançamentos.length === 0 && lançamentos.length > 0;
 
         return (
           <div key={card.id} style={{
@@ -169,7 +179,9 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
               <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
                 {lançamentos.length === 0
                   ? 'Nenhum lançamento nesta fatura'
-                  : `${lançamentos.length} lançamento${lançamentos.length > 1 ? 's' : ''} · toque para ver`}
+                  : isVirtual
+                    ? `${lançamentos.length} parcela${lançamentos.length > 1 ? 's' : ''} projetada${lançamentos.length > 1 ? 's' : ''} · toque para ver`
+                    : `${lançamentos.length} lançamento${lançamentos.length > 1 ? 's' : ''} · toque para ver`}
               </p>
             </button>
 
@@ -180,6 +192,14 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
                 background: 'rgba(0,0,0,0.03)',
                 padding: '10px 14px 12px',
               }}>
+                {isVirtual && (
+                  <p style={{
+                    margin: '0 0 8px', fontSize: 11, color: 'var(--cartao)',
+                    fontWeight: 600, fontStyle: 'italic',
+                  }}>
+                    Parcelas projetadas — nenhum lançamento cadastrado para este ciclo
+                  </p>
+                )}
                 {lançamentos.map(tx => {
                   const hasItens = tx.itens?.length > 0;
                   return (

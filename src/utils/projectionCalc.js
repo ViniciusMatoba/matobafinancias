@@ -218,34 +218,41 @@ export function calcFaturaCard(card, transactions, today) {
   let faturaAtual        = 0;
   let comprometidoFuturo = 0;
 
-  cardTxs.forEach(tx => {
-    const val = Number(tx.valor) || 0;
-    const d   = tx.dataInicio;
+  const realInWindow = cardTxs.filter(t => t.dataInicio > prevVenc && t.dataInicio <= proximoVenc);
 
-    // 1. Classifica o lançamento base pelo seu vencimento
-    if (d > prevVenc && d <= proximoVenc) {
-      faturaAtual += val;
-    } else if (d > proximoVenc) {
-      comprometidoFuturo += val;
-    }
+  if (realInWindow.length > 0) {
+    // Lançamentos reais têm prioridade
+    realInWindow.forEach(tx => { faturaAtual += Number(tx.valor) || 0; });
+  } else {
+    // Sem lançamento real: projeta parcelas de transações passadas (compras parceladas)
+    cardTxs
+      .filter(t => t.dataInicio <= prevVenc)
+      .flatMap(t => expandOccurrences(t, prevVenc, proximoVenc))
+      .filter(o => o.date > prevVenc && o.date <= proximoVenc)
+      .forEach(o => { faturaAtual += o.valor; });
+  }
 
-    // 2. Acumula parcelas futuras de itens parcelados desta fatura
-    //    (não existem como documentos no Firestore, são projeções virtuais)
-    if (tx.itens?.length > 0) {
-      tx.itens.forEach(item => {
-        if (!item.isParcelado) return;
-        const itemVal  = Number(item.valor) || 0;
-        const parAtual = item.parcelaAtual || 1;
-        const parTotal = item.totalParcelas || 1;
-        const remaining = parTotal - parAtual; // quantidade de parcelas ainda por vir
-        if (remaining <= 0) return;
-
-        // Cada parcela futura é cobrada em addMonths(d, m), que sempre será
-        // > proximoVenc (pois d ≤ proximoVenc e m ≥ 1), portanto vai a comprometidoFuturo
-        comprometidoFuturo += remaining * itemVal;
-      });
-    }
+  // Lançamentos reais futuros (após proximoVenc)
+  cardTxs.filter(t => t.dataInicio > proximoVenc).forEach(tx => {
+    comprometidoFuturo += Number(tx.valor) || 0;
   });
+
+  // Parcelas futuras de itens parcelados de todos os lançamentos do cartão
+  cardTxs.forEach(tx => {
+    if (!tx.itens?.length) return;
+    tx.itens.forEach(item => {
+      if (!item.isParcelado) return;
+      const remaining = (item.totalParcelas || 1) - (item.parcelaAtual || 1);
+      if (remaining <= 0) return;
+      comprometidoFuturo += remaining * (Number(item.valor) || 0);
+    });
+  });
+
+  // Quando faturaAtual veio de parcelas virtuais, subtrai para não dupla-contar
+  // (o cálculo item-based já inclui a parcela do mês corrente em remaining)
+  if (realInWindow.length === 0) {
+    comprometidoFuturo = Math.max(0, comprometidoFuturo - faturaAtual);
+  }
 
   const limite = card.limite || 0;
   const limiteDisponivel = Math.max(0, limite - faturaAtual - comprometidoFuturo);

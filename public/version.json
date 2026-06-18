@@ -1,7 +1,7 @@
 {
-  "version": "1.6.77",
+  "version": "1.6.78",
   "date": "18/06/2026",
   "notes": [
-    "Fix: editar fatura real de cartão com itens parcelados não duplica mais o lançamento no mês seguinte — dialog de escopo só aparece para faturas virtuais projetadas"
+    "UI: checkboxes \"É parcelado?\" e \"Conferido\" substituídos por botões toggle pill com ✓ verde/azul quando ativos — feedback visual claro"
   ]
 }

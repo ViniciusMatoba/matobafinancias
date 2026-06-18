@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.78';
+export const APP_VERSION = '1.6.79';
 export const APP_VERSION_DATE = '18/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.79',
+    date: '18/06/2026',
+    changes: [
+      'Fix: compras parceladas agora aparecem automaticamente nas faturas futuras até o número correto de parcelas — CartaoFaturaCard projeta parcelas quando não há lançamento real cadastrado para o ciclo',
+    ],
+  },
   {
     version: '1.6.78',
     date: '18/06/2026',
