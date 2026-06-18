@@ -1138,15 +1138,40 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: 16, marginBottom: 8 }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <input type="checkbox" checked={novoItem.isParcelado} onChange={e => setNovoItem(i => ({ ...i, isParcelado: e.target.checked }))} />
-                É parcelado?
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <input type="checkbox" checked={novoItem.conferido || false} onChange={e => setNovoItem(i => ({ ...i, conferido: e.target.checked }))} />
-                Conferido
-              </label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              {[
+                { key: 'isParcelado', label: 'É parcelado?', color: 'var(--cartao)' },
+                { key: 'conferido',   label: 'Conferido',    color: '#10b981' },
+              ].map(({ key, label, color }) => {
+                const checked = !!novoItem[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setNovoItem(i => ({ ...i, [key]: !i[key] }))}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '6px 12px', borderRadius: 20, cursor: 'pointer',
+                      fontSize: 12, fontWeight: 600,
+                      border: `1.5px solid ${checked ? color : 'var(--border)'}`,
+                      background: checked ? `${color}22` : 'transparent',
+                      color: checked ? color : 'var(--text-muted)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <span style={{
+                      width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: checked ? color : 'var(--bg-surface)',
+                      border: `1.5px solid ${checked ? color : 'var(--border)'}`,
+                      fontSize: 11, color: '#fff', fontWeight: 900,
+                    }}>
+                      {checked ? '✓' : ''}
+                    </span>
+                    {label}
+                  </button>
+                );
+              })}
             </div>
             {novoItem.isParcelado && (
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>

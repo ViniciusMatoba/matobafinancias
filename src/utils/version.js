@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.77';
+export const APP_VERSION = '1.6.78';
 export const APP_VERSION_DATE = '18/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.78',
+    date: '18/06/2026',
+    changes: [
+      'UI: checkboxes "É parcelado?" e "Conferido" substituídos por botões toggle pill com ✓ verde/azul quando ativos — feedback visual claro',
+    ],
+  },
   {
     version: '1.6.77',
     date: '18/06/2026',
