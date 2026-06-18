@@ -6,7 +6,9 @@ export const CHANGELOG = [
     version: '1.6.72',
     date: '18/06/2026',
     changes: [
-      'Fix: CartaoFaturaCard lista lançamentos usando período de fechamento real (getClosingDate), alinhado com calcFaturaCard',
+      'Fix: calcFaturaCard filtra por janela de vencimento (prevVenc, proximoVenc] — alinha cabeçalho com lista de lançamentos expandida',
+      'Fix: parcelas futuras de itens parcelados somadas ao comprometidoFuturo — limite disponível reflete comprometimento real',
+      'Fix: CartaoFaturaCard usa mesma janela de calcFaturaCard para listar lançamentos do card expandido',
     ],
   },
   {
