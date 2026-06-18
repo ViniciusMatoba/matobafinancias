@@ -1,7 +1,7 @@
 {
-  "version": "1.6.76",
+  "version": "1.6.78",
   "date": "18/06/2026",
   "notes": [
-    "Fix: clicar no lápis de item de fatura agora rola automaticamente até o formulário de edição (modal tem scroll próprio e o form ficava fora do viewport)"
+    "UI: checkboxes \"É parcelado?\" e \"Conferido\" substituídos por botões toggle pill com ✓ verde/azul quando ativos — feedback visual claro"
   ]
 }
