@@ -1,8 +1,9 @@
 {
-  "version": "1.6.75",
+  "version": "1.6.74",
   "date": "18/06/2026",
   "notes": [
-    "Fix: botão lápis de editar item de fatura agora abre corretamente — editItem usa cópia do objeto evitando bailout do React por referência igual",
-    "Fix: dataCompra undefined em item não causa input de data descontrolado"
+    "Fix: número de parcela (X/Yx) exibido mesmo quando isParcelado não estava salvo no item — retrocompatível com dados antigos",
+    "Fix: campo conferido dos itens preservado ao re-salvar transação de cartão",
+    "Fix: save de itens infere isParcelado automaticamente se parcelaAtual e totalParcelas estão preenchidos"
   ]
 }
