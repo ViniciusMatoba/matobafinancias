@@ -1,8 +1,7 @@
 {
-  "version": "1.6.75",
+  "version": "1.6.77",
   "date": "18/06/2026",
   "notes": [
-    "Fix: botão lápis de editar item de fatura agora abre corretamente — editItem usa cópia do objeto evitando bailout do React por referência igual",
-    "Fix: dataCompra undefined em item não causa input de data descontrolado"
+    "Fix: editar fatura real de cartão com itens parcelados não duplica mais o lançamento no mês seguinte — dialog de escopo só aparece para faturas virtuais projetadas"
   ]
 }
