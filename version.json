@@ -1,7 +1,7 @@
 {
-  "version": "1.6.77",
+  "version": "1.6.79",
   "date": "18/06/2026",
   "notes": [
-    "Fix: editar fatura real de cartão com itens parcelados não duplica mais o lançamento no mês seguinte — dialog de escopo só aparece para faturas virtuais projetadas"
+    "Fix: compras parceladas agora aparecem automaticamente nas faturas futuras até o número correto de parcelas — CartaoFaturaCard projeta parcelas quando não há lançamento real cadastrado para o ciclo"
   ]
 }
