@@ -664,14 +664,24 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const rendaMensal = config?.rendaMensal || 0;
     if (rendaMensal > 0) {
       const fromStr = `${currentMonth}-01`;
-      const [y, m] = currentMonth.split('-').map(Number);
-      const lastDay = new Date(y, m, 0).getDate();
-      const toStr = `${currentMonth}-${String(lastDay).padStart(2, '0')}`;
-      
-      const occsMes = expandRange(transactions, fromStr, toStr);
-      const totalGasto = occsMes
+      const [y9, m9] = currentMonth.split('-').map(Number);
+      const lastDay9 = new Date(y9, m9, 0).getDate();
+      const toStr = `${currentMonth}-${String(lastDay9).padStart(2, '0')}`;
+
+      // Despesas não-cartão via expandRange (sem risco de dupla contagem)
+      const nonCardOccs = expandRange(
+        transactions.filter(t => t.tipo !== 'cartao'), fromStr, toStr
+      );
+      let totalGasto = nonCardOccs
         .filter(o => o.tipo !== 'entrada')
         .reduce((sum, o) => sum + o.valor, 0);
+
+      // Cartão: usa calcFaturaCardBot para não dupla-contar parcelas virtuais de meses anteriores
+      // (expandRange geraria tanto a fatura real do mês quanto as parcelas virtuais do mês passado)
+      for (const card of cards) {
+        const { faturaAtual } = calcFaturaCardBot(card, transactions, todayStr);
+        totalGasto += faturaAtual;
+      }
 
       const pct = (totalGasto / rendaMensal) * 100;
       if (pct > 100) {
