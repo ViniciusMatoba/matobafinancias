@@ -250,7 +250,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   };
 
   const editItem = (idx) => {
-    setNovoItem(itens[idx]);
+    setNovoItem({ ...itens[idx], dataCompra: itens[idx].dataCompra || todayStr() });
     setEditItemIdx(idx);
   };
 

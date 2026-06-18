@@ -1,7 +1,9 @@
 {
-  "version": "1.6.73",
+  "version": "1.6.74",
   "date": "18/06/2026",
   "notes": [
-    "Testes: cobertura de getProximoVencimento, getClosingDate e calcFaturaCard (73 testes passando)"
+    "Fix: número de parcela (X/Yx) exibido mesmo quando isParcelado não estava salvo no item — retrocompatível com dados antigos",
+    "Fix: campo conferido dos itens preservado ao re-salvar transação de cartão",
+    "Fix: save de itens infere isParcelado automaticamente se parcelaAtual e totalParcelas estão preenchidos"
   ]
 }

@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.74';
+export const APP_VERSION = '1.6.75';
 export const APP_VERSION_DATE = '18/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.75',
+    date: '18/06/2026',
+    changes: [
+      'Fix: botão lápis de editar item de fatura agora abre corretamente — editItem usa cópia do objeto evitando bailout do React por referência igual',
+      'Fix: dataCompra undefined em item não causa input de data descontrolado',
+    ],
+  },
   {
     version: '1.6.74',
     date: '18/06/2026',
