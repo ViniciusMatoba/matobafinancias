@@ -1,7 +1,7 @@
 {
-  "version": "1.6.73",
-  "date": "18/06/2026",
+  "version": "1.6.71",
+  "date": "17/06/2026",
   "notes": [
-    "Testes: cobertura de getProximoVencimento, getClosingDate e calcFaturaCard (73 testes passando)"
+    "Fix: calcFaturaCard soma lançamentos cartão dentro do período (fechamento anterior, fechamento atual"
   ]
 }
