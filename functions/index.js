@@ -1820,6 +1820,112 @@ async function handleEconomias(chatId, uid) {
   return sendMessage(chatId, text.trim());
 }
 
+async function handleParcelados(chatId, uid) {
+  const [txSnap, cardsSnap] = await Promise.all([
+    db.collection('transactions').doc(uid).collection('entries').get(),
+    db.collection('cards').doc(uid).collection('list').get(),
+  ]);
+  const txs     = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const cards   = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  const cardMap = Object.fromEntries(cards.map(c => [c.id, c]));
+
+  // ── 1. Itens parcelados de cartão ────────────────────────────────────────
+  // Agrupa por (cartaoId, descrição, totalParcelas) e mantém o maior parcelaAtual
+  // (= estado mais recente dentre faturas não pagas)
+  const cartaoMap = {};
+  txs
+    .filter(t => t.tipo === 'cartao' && !t.conferido && t.itens?.length > 0)
+    .forEach(tx => {
+      tx.itens.forEach(item => {
+        if (!item.isParcelado || !item.totalParcelas) return;
+        const key = `${tx.cartaoId}|${(item.descricao || '').trim().toLowerCase()}|${item.totalParcelas}`;
+        const cur = cartaoMap[key];
+        if (!cur || (item.parcelaAtual || 1) > (cur.parcelaAtual || 1)) {
+          cartaoMap[key] = {
+            cartaoId:     tx.cartaoId,
+            descricao:    item.descricao || tx.descricao || 'Item',
+            valor:        Number(item.valor) || 0,
+            parcelaAtual: item.parcelaAtual || 1,
+            totalParcelas: item.totalParcelas,
+          };
+        }
+      });
+    });
+
+  // "Restam" inclui a parcela atual (ainda não conferida) + as futuras
+  const cartaoItems = Object.values(cartaoMap).filter(
+    p => p.totalParcelas >= p.parcelaAtual
+  );
+
+  // ── 2. Parcelados avulsos (frequencia === 'parcelado', fora de cartão) ───
+  const avulsos = txs
+    .filter(t => t.frequencia === 'parcelado' && t.tipo !== 'cartao')
+    .map(t => ({
+      descricao:    t.descricao || 'Parcelado',
+      valor:        Number(t.valor) || 0,
+      parcelaAtual: t.parcelaAtual || 1,
+      totalParcelas: t.totalParcelas || 1,
+    }))
+    .filter(p => p.parcelaAtual <= p.totalParcelas); // inclui última parcela ainda em aberto
+
+  if (cartaoItems.length === 0 && avulsos.length === 0) {
+    return sendMessage(chatId,
+      `🎉 *Nenhuma compra parcelada em aberto!*\n_Você está livre de dívidas parceladas._`
+    );
+  }
+
+  let text  = `📋 *Compras Parceladas em Aberto*\n\n`;
+  let totalGeral = 0;
+
+  // ── Itens de cartão agrupados por cartão ─────────────────────────────────
+  const byCard = {};
+  cartaoItems.forEach(p => {
+    (byCard[p.cartaoId] = byCard[p.cartaoId] || []).push(p);
+  });
+
+  for (const [cardId, items] of Object.entries(byCard)) {
+    const nome = cardMap[cardId]?.nome || 'Cartão';
+    text += `💳 *${nome}*\n`;
+    // ordena por valor total restante decrescente
+    items.sort((a, b) =>
+      (b.totalParcelas - b.parcelaAtual + 1) * b.valor -
+      (a.totalParcelas - a.parcelaAtual + 1) * a.valor
+    );
+    for (const p of items) {
+      const restam      = p.totalParcelas - p.parcelaAtual + 1; // atual + futuras
+      const totalRestante = restam * p.valor;
+      totalGeral += totalRestante;
+      const ultimaTag = restam === 1 ? ' ⚡ _última!_' : '';
+      text += ` • *${p.descricao}* _(${p.parcelaAtual}/${p.totalParcelas}x)_${ultimaTag}\n`;
+      text += `   ${formatBRL(p.valor)}/mês × ${restam} restantes = *${formatBRL(totalRestante)}*\n`;
+    }
+    text += '\n';
+  }
+
+  // ── Parcelados avulsos ────────────────────────────────────────────────────
+  if (avulsos.length > 0) {
+    text += `📦 *Parcelados Avulsos*\n`;
+    avulsos.sort((a, b) =>
+      (b.totalParcelas - b.parcelaAtual + 1) * b.valor -
+      (a.totalParcelas - a.parcelaAtual + 1) * a.valor
+    );
+    for (const p of avulsos) {
+      const restam        = p.totalParcelas - p.parcelaAtual + 1;
+      const totalRestante = restam * p.valor;
+      totalGeral += totalRestante;
+      const ultimaTag = restam === 1 ? ' ⚡ _última!_' : '';
+      text += ` • *${p.descricao}* _(${p.parcelaAtual}/${p.totalParcelas}x)_${ultimaTag}\n`;
+      text += `   ${formatBRL(p.valor)}/mês × ${restam} restantes = *${formatBRL(totalRestante)}*\n`;
+    }
+    text += '\n';
+  }
+
+  text += `─────────────────\n`;
+  text += `💸 *Total ainda a pagar: ${formatBRL(totalGeral)}*`;
+
+  return sendMessage(chatId, text.trim());
+}
+
 // Helper: adiciona dias a uma string de data
 function addDaysFn(dateStr, n) {
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -1830,9 +1936,10 @@ function addDaysFn(dateStr, n) {
 async function handleAjuda(chatId) {
   const MAIN_KEYBOARD = {
     keyboard: [
-      [{ text: '💰 Saldo' },     { text: '💳 Cartões' },  { text: '🧾 Fatura' }],
-      [{ text: '📊 Categorias' },{ text: '🎯 Metas' },    { text: '📈 Projeção' }],
-      [{ text: '💡 Insight' },   { text: '⚙️ Configurar' },{ text: '❓ Ajuda' }],
+      [{ text: '💰 Saldo' },      { text: '💳 Cartões' },   { text: '🧾 Fatura' }],
+      [{ text: '📊 Categorias' }, { text: '🎯 Metas' },     { text: '📈 Projeção' }],
+      [{ text: '💡 Insight' },    { text: '📋 Parcelados' },{ text: '⚙️ Configurar' }],
+      [{ text: '❓ Ajuda' }],
     ],
     resize_keyboard: true,
   };
@@ -1854,7 +1961,8 @@ async function handleAjuda(chatId) {
 
     `*💳 Cartões de Crédito*\n` +
     `/cartoes — Seus cartões, limites e vencimentos\n` +
-    `/fatura — Detalhamento de faturas e compras do mês 🧾\n\n` +
+    `/fatura — Detalhamento de faturas e compras do ciclo atual 🧾\n` +
+    `/parcelados — Compras parceladas em aberto: parcelas restantes e valores 📋\n\n` +
 
     `*📈 Projeção e Economia*\n` +
     `/projecao — Saldo projetado nos próximos 7 dias\n` +
@@ -2280,6 +2388,7 @@ async function processUpdate(update) {
   else if (cmd.includes('meta')) cmd = '/meta';
   else if (cmd.includes('insig') || cmd.includes('dica') || cmd.includes('insight')) cmd = '/insight';
   else if (cmd.includes('ajuda') || cmd.includes('help')) cmd = '/ajuda';
+  else if (cmd.includes('parcela')) cmd = '/parcelados';
   else if (cmd.includes('hoje')) cmd = '/hoje';
   else if (cmd.includes('hist')) cmd = '/historico';
   else if (cmd.includes('seman')) cmd = '/semana';
@@ -2329,9 +2438,10 @@ async function processUpdate(update) {
     case '/fatura':    return handleFatura(chatId, uid);
     case '/projecao':  return handleProjecao(chatId, uid);
     case '/insight':    return handleInsight(chatId, uid);
-    case '/proximas':   return handleProximas(chatId, uid);
-    case '/previsao':   return handlePrevisao(chatId, uid);
-    case '/economias':  return handleEconomias(chatId, uid);
+    case '/proximas':    return handleProximas(chatId, uid);
+    case '/previsao':    return handlePrevisao(chatId, uid);
+    case '/economias':   return handleEconomias(chatId, uid);
+    case '/parcelados':  return handleParcelados(chatId, uid);
     case '/configurar':
     case '/alertas':   return handleConfigurar(chatId, uid);
     case '/ajuda':
