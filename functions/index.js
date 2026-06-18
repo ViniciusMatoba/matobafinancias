@@ -1820,6 +1820,114 @@ async function handleEconomias(chatId, uid) {
   return sendMessage(chatId, text.trim());
 }
 
+// Mapa de nomes de meses em PT para número
+const MESES_NOME_MAP = {
+  jan:1,fev:2,mar:3,abr:4,mai:5,jun:6,
+  jul:7,ago:8,set:9,out:10,nov:11,dez:12,
+  janeiro:1,fevereiro:2,março:3,marco:3,abril:4,maio:5,junho:6,
+  julho:7,agosto:8,setembro:9,outubro:10,novembro:11,dezembro:12,
+};
+
+async function handleSaldoFinal(chatId, uid, args) {
+  const agora  = getNowBrasilia();
+  const hoje   = dateStrFromDate(agora);
+  const { transactions, walletInitials } = await loadUserData(uid);
+
+  // ── Analisa os argumentos ─────────────────────────────────────────────────
+  let meses = [];
+  const raw = (args || '').trim().toLowerCase();
+
+  if (!raw) {
+    // Padrão: mês atual + 5 seguintes (6 ao total)
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(agora.getFullYear(), agora.getMonth() + i, 1);
+      meses.push({ ano: d.getFullYear(), mes: d.getMonth() + 1 });
+    }
+  } else if (/^(ano|todos|all)$/.test(raw)) {
+    // Todos os meses do ano corrente
+    for (let m = 1; m <= 12; m++) {
+      meses.push({ ano: agora.getFullYear(), mes: m });
+    }
+  } else {
+    // Tokens: números (1-12) ou nomes de meses
+    const tokens = raw.split(/[\s,;]+/).filter(Boolean);
+    const seen = new Set();
+    for (const t of tokens) {
+      let m = parseInt(t);
+      if (isNaN(m)) m = MESES_NOME_MAP[t] || 0;
+      if (m < 1 || m > 12) continue;
+      if (seen.has(m)) continue;
+      seen.add(m);
+      // Se o mês já passou neste ano, usa próximo ano
+      const mesAtual = agora.getMonth() + 1;
+      const ano = m < mesAtual ? agora.getFullYear() + 1 : agora.getFullYear();
+      meses.push({ ano, mes: m });
+    }
+    meses.sort((a, b) => (a.ano * 100 + a.mes) - (b.ano * 100 + b.mes));
+
+    if (meses.length === 0) {
+      return sendMessage(chatId,
+        `❓ Não entendi os meses informados.\n\n` +
+        `*Exemplos de uso:*\n` +
+        `/saldofinal — próximos 6 meses\n` +
+        `/saldofinal 6 7 8 — junho, julho e agosto\n` +
+        `/saldofinal junho — só junho\n` +
+        `/saldofinal ano — todos os meses do ano`
+      );
+    }
+  }
+
+  // Limita a 12 meses para não gerar mensagem gigante
+  if (meses.length > 12) meses = meses.slice(0, 12);
+
+  // ── Calcula saldo para cada fim de mês ────────────────────────────────────
+  // saldo "anterior" = saldo atual para calcular o delta do primeiro mês
+  let saldoAnterior = calcSaldoSimples(transactions, hoje, walletInitials);
+
+  const linhas = meses.map(({ ano, mes }) => {
+    const ultimoDia = new Date(ano, mes, 0).getDate();
+    const endStr    = `${ano}-${String(mes).padStart(2,'0')}-${String(ultimoDia).padStart(2,'0')}`;
+    const saldo     = calcSaldoSimples(transactions, endStr, walletInitials);
+    const delta     = saldo - saldoAnterior;
+    saldoAnterior   = saldo;
+    const isPast    = endStr < hoje;
+    return { ano, mes, saldo, delta, isPast };
+  });
+
+  // ── Monta mensagem ────────────────────────────────────────────────────────
+  const titulo = meses.length === 1
+    ? `📅 *Saldo — Fim de ${MESES_LONGO[meses[0].mes]} ${meses[0].ano}*`
+    : `📅 *Saldo Projetado — Fim de Mês*`;
+
+  let text = titulo + `\n\n`;
+
+  for (const { ano, mes, saldo, delta, isPast } of linhas) {
+    const nomeMes  = MESES_LONGO[mes];
+    const saldoFmt = formatBRL(saldo);
+    const deltaFmt = `${delta >= 0 ? '+' : ''}${formatBRL(delta)}`;
+    const icon     = saldo < 0 ? '🔴' : delta >= 0 ? '✅' : '⚠️';
+    const arrow    = delta > 50 ? '▲' : delta < -50 ? '▼' : '➡️';
+    const pastTag  = isPast ? ' _(histórico)_' : '';
+
+    text += `${icon} *${nomeMes} ${ano}*${pastTag}\n`;
+    text += `   Saldo: *${saldoFmt}*\n`;
+    text += `   ${arrow} ${deltaFmt} em relação ao mês anterior\n\n`;
+  }
+
+  // Resumo quando há mais de um mês
+  if (linhas.length > 1) {
+    const primeiro = linhas[0];
+    const ultimo   = linhas[linhas.length - 1];
+    const evolucao = ultimo.saldo - calcSaldoSimples(transactions, hoje, walletInitials);
+    const tendIcon = evolucao >= 0 ? '📈' : '📉';
+    text += `─────────────────\n`;
+    text += `${tendIcon} Evolução no período: *${evolucao >= 0 ? '+' : ''}${formatBRL(evolucao)}*\n`;
+    text += `_(de ${MESES_CURTO[primeiro.mes]} a ${MESES_CURTO[ultimo.mes]}/${ultimo.ano})_`;
+  }
+
+  return sendMessage(chatId, text.trim());
+}
+
 async function handleParcelados(chatId, uid) {
   const [txSnap, cardsSnap] = await Promise.all([
     db.collection('transactions').doc(uid).collection('entries').get(),
@@ -1938,7 +2046,8 @@ async function handleAjuda(chatId) {
     keyboard: [
       [{ text: '💰 Saldo' },      { text: '💳 Cartões' },   { text: '🧾 Fatura' }],
       [{ text: '📊 Categorias' }, { text: '🎯 Metas' },     { text: '📈 Projeção' }],
-      [{ text: '💡 Insight' },    { text: '📋 Parcelados' },{ text: '⚙️ Configurar' }],
+      [{ text: '💡 Insight' },    { text: '📋 Parcelados' },{ text: '📅 Saldo Fim Mês' }],
+      [{ text: '⚙️ Configurar' }],
       [{ text: '❓ Ajuda' }],
     ],
     resize_keyboard: true,
@@ -1965,6 +2074,7 @@ async function handleAjuda(chatId) {
     `/parcelados — Compras parceladas em aberto: parcelas restantes e valores 📋\n\n` +
 
     `*📈 Projeção e Economia*\n` +
+    `/saldofinal — Saldo projetado no fim de cada mês 📅\n` +
     `/projecao — Saldo projetado nos próximos 7 dias\n` +
     `/proximas — Próximas despesas dos próximos 7 dias\n` +
     `/previsao — Fluxo de caixa para os próximos 30 dias\n` +
@@ -2379,7 +2489,8 @@ async function processUpdate(update) {
   const args = argParts.join(' ');
 
   // Normalização do comando (mapeia botões de teclado personalizados)
-  if (cmd.includes('saldo')) cmd = '/saldo';
+  if (cmd.includes('saldo') && cmd.includes('final')) cmd = '/saldofinal';
+  else if (cmd.includes('saldo')) cmd = '/saldo';
   else if (cmd.includes('cart') || cmd.includes('cartões')) cmd = '/cartoes';
   else if (cmd.includes('fatur')) cmd = '/fatura';
   else if (cmd.includes('proje') || cmd.includes('projeção')) cmd = '/projecao';
@@ -2442,6 +2553,7 @@ async function processUpdate(update) {
     case '/previsao':    return handlePrevisao(chatId, uid);
     case '/economias':   return handleEconomias(chatId, uid);
     case '/parcelados':  return handleParcelados(chatId, uid);
+    case '/saldofinal':  return handleSaldoFinal(chatId, uid, args);
     case '/configurar':
     case '/alertas':   return handleConfigurar(chatId, uid);
     case '/ajuda':

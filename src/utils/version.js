@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.79';
+export const APP_VERSION = '1.6.80';
 export const APP_VERSION_DATE = '18/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.80',
+    date: '18/06/2026',
+    changes: [
+      'Bot: novo comando /saldofinal — exibe saldo projetado no fim de cada mês (próximos 6 meses por padrão, ou meses específicos: /saldofinal 6 7 8, /saldofinal junho, /saldofinal ano)',
+    ],
+  },
   {
     version: '1.6.79',
     date: '18/06/2026',
