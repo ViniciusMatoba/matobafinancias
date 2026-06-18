@@ -148,6 +148,73 @@ function barra(valor, maximo, largura = 10) {
 
 const APP_URL = 'https://viniciusmatoba.github.io/matobafinancias/';
 
+// ─── Ciclo de cartão (espelha getProximoVencimento do frontend) ──────────────
+function getProximoVencimentoBot(card, today) {
+  const [y, m, d] = today.split('-').map(Number);
+  const diaFech = card.diaFechamento || card.diaVencimento;
+  const diaVenc = card.diaVencimento;
+  let mes = m, ano = y;
+  if (d > diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }
+  if (diaVenc < diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }
+  const lastDay = new Date(ano, mes, 0).getDate();
+  const dia = Math.min(diaVenc, lastDay);
+  return `${ano}-${String(mes).padStart(2,'0')}-${String(dia).padStart(2,'0')}`;
+}
+
+/**
+ * Calcula faturaAtual e comprometidoFuturo de um cartão.
+ * Espelha calcFaturaCard do frontend, incluindo projeção de parcelas virtuais.
+ */
+function calcFaturaCardBot(card, transactions, today) {
+  const proximoVenc = getProximoVencimentoBot(card, today);
+  const [pvy, pvm, pvd] = proximoVenc.split('-').map(Number);
+  const pm = pvm === 1 ? 12 : pvm - 1;
+  const py = pvm === 1 ? pvy - 1 : pvy;
+  const plast = new Date(py, pm, 0).getDate();
+  const prevVencStr = `${py}-${String(pm).padStart(2,'0')}-${String(Math.min(pvd, plast)).padStart(2,'0')}`;
+
+  const cardTxs = transactions.filter(
+    t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
+  );
+
+  const realInWindow = cardTxs.filter(
+    t => t.dataInicio > prevVencStr && t.dataInicio <= proximoVenc
+  );
+
+  let faturaAtual = 0;
+  if (realInWindow.length > 0) {
+    realInWindow.forEach(tx => { faturaAtual += Number(tx.valor) || 0; });
+  } else {
+    // Sem lançamento real: projeta parcelas de transações passadas
+    const occs = expandRange(
+      cardTxs.filter(t => t.dataInicio <= prevVencStr),
+      prevVencStr, proximoVenc
+    ).filter(o => o.date > prevVencStr && o.date <= proximoVenc);
+    occs.forEach(o => { faturaAtual += o.valor; });
+  }
+
+  let comprometidoFuturo = 0;
+  cardTxs.filter(t => t.dataInicio > proximoVenc).forEach(tx => {
+    comprometidoFuturo += Number(tx.valor) || 0;
+  });
+  cardTxs.forEach(tx => {
+    if (!tx.itens?.length) return;
+    tx.itens.forEach(item => {
+      if (!item.isParcelado) return;
+      const remaining = (item.totalParcelas || 1) - (item.parcelaAtual || 1);
+      if (remaining <= 0) return;
+      comprometidoFuturo += remaining * (Number(item.valor) || 0);
+    });
+  });
+  if (realInWindow.length === 0) {
+    comprometidoFuturo = Math.max(0, comprometidoFuturo - faturaAtual);
+  }
+
+  const limite = card.limite || 0;
+  const limiteDisponivel = Math.max(0, limite - faturaAtual - comprometidoFuturo);
+  return { faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc, prevVenc: prevVencStr };
+}
+
 // ─── Expansão de transações em um intervalo [from, to] ───────────────────────
 // Espelha o expandOccurrences do frontend para consistência nos cálculos.
 // Retorna array de { date, valor, tipo }
@@ -659,25 +726,12 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   if (tipos.n11 !== false) {
     for (const card of cards) {
       if (!card.limite || card.limite <= 0) continue;
-      
-      const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
-      let faturaAtual = 0;
-      cardTxs.forEach(tx => {
-        const txMonth = tx.dataInicio.slice(0, 7);
-        if (txMonth === currentMonth) {
-          if (tx.itens && tx.itens.length > 0) {
-            tx.itens.forEach(item => {
-              faturaAtual += Number(item.valor) || 0;
-            });
-          } else {
-            faturaAtual += Number(tx.valor) || 0;
-          }
-        }
-      });
 
-      const pct = (faturaAtual / card.limite) * 100;
+      const { faturaAtual, comprometidoFuturo } = calcFaturaCardBot(card, transactions, todayStr);
+      const totalComprometido = faturaAtual + comprometidoFuturo;
+      const pct = (totalComprometido / card.limite) * 100;
       if (pct >= 80) {
-        msgs.push(`💳 *Limite de Cartão próximo do fim!*\nA fatura do seu cartão *${card.nome}* atingiu *${Math.round(pct)}%* do limite total (${formatBRL(faturaAtual)} de ${formatBRL(card.limite)}).`);
+        msgs.push(`💳 *Limite de Cartão próximo do fim!*\nA fatura do seu cartão *${card.nome}* atingiu *${Math.round(pct)}%* do limite total (${formatBRL(totalComprometido)} de ${formatBRL(card.limite)}).`);
       }
     }
   }
@@ -1394,8 +1448,8 @@ async function handleInsight(chatId, uid) {
 
 async function handleFatura(chatId, uid) {
   const agora = getNowBrasilia();
-  const currentMonth = `${agora.getFullYear()}-${String(agora.getMonth()+1).padStart(2,'0')}`;
-  
+  const today = dateStrFromDate(agora);
+
   const cardsSnap = await db.collection('cards').doc(uid).collection('list').get();
   const cards = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -1406,39 +1460,60 @@ async function handleFatura(chatId, uid) {
   const txSnap = await db.collection('transactions').doc(uid).collection('entries').get();
   const txs    = txSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-  let text = `🧾 *Detalhamento das Faturas (${agora.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' })})*\n\n`;
+  let text = `🧾 *Detalhamento das Faturas*\n\n`;
 
   for (const card of cards) {
-    const cardTxs = txs.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
-    let faturaAtual = 0;
-    const items = [];
+    const { faturaAtual, comprometidoFuturo, proximoVenc, prevVenc } = calcFaturaCardBot(card, txs, today);
 
-    cardTxs.forEach(tx => {
-      const txMonth = tx.dataInicio.slice(0, 7);
-      if (txMonth === currentMonth) {
-        if (tx.itens && tx.itens.length > 0) {
-          tx.itens.forEach(item => {
-            faturaAtual += Number(item.valor) || 0;
-            items.push(item);
-          });
+    // Lançamentos reais na janela do ciclo atual
+    const cardTxsWindow = txs.filter(
+      t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
+        && t.dataInicio > prevVenc && t.dataInicio <= proximoVenc
+    );
+
+    // Se sem real, usa parcelas projetadas via expandRange
+    let items = [];
+    let isVirtual = false;
+    if (cardTxsWindow.length > 0) {
+      cardTxsWindow.forEach(tx => {
+        if (tx.itens?.length > 0) {
+          tx.itens.forEach(item => items.push(item));
         } else {
-          faturaAtual += Number(tx.valor) || 0;
           items.push({ descricao: tx.descricao || 'Despesa Cartão', valor: tx.valor, dataCompra: tx.dataInicio });
         }
-      }
-    });
-
-    text += `💳 *${card.nome}* (Limite: ${formatBRL(card.limite)})\n`;
-    text += `Total Acumulado: *${formatBRL(faturaAtual)}*\n`;
-    
-    if (items.length > 0) {
-      text += `_Lançamentos:_\n`;
-      items.sort((a,b) => (a.dataCompra || '').localeCompare(b.dataCompra || '')).forEach(item => {
-        const dia = item.dataCompra ? item.dataCompra.split('-')[2] : '–';
-        text += ` • ${dia} · ${item.descricao || 'Despesa'}: *${formatBRL(item.valor)}*\n`;
       });
     } else {
-      text += `_Nenhum lançamento no mês corrente._\n`;
+      isVirtual = true;
+      const occs = expandRange(
+        txs.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido && t.dataInicio <= prevVenc),
+        prevVenc, proximoVenc
+      ).filter(o => o.date > prevVenc && o.date <= proximoVenc);
+      occs.forEach(o => {
+        if (o.tx?.itens?.length > 0) {
+          o.tx.itens.forEach(item => items.push(item));
+        }
+      });
+    }
+
+    const [pvy, pvm, pvd] = proximoVenc.split('-');
+    const vencLabel = `${pvd}/${pvm}/${pvy}`;
+    text += `💳 *${card.nome}* — vence ${vencLabel}\n`;
+    text += `Fatura: *${formatBRL(faturaAtual)}*`;
+    if (comprometidoFuturo > 0) text += ` _(+ ${formatBRL(comprometidoFuturo)} futuro)_`;
+    if (card.limite > 0) text += ` · Disponível: *${formatBRL(Math.max(0, card.limite - faturaAtual - comprometidoFuturo))}*`;
+    text += '\n';
+
+    if (items.length > 0) {
+      if (isVirtual) text += `_Parcelas projetadas:_\n`;
+      else text += `_Lançamentos:_\n`;
+      items.sort((a,b) => (a.dataCompra || '').localeCompare(b.dataCompra || '')).forEach(item => {
+        const dia = item.dataCompra ? item.dataCompra.split('-')[2] : '–';
+        const parc = (item.isParcelado || (item.parcelaAtual && item.totalParcelas))
+          ? ` (${item.parcelaAtual}/${item.totalParcelas}x)` : '';
+        text += ` • ${dia} · ${item.descricao || 'Despesa'}${parc}: *${formatBRL(item.valor)}*\n`;
+      });
+    } else {
+      text += `_Nenhum lançamento neste ciclo._\n`;
     }
     text += `\n`;
   }
