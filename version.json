@@ -1,7 +1,7 @@
 {
-  "version": "1.6.97",
+  "version": "1.6.96",
   "date": "23/06/2026",
   "notes": [
-    "Ícone 👁 movido do header para o lado esquerdo do Saldo Global"
+    "Fix: correção de erro crítico (tela preta) causado por recursão na função fmtVal em BudgetSummaryCard e CartaoFaturaCard"
   ]
 }
