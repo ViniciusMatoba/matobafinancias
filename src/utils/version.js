@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.96';
+export const APP_VERSION = '1.6.97';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.97',
+    date: '23/06/2026',
+    changes: [
+      'Ícone 👁 movido do header para o lado esquerdo do Saldo Global',
+    ],
+  },
   {
     version: '1.6.96',
     date: '23/06/2026',

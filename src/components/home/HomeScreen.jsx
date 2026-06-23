@@ -218,9 +218,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', letterSpacing: 1, textTransform: 'uppercase' }}>
             Matoba Finanças
           </p>
-          <button onClick={toggleValues} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title={valuesVisible ? 'Ocultar valores' : 'Exibir valores'}>
-            {valuesVisible ? <Eye size={17} /> : <EyeOff size={17} />}
-          </button>
           <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
             <HelpCircle size={17} />
           </button>
@@ -268,6 +265,9 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
             {isFuture ? 'Saldo projetado' : 'Saldo Global'}
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+            <button onClick={toggleValues} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4, flexShrink: 0 }} title={valuesVisible ? 'Ocultar valores' : 'Exibir valores'}>
+              {valuesVisible ? <Eye size={20} /> : <EyeOff size={20} />}
+            </button>
             <p style={{
               margin: 0, fontSize: 40, fontWeight: 700,
               color: saldoPositivo ? 'var(--entrada)' : 'var(--saida)',

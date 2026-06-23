@@ -1,8 +1,7 @@
 {
-  "version": "1.6.95",
+  "version": "1.6.96",
   "date": "23/06/2026",
   "notes": [
-    "Feature: botão 👁 no header da tela Início para ocultar/exibir todos os valores monetários (saldo, carteiras, cartão, orçamento) — preferência salva no dispositivo",
-    "Tour: descrição do Saldo Global atualizada para referenciar o novo botão de privacidade"
+    "Fix: correção de erro crítico (tela preta) causado por recursão na função fmtVal em BudgetSummaryCard e CartaoFaturaCard"
   ]
 }
