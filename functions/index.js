@@ -803,7 +803,8 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       if (parcAtual !== parcTotal) continue;          // não é a última
       
       const pd = new Date(tx.dataInicio + 'T00:00:00');
-      const diffMonths = (tx.totalParcelas || 1) - (tx.parcelaAtual || 1);
+      // Data da parcela atual = dataInicio + (parcelaAtual - 1) meses
+      const diffMonths = (tx.parcelaAtual || 1) - 1;
       for (let j = 0; j < diffMonths; j++) addOneMonthClamped(pd);
       const ds = dateStrFromDate(pd);
       if (ds !== todayStr) continue; // não vence hoje
@@ -1081,11 +1082,14 @@ async function handleCartoes(chatId, uid) {
     return sendMessage(chatId, '💳 Nenhum cartão cadastrado.');
   }
 
-  const today = getNowBrasilia().getDate();
+  const todayStr = todayStrBrasilia();
   let text = '💳 *Seus cartões:*\n\n';
   for (const c of cards) {
-    const diasVenc = ((c.diaVencimento - today + 31) % 31) || 31;
-    const urgente  = diasVenc <= 3 ? ' ⚠️' : '';
+    const proximoVenc = getProximoVencimentoBot(c, todayStr);
+    const diasVenc = Math.round(
+      (new Date(proximoVenc + 'T00:00:00') - new Date(todayStr + 'T00:00:00')) / 86400000
+    );
+    const urgente = diasVenc === 0 ? ' 🚨 vence HOJE' : diasVenc <= 3 ? ` ⚠️ vence em ${diasVenc}d` : '';
     text += `• *${c.nome}*${urgente}\n  Vence dia ${c.diaVencimento} · Fecha dia ${c.diaFechamento} · Limite ${formatBRL(c.limite)}\n\n`;
   }
 
@@ -1699,7 +1703,9 @@ async function handleProximas(chatId, uid) {
   const { transactions, walletInitials } = await loadUserData(uid);
   const saldo    = calcSaldoSimples(transactions, hoje, walletInitials);
 
-  const occs = expandRange(transactions, hoje, fim7)
+  // Começa em amanhã: saldo já inclui hoje via calcSaldoSimples — evita dupla-contagem
+  const amanha = addDaysFn(hoje, 1);
+  const occs = expandRange(transactions, amanha, fim7)
     .filter(o => o.tipo !== 'entrada')
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -1743,7 +1749,8 @@ async function handlePrevisao(chatId, uid) {
   const { transactions, walletInitials } = await loadUserData(uid);
   const saldoHoje = calcSaldoSimples(transactions, hoje, walletInitials);
 
-  const occs = expandRange(transactions, hoje, fim30);
+  // Começa em amanhã: saldoHoje já inclui hoje via calcSaldoSimples — evita dupla-contagem
+  const occs = expandRange(transactions, addDaysFn(hoje, 1), fim30);
   let entradas = 0, saidas = 0;
   let diaMaisCritico = null, maiorSaidaDia = 0;
 

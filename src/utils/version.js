@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.81';
+export const APP_VERSION = '1.6.82';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.82',
+    date: '23/06/2026',
+    changes: [
+      'Fix bot N14: alerta de última parcela nunca disparava — cálculo de data corrigido para dataInicio + (parcelaAtual-1) meses',
+      'Fix bot /cartoes: dias até vencimento mostrava 31 no dia do vencimento — usa getProximoVencimentoBot igual ao frontend',
+      'Fix bot /proximas e /previsao: gastos de hoje eram contados duas vezes no saldo esperado — expandRange agora começa em amanhã',
+    ],
+  },
   {
     version: '1.6.81',
     date: '23/06/2026',
