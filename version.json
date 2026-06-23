@@ -1,9 +1,7 @@
 {
-  "version": "1.6.85",
+  "version": "1.6.87",
   "date": "23/06/2026",
   "notes": [
-    "Fix bot N4/N5: orçamento por categoria não contava diário passado — remove historical:true para igualar ao app",
-    "Fix app + bot: dupla contagem de parcelas de cartão no orçamento — BudgetSummaryCard agora filtra projeções virtuais quando fatura real existe",
-    "Fix bot N6: alerta de saldo negativo ignorava entradas dos próximos 7 dias — refatorado para usar calcSaldoSimples(in7)"
+    "Onboarding: esclarece que a renda deve ser o valor líquido (o que cai na conta), com exemplo bruto vs líquido"
   ]
 }
