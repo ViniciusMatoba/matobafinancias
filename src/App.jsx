@@ -325,7 +325,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
           />
         )}
 
-        {tourActive && <TourGuide onComplete={handleCompleteTour} hasCards={cards.length > 0} />}
+        {tourActive && <TourGuide onComplete={handleCompleteTour} />}
       </>
     );
   };

@@ -1,13 +1,19 @@
-export const APP_VERSION = '1.6.88';
+export const APP_VERSION = '1.6.89';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
   {
+    version: '1.6.89',
+    date: '23/06/2026',
+    changes: [
+      'Fix tour: passo de cartão aparece para todos com aviso de que o card só exibe para quem tem cartão cadastrado',
+    ],
+  },
+  {
     version: '1.6.88',
     date: '23/06/2026',
     changes: [
-      'Tour guiado: reescrito com 8 passos detalhados — menu inferior, saldo global, carteiras, divisão percentual, cartão (condicional), lançamentos do dia e tipos de lançamento',
-      'Tour: passo de cartão de crédito aparece apenas para usuários com cartão cadastrado',
+      'Tour guiado: reescrito com 8 passos detalhados — menu inferior, saldo global, carteiras, divisão percentual, cartão, lançamentos do dia e tipos de lançamento',
       'Tour: barra de progresso visual + botão "Pular tour" em todos os passos',
     ],
   },

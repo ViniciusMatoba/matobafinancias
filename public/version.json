@@ -1,7 +1,9 @@
 {
-  "version": "1.6.87",
+  "version": "1.6.88",
   "date": "23/06/2026",
   "notes": [
-    "Onboarding: esclarece que a renda deve ser o valor líquido (o que cai na conta), com exemplo bruto vs líquido"
+    "Tour guiado: reescrito com 8 passos detalhados — menu inferior, saldo global, carteiras, divisão percentual, cartão (condicional), lançamentos do dia e tipos de lançamento",
+    "Tour: passo de cartão de crédito aparece apenas para usuários com cartão cadastrado",
+    "Tour: barra de progresso visual + botão \"Pular tour\" em todos os passos"
   ]
 }

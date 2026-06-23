@@ -33,8 +33,7 @@ const BASE_STEPS = [
   },
   {
     title: '💳 Cartão de Crédito',
-    desc: 'Aqui você acompanha a fatura estimada do ciclo atual e o limite disponível de cada cartão. Ao confirmar o pagamento da fatura, o saldo do cartão é zerado automaticamente.',
-    cartaoOnly: true,
+    desc: 'Aqui você acompanha a fatura estimada do ciclo atual e o limite disponível de cada cartão. Ao confirmar o pagamento da fatura, o saldo do cartão é zerado automaticamente. ⚠️ Este card aparece na tela Início apenas para quem tiver um cartão cadastrado em Configurações → Cartões.',
   },
   {
     title: '📅 Lançamentos do dia',
@@ -55,8 +54,8 @@ const BASE_STEPS = [
   },
 ];
 
-export default function TourGuide({ onComplete, hasCards = false }) {
-  const steps = BASE_STEPS.filter(s => !s.cartaoOnly || hasCards);
+export default function TourGuide({ onComplete }) {
+  const steps = BASE_STEPS;
   const [currentStep, setCurrentStep] = useState(0);
 
   const handleNext = () => {
