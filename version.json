@@ -1,7 +1,7 @@
 {
-  "version": "1.6.89",
+  "version": "1.6.91",
   "date": "23/06/2026",
   "notes": [
-    "Fix tour: passo de cartão aparece para todos com aviso de que o card só exibe para quem tem cartão cadastrado"
+    "Botão ? de ajuda contextual em todas as 6 telas — abre modal com explicações detalhadas da tela atual"
   ]
 }
