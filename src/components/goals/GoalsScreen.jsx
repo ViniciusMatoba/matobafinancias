@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/purity */
 import { useState, useMemo, useEffect } from 'react';
 import { Target, Plus, Pencil, Trash2, TrendingUp, Sparkles, Building, Car, HelpCircle } from 'lucide-react';
+import HelpModal from '../shared/HelpModal';
 import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, todayStr, addMonths, formatMonthYear } from '../../utils/formatters';
 import { getAutoCategory, PERCENTUAL_CATEGORIES, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 import { calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
@@ -10,6 +11,7 @@ const COLOR_OPTIONS = [
 ];
 
 export default function GoalsScreen({ goals, transactions, wallets = [], config, onSaveConfig, onAddGoal, onUpdateGoal, onRemoveGoal, onAddTransaction }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   
@@ -520,7 +522,12 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
     <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
       <div style={{ padding: '20px 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Metas e Caixinhas</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Metas e Caixinhas</h1>
+            <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
+              <HelpCircle size={17} />
+            </button>
+          </div>
           {activeTab === 'caixinhas' && !formOpen && (
             <button onClick={() => setFormOpen(true)} style={{
               background: 'var(--investimento)', color: '#fff', border: 'none',
@@ -1407,6 +1414,7 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
           `}</style>
         </div>
       )}
+      <HelpModal screen="goals" open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

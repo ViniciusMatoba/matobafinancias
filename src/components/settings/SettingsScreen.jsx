@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { LogOut, User, Shield, ChevronDown, ChevronUp, Download } from 'lucide-react';
+import { LogOut, User, Shield, ChevronDown, ChevronUp, Download, HelpCircle } from 'lucide-react';
+import HelpModal from '../shared/HelpModal';
 import { useToast } from '../shared/Toast';
 import { triggerUpdate } from '../../hooks/useVersionCheck';
 import { doc, collection, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
@@ -139,6 +140,7 @@ const CHANGELOG_DATA = [
 ];
 
 export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour, onUpdateApp, onUpdateTransaction }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
   const [walletsOpen, setWalletsOpen] = useState(false);
@@ -388,7 +390,12 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
   return (
     <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 90 }}>
       <div style={{ padding: '20px 20px 0' }}>
-        <h1 style={{ margin: '0 0 20px', fontSize: 20, fontWeight: 700 }}>Configurações</h1>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Configurações</h1>
+          <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
+            <HelpCircle size={17} />
+          </button>
+        </div>
 
         {/* Perfil */}
         <div style={{
@@ -939,6 +946,7 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
       )}
 
       {ToastNode}
+      <HelpModal screen="settings" open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

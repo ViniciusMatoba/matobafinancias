@@ -3,7 +3,8 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, ComposedChart, Bar, 
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
-import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer } from 'lucide-react';
+import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer, HelpCircle } from 'lucide-react';
+import HelpModal from '../shared/HelpModal';
 
 const TABS = {
   RESUMO: 'resumo',
@@ -33,6 +34,7 @@ function getMonthRange(offset) {
 }
 
 export default function ReportsScreen({ transactions, wallets = [], config, onNavigate }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(TABS.RESUMO);
   const [period, setPeriod] = useState('current_month');
   
@@ -307,7 +309,12 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
             >
               <ArrowLeft size={16} />
             </button>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>Relatórios</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>Relatórios</h1>
+              <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
+                <HelpCircle size={17} />
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
@@ -935,6 +942,7 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
           </table>
         </div>
       </div>
+    <HelpModal screen="reports" open={helpOpen} onClose={() => setHelpOpen(false)} />
     </>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Pencil, Trash2, BarChart2, Copy, List } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Pencil, Trash2, BarChart2, Copy, List, HelpCircle } from 'lucide-react';
+import HelpModal from '../shared/HelpModal';
 import TransactionsScreen from '../transactions/TransactionsScreen';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
@@ -24,6 +25,7 @@ function formatDayNum(dateStr) {
 }
 
 export default function ProjectionScreen({ transactions, wallets, cards = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   const [viewTab, setViewTab] = useState('mensal'); // 'mensal' | 'resumo' | 'anual'
   const [monthOffset, setMonthOffset] = useState(0);
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -185,7 +187,12 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
         {/* Título e Seletor de Visão (Segmented Control) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Projeção</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Projeção</h1>
+              <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
+                <HelpCircle size={17} />
+              </button>
+            </div>
             
             {/* Segmented Control de 3 opções */}
             <div style={{ display: 'flex', background: 'var(--bg-card)', padding: 3, borderRadius: 10, border: '1px solid var(--border)' }}>
@@ -793,6 +800,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
         <div style={{ height: 8 }} />
       </div>}
     </div>
+    <HelpModal screen="projection" open={helpOpen} onClose={() => setHelpOpen(false)} />
     </>
   );
 }

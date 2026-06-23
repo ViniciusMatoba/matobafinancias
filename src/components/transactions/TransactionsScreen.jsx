@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp, Copy, X, RefreshCw, CheckCheck } from 'lucide-react';
+import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp, Copy, X, RefreshCw, CheckCheck, HelpCircle } from 'lucide-react';
+import HelpModal from '../shared/HelpModal';
 import { formatBRL, formatDateShort, TYPE_CONFIG, todayStr } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
@@ -16,6 +17,7 @@ function monthStr(offset) {
 }
 
 export default function TransactionsScreen({ transactions, wallets = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   const [viewMode, setViewMode] = useState('mensal'); // 'mensal' | 'completo'
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -283,7 +285,12 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
         
         {/* Seletor de Visão e Título */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Histórico</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Histórico</h1>
+            <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
+              <HelpCircle size={17} />
+            </button>
+          </div>
           
           {/* Segmented Control */}
           <div style={{ display: 'flex', background: 'var(--bg-card)', padding: 3, borderRadius: 10, border: '1px solid var(--border)' }}>
@@ -787,6 +794,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
           </>
         )}
       </div>
+      <HelpModal screen="transactions" open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

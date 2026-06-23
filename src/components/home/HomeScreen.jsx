@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal, HelpCircle } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura, calcFaturaCard } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -8,6 +8,7 @@ import AdjustBalanceModal from './AdjustBalanceModal';
 import ProximasContasCard from './ProximasContasCard';
 import CartaoFaturaCard from './CartaoFaturaCard';
 import FaturaHistoricoModal from './FaturaHistoricoModal';
+import HelpModal from '../shared/HelpModal';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -32,6 +33,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [historyCard, setHistoryCard] = useState(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem('matoba:sobra-banner-dismissed') === todayStr()
   );
@@ -203,9 +205,14 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         background: 'linear-gradient(160deg, #0f1f3d 0%, var(--bg-primary) 100%)',
         padding: '20px 20px 28px',
       }}>
-        <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--text-secondary)', letterSpacing: 1, textTransform: 'uppercase' }}>
-          Matoba Finanças
-        </p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', letterSpacing: 1, textTransform: 'uppercase' }}>
+            Matoba Finanças
+          </p>
+          <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
+            <HelpCircle size={17} />
+          </button>
+        </div>
 
         {/* Navegação diária */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -583,6 +590,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       </div>
 
     </div>
+      <HelpModal screen="home" open={helpOpen} onClose={() => setHelpOpen(false)} />
       <FaturaHistoricoModal
         card={historyCard}
         transactions={transactions}

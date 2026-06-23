@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.90';
+export const APP_VERSION = '1.6.91';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.91',
+    date: '23/06/2026',
+    changes: [
+      'Botão ? de ajuda contextual em todas as 6 telas — abre modal com explicações detalhadas da tela atual',
+    ],
+  },
   {
     version: '1.6.90',
     date: '23/06/2026',
