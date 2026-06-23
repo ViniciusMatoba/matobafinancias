@@ -249,10 +249,17 @@ export default function SetupGoalsScreen({ onSave, onAfterSetup }) {
               ))}
             </div>
 
+            <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, padding: '10px 14px', marginBottom: 10, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>📱</span>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <strong style={{ color: 'var(--text-primary)' }}>Você precisará ter o Telegram instalado no celular.</strong> Se ainda não tiver, o botão abaixo já direciona para o download gratuito na App Store ou Google Play — é rápido e fácil.
+              </p>
+            </div>
+
             <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, padding: '10px 14px', marginBottom: 20, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>ℹ️</span>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Ao tocar em "Ativar agora", o Telegram abrirá. Inicie uma conversa com o bot e depois acesse <strong style={{ color: 'var(--text-primary)' }}>Configurações → Telegram</strong> para inserir o código de vinculação.
+                Após instalar e abrir o Telegram, volte aqui e acesse <strong style={{ color: 'var(--text-primary)' }}>Configurações → Telegram</strong> para gerar o código de vinculação e ativar o bot na sua conta.
               </p>
             </div>
 
@@ -263,7 +270,7 @@ export default function SetupGoalsScreen({ onSave, onAfterSetup }) {
                 rel="noopener noreferrer"
                 style={{ ...BTN_PRIMARY, textDecoration: 'none' }}
               >
-                <ExternalLink size={16} /> Ativar agora no Telegram
+                <ExternalLink size={16} /> Abrir ou baixar o Telegram
               </a>
               <button onClick={() => setStep(4)} style={BTN_GHOST}>
                 Configurar depois
