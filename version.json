@@ -1,7 +1,8 @@
 {
-  "version": "1.6.90",
+  "version": "1.6.92",
   "date": "23/06/2026",
   "notes": [
-    "Tutorial contextual: banner discreto aparece na primeira visita a Painel, Projeção, Relatórios, Metas e Configurações — some em 6s ou ao tocar em Ok"
+    "Onboarding: 2 novos passos ao final do setup — apresentação do Bot do Telegram (com link direto) e cadastro de cartão de crédito",
+    "Onboarding: ao escolher \"Cadastrar cartão agora\", app abre diretamente em Configurações após o setup"
   ]
 }
