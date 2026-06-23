@@ -1,7 +1,7 @@
 {
-  "version": "1.6.91",
+  "version": "1.6.90",
   "date": "23/06/2026",
   "notes": [
-    "Botão ? de ajuda contextual em todas as 6 telas — abre modal com explicações detalhadas da tela atual"
+    "Tutorial contextual: banner discreto aparece na primeira visita a Painel, Projeção, Relatórios, Metas e Configurações — some em 6s ou ao tocar em Ok"
   ]
 }
