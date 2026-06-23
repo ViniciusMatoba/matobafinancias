@@ -13,6 +13,7 @@ const GoalsScreen      = lazy(() => import('./components/goals/GoalsScreen'));
 const SettingsScreen   = lazy(() => import('./components/settings/SettingsScreen'));
 const ReportsScreen    = lazy(() => import('./components/reports/ReportsScreen'));
 import TourGuide from './components/shared/TourGuide';
+import ScreenTip from './components/shared/ScreenTip';
 import BottomNav from './components/shared/BottomNav';
 import ReloadPrompt from './components/shared/ReloadPrompt';
 import Modal from './components/shared/Modal';
@@ -326,6 +327,14 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
         )}
 
         {tourActive && <TourGuide onComplete={handleCompleteTour} />}
+        <ScreenTip
+          view={view}
+          toursVistas={config?.toursVistas ?? []}
+          onDismiss={(tela) => {
+            const atual = config?.toursVistas ?? [];
+            if (!atual.includes(tela)) saveConfig({ toursVistas: [...atual, tela] });
+          }}
+        />
       </>
     );
   };

@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.89';
+export const APP_VERSION = '1.6.90';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.90',
+    date: '23/06/2026',
+    changes: [
+      'Tutorial contextual: banner discreto aparece na primeira visita a Painel, Projeção, Relatórios, Metas e Configurações — some em 6s ou ao tocar em Ok',
+    ],
+  },
   {
     version: '1.6.89',
     date: '23/06/2026',
