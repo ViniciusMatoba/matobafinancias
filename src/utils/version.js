@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.82';
+export const APP_VERSION = '1.6.83';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.83',
+    date: '23/06/2026',
+    changes: [
+      'Fix bot: dupla contagem de parcelas de cartão em computeSpentByCategory, getTopExpensesForCategory e N12 — projeções virtuais de cartões com fatura real no mês agora são ignoradas (afetava N4, N5, N17, /categoria, /insight e comparativo mensal)',
+    ],
+  },
   {
     version: '1.6.82',
     date: '23/06/2026',

@@ -343,11 +343,27 @@ function calcSaldoSimples(transactions, upTo, walletInitials = 0) {
 // ─── Gasto por categoria no mês corrente ─────────────────────────────────────
 const CATEGORY_ORDER = ['liberdade','custos_fixos','conforto','metas','prazeres','conhecimento'];
 
+/**
+ * Retorna o Set de cartaoIds que têm pelo menos uma fatura REAL (não projeção virtual)
+ * no intervalo [from, to]. Usado para descartar projeções virtuais de meses anteriores
+ * quando já existe lançamento real do mesmo cartão no período — evita dupla contagem.
+ */
+function cartaoComFaturaRealNoMes(transactions, from, to) {
+  return new Set(
+    transactions
+      .filter(t => t.tipo === 'cartao' && t.dataInicio >= from && t.dataInicio <= to)
+      .map(t => t.cartaoId)
+  );
+}
+
 function computeSpentByCategory(transactions, currentMonth) {
   const totals = Object.fromEntries(CATEGORY_ORDER.map(id => [id, 0]));
   const [year, mon] = currentMonth.split('-').map(Number);
   const from = `${currentMonth}-01`;
   const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
+
+  // Cartões com fatura real no mês — projeções virtuais desses cartões são ignoradas
+  const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
 
   // historical=true: inclui estimativas diárias passadas no cômputo de orçamento,
   // pois elas representam gastos previstos por categoria (alimentação, moradia, etc.)
@@ -357,15 +373,17 @@ function computeSpentByCategory(transactions, currentMonth) {
     const tx = o.tx;
     if (!tx || tx.tipo === 'entrada') continue;
 
-    // ── Cartão com itens (inclui faturas projetadas virtuais) ───────────────
+    // ── Cartão com itens ────────────────────────────────────────────────────
     if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+      // Projeção virtual (id = "txId-proj-N") de cartão que já tem fatura real: ignora
+      if (tx.id?.includes('-proj-') && comFaturaReal.has(tx.cartaoId)) continue;
+
       for (const item of tx.itens) {
         const cat = item.categoria;
         if (!cat || !(cat in totals)) continue;
         const valor = Number(item.valor) || 0;
 
         if (item.isParcelado) {
-          // Conta a parcela se ela pertence a esta ocorrência de fatura
           totals[cat] += valor;
         } else {
           // Itens avulsos não parcelados contam apenas no mês da compra (dataCompra)
@@ -390,17 +408,21 @@ function getTopExpensesForCategory(transactions, category, currentMonth) {
   const [year, mon] = currentMonth.split('-').map(Number);
   const from = `${currentMonth}-01`;
   const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
-  
-  // Expande transações no período (historical=true para ser consistente com computeSpentByCategory)
+
+  // Mesma regra: projeções virtuais de cartões com fatura real são ignoradas
+  const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
+
   const occs = expandRange(transactions, from, to, { historical: true });
-  
+
   const groups = {};
   for (const o of occs) {
     const tx = o.tx;
     if (!tx || tx.tipo === 'entrada') continue;
-    
+
     // Tratamento para cartão com itens
     if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+      if (tx.id?.includes('-proj-') && comFaturaReal.has(tx.cartaoId)) continue;
+
       for (const item of tx.itens) {
         if (item.categoria === category) {
           const valor = Number(item.valor) || 0;
@@ -412,7 +434,7 @@ function getTopExpensesForCategory(transactions, category, currentMonth) {
       }
       continue;
     }
-    
+
     // Tratamento para demais lançamentos
     const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
     if (cat === category) {
@@ -420,12 +442,12 @@ function getTopExpensesForCategory(transactions, category, currentMonth) {
       groups[desc] = (groups[desc] || 0) + o.valor;
     }
   }
-  
+
   // Ordena por valor decrescente e pega os 2 principais
   const sorted = Object.entries(groups)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 2);
-    
+
   if (sorted.length === 0) return '';
   return sorted.map(([desc, val]) => `${desc}: ${formatBRL(val)}`).join(', ');
 }
@@ -758,9 +780,16 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       const [y, m] = targetMonth.split('-').map(Number);
       const lastDay = new Date(y, m, 0).getDate();
       const toStr = `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
+      // Cartões com fatura real no mês — projeções virtuais desses são ignoradas
+      const comFaturaReal = cartaoComFaturaRealNoMes(transactions, fromStr, toStr);
       const occs = expandRange(transactions, fromStr, toStr);
       return occs
-        .filter(o => o.tipo !== 'entrada')
+        .filter(o => {
+          if (o.tipo === 'entrada') return false;
+          // Descarta projeção virtual de cartão que já tem fatura real no mês
+          if (o.tx?.id?.includes('-proj-') && comFaturaReal.has(o.tx?.cartaoId)) return false;
+          return true;
+        })
         .reduce((sum, o) => sum + o.valor, 0);
     };
 
