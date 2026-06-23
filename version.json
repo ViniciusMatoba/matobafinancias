@@ -1,8 +1,7 @@
 {
-  "version": "1.6.99",
+  "version": "1.6.98",
   "date": "23/06/2026",
   "notes": [
-    "Fix estrutural: changelog consolidado em fonte única (version.js) — array duplicado removido do SettingsScreen",
-    "Histórico completo desde v1.2.0 agora visível nas Notas de Atualização"
+    "Fix: notas de atualização agora exibem todas as versões recentes (v1.6.0+) com data visível — histórico anterior separado por divisor visual"
   ]
 }
