@@ -1,7 +1,7 @@
 {
-  "version": "1.6.87",
+  "version": "1.6.89",
   "date": "23/06/2026",
   "notes": [
-    "Onboarding: esclarece que a renda deve ser o valor líquido (o que cai na conta), com exemplo bruto vs líquido"
+    "Fix tour: passo de cartão aparece para todos com aviso de que o card só exibe para quem tem cartão cadastrado"
   ]
 }
