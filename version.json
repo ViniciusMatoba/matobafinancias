@@ -1,9 +1,7 @@
 {
-  "version": "1.6.88",
+  "version": "1.6.90",
   "date": "23/06/2026",
   "notes": [
-    "Tour guiado: reescrito com 8 passos detalhados — menu inferior, saldo global, carteiras, divisão percentual, cartão (condicional), lançamentos do dia e tipos de lançamento",
-    "Tour: passo de cartão de crédito aparece apenas para usuários com cartão cadastrado",
-    "Tour: barra de progresso visual + botão \"Pular tour\" em todos os passos"
+    "Tutorial contextual: banner discreto aparece na primeira visita a Painel, Projeção, Relatórios, Metas e Configurações — some em 6s ou ao tocar em Ok"
   ]
 }
