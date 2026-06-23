@@ -73,11 +73,10 @@ export default function SetupGoalsScreen({ onSave }) {
         {step === 0 && (
           <div>
             <p style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Qual é sua renda mensal?
+              Qual é sua renda mensal líquida?
             </p>
             <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Este valor serve apenas para <strong style={{ color: 'var(--text-primary)' }}>estipular metas de acompanhamento</strong>.
-              Use um valor aproximado se preferir — você registrará suas entradas reais normalmente depois.
+              Use o <strong style={{ color: 'var(--text-primary)' }}>valor líquido</strong> — o que você recebe de fato na conta, já descontados impostos e contribuições (INSS, IR, plano de saúde, etc.). Este valor serve para <strong style={{ color: 'var(--text-primary)' }}>estipular metas de acompanhamento</strong>; você registrará suas entradas reais normalmente depois.
             </p>
 
             <div style={{ marginBottom: 16 }}>
@@ -105,7 +104,7 @@ export default function SetupGoalsScreen({ onSave }) {
             }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Não precisa ser o valor exato. Você pode atualizar a qualquer momento em <strong style={{ color: 'var(--text-primary)' }}>Configurações → Orçamento</strong>.
+                Ex: salário bruto R$5.000, mas cai R$3.800 na conta? Informe <strong style={{ color: 'var(--text-primary)' }}>R$3.800</strong>. Não precisa ser exato — você pode atualizar a qualquer momento em <strong style={{ color: 'var(--text-primary)' }}>Configurações → Orçamento</strong>.
               </p>
             </div>
 

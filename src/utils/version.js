@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.86';
+export const APP_VERSION = '1.6.87';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.87',
+    date: '23/06/2026',
+    changes: [
+      'Onboarding: esclarece que a renda deve ser o valor líquido (o que cai na conta), com exemplo bruto vs líquido',
+    ],
+  },
   {
     version: '1.6.86',
     date: '23/06/2026',
