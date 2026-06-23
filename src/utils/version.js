@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.80';
-export const APP_VERSION_DATE = '18/06/2026';
+export const APP_VERSION = '1.6.81';
+export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.81',
+    date: '23/06/2026',
+    changes: [
+      'Fix bot N18: notificação de economia do dia agora ignora lançamentos únicos recém-cadastrados — só considera despesas recorrentes (mensal/semanal/diario) não pagas',
+    ],
+  },
   {
     version: '1.6.80',
     date: '18/06/2026',

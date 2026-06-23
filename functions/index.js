@@ -958,16 +958,18 @@ function checkN18(transactions, config, tipos) {
     return !!(tx.conferidos && tx.conferidos.includes(o.date));
   };
 
-  // Despesas previstas para hoje não pagas = possível economia
+  // Apenas despesas recorrentes (mensal/semanal/diario) não pagas = possível economia.
+  // Lançamentos únicos (unico/parcelado) recém-registrados não são "economia" — são despesas pendentes.
+  const isRecorrente  = (o) => o.tx && !['unico', 'parcelado'].includes(o.tx.frequencia);
   const occsHoje      = expandRange(transactions, todayS, todayS);
-  const naoConfHoje   = occsHoje.filter(o => o.tipo !== 'entrada' && !isConferido(o));
+  const naoConfHoje   = occsHoje.filter(o => o.tipo !== 'entrada' && !isConferido(o) && isRecorrente(o));
   const economiaHoje  = naoConfHoje.reduce((s, o) => s + (Number(o.valor) || 0), 0);
 
   if (economiaHoje <= 0) return [];
 
-  // Acumulado do mês até hoje
+  // Acumulado do mês até hoje (também só recorrentes)
   const occsMonth    = expandRange(transactions, from, todayS);
-  const naoConfMes   = occsMonth.filter(o => o.tipo !== 'entrada' && !isConferido(o));
+  const naoConfMes   = occsMonth.filter(o => o.tipo !== 'entrada' && !isConferido(o) && isRecorrente(o));
   const economiaMes  = naoConfMes.reduce((s, o) => s + (Number(o.valor) || 0), 0);
 
   const nomeMes  = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
