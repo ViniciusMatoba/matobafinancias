@@ -1,7 +1,9 @@
 {
-  "version": "1.6.80",
-  "date": "18/06/2026",
+  "version": "1.6.82",
+  "date": "23/06/2026",
   "notes": [
-    "Bot: novo comando /saldofinal — exibe saldo projetado no fim de cada mês (próximos 6 meses por padrão, ou meses específicos: /saldofinal 6 7 8, /saldofinal junho, /saldofinal ano)"
+    "Fix bot N14: alerta de última parcela nunca disparava — cálculo de data corrigido para dataInicio + (parcelaAtual-1) meses",
+    "Fix bot /cartoes: dias até vencimento mostrava 31 no dia do vencimento — usa getProximoVencimentoBot igual ao frontend",
+    "Fix bot /proximas e /previsao: gastos de hoje eram contados duas vezes no saldo esperado — expandRange agora começa em amanhã"
   ]
 }
