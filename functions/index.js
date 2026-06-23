@@ -1086,10 +1086,12 @@ async function handleResumo(chatId, uid) {
   const to      = `${month}-${String(lastDay).padStart(2,'0')}`;
 
   const { transactions } = await loadUserData(uid);
+  const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
   const occs = expandRange(transactions, from, to);
 
   let entradas = 0, saidas = 0;
   for (const o of occs) {
+    if (o.tx?.id?.includes('-proj-') && comFaturaReal.has(o.tx?.cartaoId)) continue;
     if (o.tipo === 'entrada') entradas += o.valor;
     else                      saidas   += o.valor;
   }
@@ -1261,10 +1263,12 @@ async function handleMes(chatId, uid, args) {
   const to      = `${mesStr}-${String(lastDay).padStart(2, '0')}`;
 
   const { transactions } = await loadUserData(uid);
+  const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
   const occs = expandRange(transactions, from, to);
 
   let entradas = 0, saidas = 0;
   for (const o of occs) {
+    if (o.tx?.id?.includes('-proj-') && comFaturaReal.has(o.tx?.cartaoId)) continue;
     if (o.tipo === 'entrada') entradas += o.valor;
     else                      saidas   += o.valor;
   }
@@ -2527,22 +2531,26 @@ async function processUpdate(update) {
   const args = argParts.join(' ');
 
   // Normalização do comando (mapeia botões de teclado personalizados)
-  if (cmd.includes('saldo') && cmd.includes('final')) cmd = '/saldofinal';
-  else if (cmd.includes('saldo')) cmd = '/saldo';
-  else if (cmd.includes('cart') || cmd.includes('cartões')) cmd = '/cartoes';
-  else if (cmd.includes('fatur')) cmd = '/fatura';
-  else if (cmd.includes('proje') || cmd.includes('projeção')) cmd = '/projecao';
-  else if (cmd.includes('categor')) cmd = '/categoria';
-  else if (cmd.includes('configur') || cmd.includes('alerta') || cmd.includes('⚙️')) cmd = '/configurar';
-  else if (cmd.includes('meta')) cmd = '/meta';
-  else if (cmd.includes('insig') || cmd.includes('dica') || cmd.includes('insight')) cmd = '/insight';
-  else if (cmd.includes('ajuda') || cmd.includes('help')) cmd = '/ajuda';
-  else if (cmd.includes('parcela')) cmd = '/parcelados';
-  else if (cmd.includes('hoje')) cmd = '/hoje';
-  else if (cmd.includes('hist')) cmd = '/historico';
-  else if (cmd.includes('seman')) cmd = '/semana';
-  else if (cmd.includes('mes')) cmd = '/mes';
-  else if (cmd.includes('resum')) cmd = '/resumo';
+  // Verifica o texto completo (não só cmd) para suportar botões com emoji prefix: "💰 Saldo" → cmd='💰'
+  if (!cmd.startsWith('/')) {
+    const t = text.toLowerCase();
+    if (t.includes('saldo') && (t.includes('final') || t.includes('fim'))) cmd = '/saldofinal';
+    else if (t.includes('saldo')) cmd = '/saldo';
+    else if (t.includes('cart') || t.includes('cartões')) cmd = '/cartoes';
+    else if (t.includes('fatur')) cmd = '/fatura';
+    else if (t.includes('proje') || t.includes('projeção')) cmd = '/projecao';
+    else if (t.includes('categor')) cmd = '/categoria';
+    else if (t.includes('configur') || t.includes('alerta') || t.includes('⚙️')) cmd = '/configurar';
+    else if (t.includes('meta')) cmd = '/meta';
+    else if (t.includes('insig') || t.includes('dica') || t.includes('insight')) cmd = '/insight';
+    else if (t.includes('ajuda') || t.includes('help')) cmd = '/ajuda';
+    else if (t.includes('parcela')) cmd = '/parcelados';
+    else if (t.includes('hoje')) cmd = '/hoje';
+    else if (t.includes('hist')) cmd = '/historico';
+    else if (t.includes('seman')) cmd = '/semana';
+    else if (t.includes('mes') || t.includes('mês')) cmd = '/mes';
+    else if (t.includes('resum')) cmd = '/resumo';
+  }
 
   // Comandos que não precisam de vínculo
   if (cmd === '/start' || cmd === '/vincular') {

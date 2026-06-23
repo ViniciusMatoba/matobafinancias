@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.83';
+export const APP_VERSION = '1.6.84';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.84',
+    date: '23/06/2026',
+    changes: [
+      'Fix bot: botões do teclado (💰 Saldo, 💳 Cartões etc.) não funcionavam — normalização de comando agora usa o texto completo da mensagem, não só a primeira palavra',
+      'Fix bot /resumo e /mes: dupla contagem de parcelas de cartão — mesmo fix aplicado em N12 (v1.6.83)',
+    ],
+  },
   {
     version: '1.6.83',
     date: '23/06/2026',
