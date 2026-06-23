@@ -1,9 +1,8 @@
 {
-  "version": "1.6.82",
+  "version": "1.6.84",
   "date": "23/06/2026",
   "notes": [
-    "Fix bot N14: alerta de última parcela nunca disparava — cálculo de data corrigido para dataInicio + (parcelaAtual-1) meses",
-    "Fix bot /cartoes: dias até vencimento mostrava 31 no dia do vencimento — usa getProximoVencimentoBot igual ao frontend",
-    "Fix bot /proximas e /previsao: gastos de hoje eram contados duas vezes no saldo esperado — expandRange agora começa em amanhã"
+    "Fix bot: botões do teclado (💰 Saldo, 💳 Cartões etc.) não funcionavam — normalização de comando agora usa o texto completo da mensagem, não só a primeira palavra",
+    "Fix bot /resumo e /mes: dupla contagem de parcelas de cartão — mesmo fix aplicado em N12 (v1.6.83)"
   ]
 }
