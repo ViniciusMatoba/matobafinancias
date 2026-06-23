@@ -1,7 +1,9 @@
 {
-  "version": "1.6.83",
+  "version": "1.6.82",
   "date": "23/06/2026",
   "notes": [
-    "Fix bot: dupla contagem de parcelas de cartão em computeSpentByCategory, getTopExpensesForCategory e N12 — projeções virtuais de cartões com fatura real no mês agora são ignoradas (afetava N4, N5, N17, /categoria, /insight e comparativo mensal)"
+    "Fix bot N14: alerta de última parcela nunca disparava — cálculo de data corrigido para dataInicio + (parcelaAtual-1) meses",
+    "Fix bot /cartoes: dias até vencimento mostrava 31 no dia do vencimento — usa getProximoVencimentoBot igual ao frontend",
+    "Fix bot /proximas e /previsao: gastos de hoje eram contados duas vezes no saldo esperado — expandRange agora começa em amanhã"
   ]
 }
