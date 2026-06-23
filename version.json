@@ -1,7 +1,7 @@
 {
-  "version": "1.6.96",
+  "version": "1.6.98",
   "date": "23/06/2026",
   "notes": [
-    "Fix: correção de erro crítico (tela preta) causado por recursão na função fmtVal em BudgetSummaryCard e CartaoFaturaCard"
+    "Fix: notas de atualização agora exibem todas as versões recentes (v1.6.0+) com data visível — histórico anterior separado por divisor visual"
   ]
 }
