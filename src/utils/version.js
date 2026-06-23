@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.98';
+export const APP_VERSION = '1.6.99';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.99',
+    date: '23/06/2026',
+    changes: [
+      'Fix estrutural: changelog consolidado em fonte única (version.js) — array duplicado removido do SettingsScreen',
+      'Histórico completo desde v1.2.0 agora visível nas Notas de Atualização',
+    ],
+  },
   {
     version: '1.6.98',
     date: '23/06/2026',
@@ -794,6 +802,86 @@ export const CHANGELOG = [
       'Relatórios em PDF',
       'Backup e restauração em JSON',
       'Tutorial de instalação PWA com atalho para Windows',
+    ],
+  },
+  {
+    version: '1.5.5',
+    date: '29/05/2026',
+    changes: [
+      'Cálculo Consistente de Cartões & Soma de Lançamentos',
+      'Filtragem mensal precisa nas estatísticas de Fatura Atual e limite disponível',
+      'Soma automática no formulário de fatura do cartão',
+      'Correção na gravação de itens modificados de faturas virtuais na Projeção',
+    ],
+  },
+  {
+    version: '1.5.4',
+    date: '29/05/2026',
+    changes: [
+      'Aprimoramento no sistema de busca de atualizações manuais com conexão em tempo real',
+      'Reset inteligente do estado oculto do banner de atualização',
+    ],
+  },
+  {
+    version: '1.5.3',
+    date: '29/05/2026',
+    changes: [
+      'Correção na exclusão e edição de faturas de cartão projetadas (virtuais)',
+      'Suporte a edição/exclusão de ocorrências individuais de compras parceladas',
+    ],
+  },
+  {
+    version: '1.5.2',
+    date: '29/05/2026',
+    changes: [
+      'Notificações de atualização do PWA disponíveis em todas as telas',
+      'Botão fechar com persistência diária no banner de Sobra Segura',
+    ],
+  },
+  {
+    version: '1.5.1',
+    date: '29/05/2026',
+    changes: [
+      'Correção definitiva na antecipação de faturas de cartão',
+      'Sincronização do motor de projeção de parcelas para evitar duplicidades',
+    ],
+  },
+  {
+    version: '1.5.0',
+    date: '29/05/2026',
+    changes: [
+      'Botão universal "Pagar" na Projeção, Home e Histórico',
+      'Planejamento anual expandido e histórico avançado com filtros',
+      'Relatórios financeiros em PDF',
+      'Painel dinâmico de contas próximas a vencer e limite detalhado de cartões',
+    ],
+  },
+  {
+    version: '1.4.0',
+    date: '29/05/2026',
+    changes: [
+      'Painel "Pense com Calma" para controle de compras impulsivas',
+      'Cálculo de impacto em dias de trabalho e porcentagem da categoria',
+      'Simulador "Viver de Renda" com projeção de juros compostos (FIRE)',
+      'Guia tributário real de investimentos (Poupança, CDB, LCI, Ações/FIIs)',
+    ],
+  },
+  {
+    version: '1.3.0',
+    date: '28/05/2026',
+    changes: [
+      'Lote rápido "Pagar" para faturas e lançamentos recorrentes',
+      'Paginação mensal fixa por calendário na Projeção',
+      'Lançamentos recorrentes diários com rateio automático por 30',
+    ],
+  },
+  {
+    version: '1.2.0',
+    date: '15/05/2026',
+    changes: [
+      'Criptografia ponta a ponta com Firebase Authentication',
+      'Suporte offline completo PWA com instalação na tela inicial',
+      'Integração com Bot do Telegram para consultas de saldo e limites',
     ],
   },
 ];

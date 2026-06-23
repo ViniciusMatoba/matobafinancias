@@ -1,7 +1,7 @@
 {
-  "version": "1.6.97",
+  "version": "1.6.98",
   "date": "23/06/2026",
   "notes": [
-    "Ícone 👁 movido do header para o lado esquerdo do Saldo Global"
+    "Fix: notas de atualização agora exibem todas as versões recentes (v1.6.0+) com data visível — histórico anterior separado por divisor visual"
   ]
 }

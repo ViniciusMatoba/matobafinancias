@@ -13,6 +13,8 @@ Lido automaticamente pelo Claude Code no início de cada sessão.
 | 1 | `src/utils/version.js` | Incrementar `APP_VERSION`, atualizar `APP_VERSION_DATE` e adicionar bloco no topo de `CHANGELOG[]` |
 | 2 | `package.json` | Campo `"version"` |
 
+> **FONTE ÚNICA DE CHANGELOG:** `src/utils/version.js` é a **única** fonte de dados do histórico de versões. `SettingsScreen.jsx` NÃO tem mais array local de changelog — não adicionar `CHANGELOG_DATA` ou qualquer array hardcoded lá. Toda entrada de histórico vai exclusivamente em `version.js`.
+
 Em seguida, executar o release:
 
 ```bash

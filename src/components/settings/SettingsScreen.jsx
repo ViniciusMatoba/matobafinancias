@@ -15,129 +15,6 @@ import TelegramSettings from './TelegramSettings';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { APP_VERSION, CHANGELOG } from '../../utils/version';
 
-const CHANGELOG_DATA = [
-  {
-    version: 'v1.6.4 (01/06/2026)',
-    title: 'Orçamento Corrigido, Parcelas Inteligentes & CSV Expandido 📊',
-    items: [
-      'Correção do Orçamento do Mês: o painel de divisão percentual agora sempre exibe o mês real corrente, independente do dia selecionado na navegação diária da Home.',
-      'Parcelas com data final calculada: ao registrar um lançamento parcelado, a data da última parcela é exibida em tempo real e o campo dataFim é preenchido automaticamente.',
-      'CSV Expandido por Período: a exportação de planilha agora expande todas as ocorrências reais (mensalidades, parcelas, recorrências) — uma linha por evento com data efetiva, dia da semana e status de conferência.',
-    ]
-  },
-  {
-    version: 'v1.6.2 (29/05/2026)',
-    title: 'Self-Healing do PWA, Projeções de Fluxo de Caixa e Limpeza da Home 🛠️',
-    items: [
-      'Recuperação Autônoma (Self-Healing): movido o gerenciador de atualização do PWA para fora das rotas de carregamento precoce. Agora, mesmo que haja erro nas credenciais locais, o Service Worker é executado e atualiza o app de forma totalmente transparente e automática.',
-      'Projeções de fluxo de caixa: corrigido bug de herança de status pago em faturas virtuais futuras dos cartões. Agora as parcelas de meses futuros permanecem em aberto para uma estimativa precisa e real de fluxo de caixa.',
-      'Limpeza de redundâncias na Home: a seção de Próximas Contas de 15 dias foi inteiramente removida do início, mantendo esses dados centralizados e organizados unicamente na aba de Projeção.'
-    ]
-  },
-  {
-    version: 'v1.6.1 (29/05/2026)',
-    title: 'Controle de Pagamentos & Auto-Atualização PWA Imersiva 🔄',
-    items: [
-      'Controle de próximas contas: resolvido bug em que contas e faturas de cartão pagas continuavam aparecendo na lista de próximas contas de 15 dias na Home. Agora, ao registrar um pagamento, o status do lançamento é automaticamente marcado como pago (conferido) e removido dos compromissos futuros.',
-      'Auto-Atualização do PWA: o aplicativo agora detecta novas versões em segundo plano instantaneamente sempre que ganha foco (visibilitychange) ou é retomado do background no celular.',
-      'Instalação e recarga automática: novas atualizações do PWA são ativadas e instaladas 100% de forma autônoma e imediata, exibindo uma tela de carregamento suave e realizando o reload automaticamente sem requerer nenhuma ação manual ou navegação externa do usuário.'
-    ]
-  },
-  {
-    version: 'v1.6.0 (29/05/2026)',
-    title: 'Notificações Inteligentes & Upgrade do Bot do Telegram 🌅',
-    items: [
-      'Novas Notificações Push/Telegram (N8 a N12): adicionados alertas de limite geral de gastos mensais, contas fixas recorrentes pendentes a vencer nos próximos 2 dias, limite de cartão comprometido e relatório comparativo de fechamento mensal.',
-      'Preferências de Resumo Diário: configure horário de envio preferido (7h, 12h, 19h) e dias da semana (todo dia, dias úteis, fds) diretamente pela tela de configurações do webapp.',
-      'Novos comandos no Bot do Telegram: acesse dicas personalizadas com o comando /insight e detalhe despesas ativas nos cartões de crédito com o comando /fatura.',
-      'Simuladores de testes locais: pré-visualize e teste cada um dos 12 tipos de notificações com seus dados reais em tempo real clicando no botão Testar.'
-    ]
-  },
-  {
-    version: 'v1.5.5 (29/05/2026)',
-    title: 'Cálculo Consistente de Cartões & Soma de Lançamentos 💳',
-    items: [
-      'Filtragem mensal precisa nos cartões: as estatísticas de Fatura Atual e limite disponível na Home e Configurações agora filtram transações pelo mês ativo, isolando faturas passadas ou futuras da fatura do mês corrente.',
-      'Soma automática no formulário: ao lançar despesas (itens) na fatura do cartão, o total principal da fatura é somado automaticamente e mantido em perfeita sincronia.',
-      'Ajuste na edição de projeções: corrigida a gravação de itens modificados de faturas virtuais separadas na área de Projeção.'
-    ]
-  },
-  {
-    version: 'v1.5.4 (29/05/2026)',
-    title: 'Busca de Atualizações Precisa & PWA 🔄',
-    items: [
-      'Aprimoramento completo no sistema de busca de atualizações manuais: agora a verificação de nova versão se conecta em tempo real ao servidor e informa exatamente se há atualizações prontas, em andamento ou se o app já está na versão mais recente.',
-      'Reset inteligente do estado oculto: fechar o aviso temporário não bloqueia mais permanentemente novos avisos automáticos de futuras versões.'
-    ]
-  },
-  {
-    version: 'v1.5.3 (29/05/2026)',
-    title: 'Edição e Exclusão de Projeções 🛠️',
-    items: [
-      'Correção na exclusão e edição de faturas de cartão projetadas (virtuais): agora é possível remover ou editar faturas futuras, gerando a exclusão na transação pai de cartão e permitindo criar exceções personalizadas.',
-      'Suporte completo a lançamentos parcelados: a edição e exclusão de ocorrências individuais de compras parceladas agora segue o mesmo padrão flexível de recorrência (apenas esta, esta e próximas, todas) e respeita a data final definida no motor de projeção.'
-    ]
-  },
-  {
-    version: 'v1.5.2 (29/05/2026)',
-    title: 'Notificações PWA Globais & Ajustes Finos 🚀',
-    items: [
-      'Configuração global das notificações de atualização do PWA em todas as telas, garantindo que usuários logados recebam avisos imediatos de novas versões sem depender da tela de login.',
-      'Implementação de botão de fechar (X) com persistência diária em localStorage no banner inteligente de Sobra Segura na Home, permitindo ocultar recomendações temporariamente por 24 horas.'
-    ]
-  },
-  {
-    version: 'v1.5.1 (29/05/2026)',
-    title: 'Correção de Pagamentos Antecipados 💳',
-    items: [
-      'Resolução definitiva na antecipação de faturas de cartão: ao pagar antecipadamente, a fatura programada e suas cobranças internas (itens) são movidas juntas para a data do pagamento real, limpando o dia futuro.',
-      'Sincronização do motor de projeção de parcelas para evitar duplicidades visuais e respeitar exclusões de faturas pagas.'
-    ]
-  },
-  {
-    version: 'v1.5.0 (29/05/2026)',
-    title: 'Controle de Pagamentos & Projeções Inteligentes 💸',
-    items: [
-      'Novo botão universal "Pagar" na Projeção, Home e Histórico com modal centralizado para simplificar o controle.',
-      'Planejamento anual expandido, histórico avançado de transações com filtros e conciliação manual rápida.',
-      'Relatórios financeiros em formato PDF de alto padrão prontos para exportação direta.',
-      'Painel dinâmico de contas próximas a vencer no topo da Home e limite detalhado de cartões de crédito.'
-    ]
-  },
-  {
-    version: 'v1.4.0 (29/05/2026)',
-    title: 'Educação Financeira & Controle de Impulsos 🧘‍♂️',
-    items: [
-      'Painel "Pense com Calma" para controle de compras impulsivas com contagem regressiva de 10 dias.',
-      'Cálculo de impacto em dias comerciais de trabalho (Preço / Salário Diário) e porcentagem da categoria.',
-      'Scoreboard de Economia Acumulada persistente com animação de confetes ao desistir de compras supérfluas.',
-      'Simulador "Viver de Renda" nas Caixinhas de Independência Financeira (FIRE) com projeção de juros compostos.',
-      'Guia tributário real de investimentos com orientações sobre Poupança, CDB/Selic, LCI/LCA e Ações/FIIs.',
-      'Novo banner inteligente de Sobra Segura ciente da conclusão da sua Reserva de Emergência.',
-      'Higienização completa de marcas anteriores para o termo neutro "Divisão Percentual".',
-      'Personalização de Tooltips gráficos com dia da semana e variação acumulada colorida.'
-    ]
-  },
-  {
-    version: 'v1.3.0 (28/05/2026)',
-    title: 'Pagamentos em Lote & Navegação Precisa 💸',
-    items: [
-      'Novo recurso de lote rápido "Pagar" para faturas e lançamentos recorrentes.',
-      'Paginação mensal fixa por calendário na Projeção (resolvendo furos do dia 31).',
-      'Visão flexível de Resumo por Período customizado.',
-      'Lançamentos recorrentes diários automáticos com divisão por 30 (rateio).'
-    ]
-  },
-  {
-    version: 'v1.2.0 (15/05/2026)',
-    title: 'Segurança & Sincronização offline 🔒',
-    items: [
-      'Criptografia completa ponta a ponta com o Firebase Authentication.',
-      'Suporte offline completo PWA e instalação na tela inicial.',
-      'Integração com o Bot de Telegram para consultas rápidos de saldo e limites.'
-    ]
-  }
-];
 
 export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour, onUpdateApp, onUpdateTransaction }) {
   const [helpOpen, setHelpOpen] = useState(false);
@@ -642,9 +519,9 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
                 🔄 Atualizar Aplicativo Agora
               </button>
 
-              {/* Histórico de atualizações — gerado de version.js */}
+              {/* Histórico completo — fonte única: src/utils/version.js */}
               {CHANGELOG.map((ch, idx) => (
-                <div key={`new-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(99,102,241,0.1)', padding: '1px 5px', borderRadius: 4 }}>
                       v{ch.version}
@@ -658,28 +535,6 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
                   </ul>
                 </div>
               ))}
-
-              {/* Versões antigas (antes de v1.6.0) */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
-                <p style={{ margin: '0 0 12px', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
-                  Histórico anterior a v1.6.0
-                </p>
-                {CHANGELOG_DATA.map((ch, idx) => (
-                  <div key={`old-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '1px 5px', borderRadius: 4 }}>
-                        {ch.version}
-                      </span>
-                      <strong style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{ch.title}</strong>
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                      {ch.items.map((it, itemIdx) => (
-                        <li key={itemIdx} style={{ fontSize: 12 }}>{it}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
