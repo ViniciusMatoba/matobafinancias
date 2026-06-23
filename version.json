@@ -1,7 +1,7 @@
 {
-  "version": "1.6.94",
+  "version": "1.6.93",
   "date": "23/06/2026",
   "notes": [
-    "Reiniciar Tour: reseta também os banners contextuais por tela (toursVistas), não apenas o tour guiado principal"
+    "Onboarding Telegram: aviso de que é necessário ter o Telegram instalado + instrução de download + botão renomeado para \"Abrir ou baixar o Telegram\""
   ]
 }
