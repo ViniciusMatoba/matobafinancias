@@ -22,7 +22,7 @@ function formatDateShort(dateStr) {
 export default function BudgetSummaryCard({
   transactions, cards, rendaMensal, budgetPcts, currentMonth, onNavigateSettings, hideValues = false,
 }) {
-  const fmtVal = (n) => hideValues ? '•••' : fmtVal(n);
+  const fmtVal = (n) => hideValues ? '•••' : formatBRL(n);
   const [expanded,    setExpanded]    = useState(true);
   const [selectedCat, setSelectedCat] = useState(null); // id da categoria aberta
 

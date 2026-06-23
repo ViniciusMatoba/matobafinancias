@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.95';
+export const APP_VERSION = '1.6.96';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.96',
+    date: '23/06/2026',
+    changes: [
+      'Fix: correção de erro crítico (tela preta) causado por recursão na função fmtVal em BudgetSummaryCard e CartaoFaturaCard',
+    ],
+  },
   {
     version: '1.6.95',
     date: '23/06/2026',

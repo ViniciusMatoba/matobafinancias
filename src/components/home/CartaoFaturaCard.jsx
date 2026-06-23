@@ -6,7 +6,7 @@ import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
 export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistorico, hideValues = false }) {
   const [expandedId, setExpandedId] = useState(null);
-  const fmtVal = (n) => hideValues ? '•••' : fmtVal(n);
+  const fmtVal = (n) => hideValues ? '•••' : formatBRL(n);
 
   if (!cardsStats?.length) return null;
 
