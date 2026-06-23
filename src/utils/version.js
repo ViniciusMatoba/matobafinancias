@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.97';
+export const APP_VERSION = '1.6.98';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.98',
+    date: '23/06/2026',
+    changes: [
+      'Fix: notas de atualização agora exibem todas as versões recentes (v1.6.0+) com data visível — histórico anterior separado por divisor visual',
+    ],
+  },
   {
     version: '1.6.97',
     date: '23/06/2026',

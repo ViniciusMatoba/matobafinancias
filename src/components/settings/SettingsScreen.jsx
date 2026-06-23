@@ -642,38 +642,44 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
                 🔄 Atualizar Aplicativo Agora
               </button>
 
-              {/* Entradas recentes — geradas automaticamente de version.js */}
+              {/* Histórico de atualizações — gerado de version.js */}
               {CHANGELOG.map((ch, idx) => (
                 <div key={`new-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(99,102,241,0.1)', padding: '1px 5px', borderRadius: 4 }}>
-                      v{ch.version} ({ch.date})
+                      v{ch.version}
                     </span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{ch.date}</span>
                   </div>
                   <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {ch.changes.map((it, itemIdx) => (
-                      <li key={itemIdx}>{it}</li>
+                      <li key={itemIdx} style={{ fontSize: 12 }}>{it}</li>
                     ))}
                   </ul>
                 </div>
               ))}
 
-              {/* Histórico anterior */}
-              {CHANGELOG_DATA.map((ch, idx) => (
-                <div key={`old-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--primary)', background: 'rgba(99,102,241,0.1)', padding: '1px 5px', borderRadius: 4 }}>
-                      {ch.version}
-                    </span>
-                    <strong style={{ fontSize: 12, color: 'var(--text-primary)' }}>{ch.title}</strong>
+              {/* Versões antigas (antes de v1.6.0) */}
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 4 }}>
+                <p style={{ margin: '0 0 12px', fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Histórico anterior a v1.6.0
+                </p>
+                {CHANGELOG_DATA.map((ch, idx) => (
+                  <div key={`old-${idx}`} style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '1px 5px', borderRadius: 4 }}>
+                        {ch.version}
+                      </span>
+                      <strong style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{ch.title}</strong>
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                      {ch.items.map((it, itemIdx) => (
+                        <li key={itemIdx} style={{ fontSize: 12 }}>{it}</li>
+                      ))}
+                    </ul>
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    {ch.items.map((it, itemIdx) => (
-                      <li key={itemIdx}>{it}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
