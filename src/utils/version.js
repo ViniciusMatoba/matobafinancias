@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.84';
+export const APP_VERSION = '1.6.85';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.85',
+    date: '23/06/2026',
+    changes: [
+      'Fix bot N4/N5: orçamento por categoria não contava diário passado — remove historical:true para igualar ao app',
+      'Fix app + bot: dupla contagem de parcelas de cartão no orçamento — BudgetSummaryCard agora filtra projeções virtuais quando fatura real existe',
+      'Fix bot N6: alerta de saldo negativo ignorava entradas dos próximos 7 dias — refatorado para usar calcSaldoSimples(in7)',
+    ],
+  },
   {
     version: '1.6.84',
     date: '23/06/2026',

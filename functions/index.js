@@ -365,9 +365,8 @@ function computeSpentByCategory(transactions, currentMonth) {
   // Cartões com fatura real no mês — projeções virtuais desses cartões são ignoradas
   const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
 
-  // historical=true: inclui estimativas diárias passadas no cômputo de orçamento,
-  // pois elas representam gastos previstos por categoria (alimentação, moradia, etc.)
-  const occs = expandRange(transactions, from, to, { historical: true });
+  // Sem historical: comportamento igual ao BudgetSummaryCard do app — diário passado ignorado
+  const occs = expandRange(transactions, from, to);
 
   for (const o of occs) {
     const tx = o.tx;
@@ -412,7 +411,7 @@ function getTopExpensesForCategory(transactions, category, currentMonth) {
   // Mesma regra: projeções virtuais de cartões com fatura real são ignoradas
   const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
 
-  const occs = expandRange(transactions, from, to, { historical: true });
+  const occs = expandRange(transactions, from, to);
 
   const groups = {};
   for (const o of occs) {
@@ -524,50 +523,14 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   }
 
   // N6 — Saldo negativo projetado em 7 dias
+  // Usa calcSaldoSimples até in7: inclui entradas, todas as frequências e projeções virtuais
   if (tipos.n6 !== false) {
     const saldoAtual = calcSaldoSimples(transactions, todayStr, walletInitials);
     const d7 = new Date(hoje); d7.setDate(d7.getDate() + 7);
     const in7 = dateStrFromDate(d7);
-
-    let saidas7 = 0;
-    for (const tx of transactions) {
-      if (tx.tipo === 'entrada') continue;
-      const v = Number(tx.valor) || 0;
-      if (!v || !tx.dataInicio) continue;
-
-      if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
-        // Lançamento único ou parcela: verifica se cai na janela
-        if (tx.dataInicio > todayStr && tx.dataInicio <= in7) saidas7 += v;
-
-      } else if (tx.frequencia === 'mensal') {
-        // Verifica mês corrente E mês seguinte para cobrir qualquer janela de 7 dias
-        const txDay = parseInt(tx.dataInicio.split('-')[2], 10);
-        for (let delta = 0; delta <= 1; delta++) {
-          const occ = new Date(hoje.getFullYear(), hoje.getMonth() + delta, txDay);
-          const ds  = dateStrFromDate(occ);
-          const inWindow    = ds > todayStr && ds <= in7;
-          const afterStart  = ds >= tx.dataInicio;
-          const beforeEnd   = !tx.dataFim || ds <= tx.dataFim;
-          if (inWindow && afterStart && beforeEnd) saidas7 += v;
-        }
-
-      } else if (tx.frequencia === 'semanal') {
-        // Avança da dataInicio até o primeiro dia futuro, depois verifica janela
-        let cur = new Date(tx.dataInicio + 'T00:00:00');
-        const endDate = tx.dataFim ? tx.dataFim : in7;
-        // Pula para próxima ocorrência futura sem loop desnecessário
-        while (dateStrFromDate(cur) <= todayStr) cur.setDate(cur.getDate() + 7);
-        while (dateStrFromDate(cur) <= in7) {
-          const ds = dateStrFromDate(cur);
-          if (ds <= endDate) saidas7 += v;
-          cur.setDate(cur.getDate() + 7);
-        }
-      }
-    }
-
-    const saldoProjetado = saldoAtual - saidas7;
+    const saldoProjetado = calcSaldoSimples(transactions, in7, walletInitials);
     if (saldoProjetado < 0) {
-      msgs.push(`📉 *Alerta: saldo pode ficar negativo!*\nSaldo atual ${formatBRL(saldoAtual)} · Saídas previstas ${formatBRL(saidas7)} · Projeção *${formatBRL(saldoProjetado)}* em 7 dias.`);
+      msgs.push(`📉 *Alerta: saldo pode ficar negativo!*\nSaldo atual ${formatBRL(saldoAtual)} · Projeção *${formatBRL(saldoProjetado)}* em 7 dias.`);
     }
   }
 

@@ -43,6 +43,13 @@ export default function BudgetSummaryCard({
     const totals  = Object.fromEntries(CATEGORY_ORDER.map(id => [id, 0]));
     const details = Object.fromEntries(CATEGORY_ORDER.map(id => [id, []]));
 
+    // Cartões com fatura real no período — projeções virtuais desses cartões são ignoradas
+    const cartaoComFaturaReal = new Set(
+      transactions
+        .filter(t => t.tipo === 'cartao' && t.dataInicio >= from && t.dataInicio <= to)
+        .map(t => t.cartaoId)
+    );
+
     // Expande todas as transações no período
     const occurrences = transactions.flatMap(tx =>
       expandOccurrences(tx, from, to).map(o => ({ ...o, tx }))
@@ -54,6 +61,8 @@ export default function BudgetSummaryCard({
 
       // ── Cartão com itens (inclui faturas projetadas virtuais) ───────────────
       if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+        // Projeção virtual de cartão que já tem fatura real no período: ignora
+        if (tx.id?.includes('-proj-') && cartaoComFaturaReal.has(tx.cartaoId)) return;
         const cartaoNome = cardsMap[tx.cartaoId] || tx.descricao || 'Cartão';
 
         tx.itens.forEach(item => {
