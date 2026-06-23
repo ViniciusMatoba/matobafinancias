@@ -4,8 +4,9 @@ import { formatBRL, formatDate, todayStr, getProximoVencimento, addMonths } from
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
-export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistorico }) {
+export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistorico, hideValues = false }) {
   const [expandedId, setExpandedId] = useState(null);
+  const fmtVal = (n) => hideValues ? '•••' : fmtVal(n);
 
   if (!cardsStats?.length) return null;
 
@@ -142,11 +143,11 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
                 <div>
                   <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Fatura aberta</p>
                   <p style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>
-                    {formatBRL(card.faturaAtual)}
+                    {fmtVal(card.faturaAtual)}
                   </p>
                   {card.comprometidoFuturo > 0 && (
                     <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
-                      + {formatBRL(card.comprometidoFuturo)} futuro
+                      + {fmtVal(card.comprometidoFuturo)} futuro
                     </p>
                   )}
                 </div>
@@ -154,10 +155,10 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
                   <div style={{ textAlign: 'right' }}>
                     <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Disponível</p>
                     <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: corDisponivel }}>
-                      {formatBRL(card.limiteDisponivel)}
+                      {fmtVal(card.limiteDisponivel)}
                     </p>
                     <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>
-                      de {formatBRL(limite)}
+                      de {fmtVal(limite)}
                     </p>
                   </div>
                 )}
@@ -246,7 +247,7 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                                   {item.conferido && <span style={{ fontSize: 11, color: '#10b981', fontWeight: 700 }}>✓</span>}
                                   <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--saida)' }}>
-                                    {formatBRL(Number(item.valor) || 0)}
+                                    {fmtVal(Number(item.valor) || 0)}
                                   </span>
                                 </div>
                               </div>
@@ -270,7 +271,7 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
                             </p>
                           </div>
                           <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--saida)', flexShrink: 0 }}>
-                            {formatBRL(tx.valor || 0)}
+                            {fmtVal(tx.valor || 0)}
                           </span>
                         </div>
                       )}
@@ -287,7 +288,7 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
                     Total da fatura aberta
                   </span>
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--saida)' }}>
-                    {formatBRL(card.faturaAtual)}
+                    {fmtVal(card.faturaAtual)}
                   </span>
                 </div>
               </div>

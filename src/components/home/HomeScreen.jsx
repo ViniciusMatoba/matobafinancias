@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal, HelpCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura, calcFaturaCard } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -34,6 +34,15 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [historyCard, setHistoryCard] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [valuesVisible, setValuesVisible] = useState(
+    () => localStorage.getItem('matoba:values-visible') !== 'false'
+  );
+  const toggleValues = () => setValuesVisible(v => {
+    const next = !v;
+    localStorage.setItem('matoba:values-visible', String(next));
+    return next;
+  });
+  const fmtVal = (n) => valuesVisible ? formatBRL(n) : '•••';
   const [bannerDismissed, setBannerDismissed] = useState(
     () => localStorage.getItem('matoba:sobra-banner-dismissed') === todayStr()
   );
@@ -209,6 +218,9 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', letterSpacing: 1, textTransform: 'uppercase' }}>
             Matoba Finanças
           </p>
+          <button onClick={toggleValues} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title={valuesVisible ? 'Ocultar valores' : 'Exibir valores'}>
+            {valuesVisible ? <Eye size={17} /> : <EyeOff size={17} />}
+          </button>
           <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
             <HelpCircle size={17} />
           </button>
@@ -261,7 +273,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
               color: saldoPositivo ? 'var(--entrada)' : 'var(--saida)',
               letterSpacing: -1,
             }}>
-              {formatBRL(saldoAcumulado)}
+              {fmtVal(saldoAcumulado)}
             </p>
             {/* Botão ajustar saldo — apenas no dia de hoje */}
             {isToday && onAdjustBalance && (
@@ -297,7 +309,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                 <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: w.cor }} />
                 <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{w.nome}</p>
                 <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: w.saldoAtual >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
-                  {formatBRL(w.saldoAtual)}
+                  {fmtVal(w.saldoAtual)}
                 </p>
               </div>
             ))}
@@ -313,7 +325,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                 borderRadius: 14, padding: '12px 14px',
               }}>
                 <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-secondary)' }}>{item.label}</p>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 600, color: item.color }}>{formatBRL(item.value)}</p>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 600, color: item.color }}>{fmtVal(item.value)}</p>
               </div>
             ))}
           </div>
@@ -417,6 +429,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
             cardsStats={cardsStats}
             transactions={transactions}
             onVerHistorico={setHistoryCard}
+            hideValues={!valuesVisible}
           />
         </div>
       )}
@@ -436,6 +449,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           budgetPcts={config?.budgetPcts}
           currentMonth={today.slice(0, 7)}
           onNavigateSettings={() => onNavigate('settings')}
+          hideValues={!valuesVisible}
         />
       </div>
 
@@ -508,7 +522,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, marginLeft: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                     <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: cfg.color }}>
-                      {cfg.sign > 0 ? '+' : '-'}{formatBRL(occ.valor)}
+                      {cfg.sign > 0 ? '+' : '-'}{fmtVal(occ.valor)}
                     </p>
                     {hasItens && (
                       <button onClick={() => toggleExpand(occ.tx.id)} style={{ background: 'none', color: 'var(--text-muted)', display: 'flex', padding: 2 }}>
@@ -577,7 +591,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                           )}
                         </div>
                         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--cartao)', flexShrink: 0 }}>
-                          {formatBRL(Number(item.valor) || 0)}
+                          {fmtVal(Number(item.valor) || 0)}
                         </span>
                       </div>
                     );

@@ -21,7 +21,7 @@ const BASE_STEPS = [
   },
   {
     title: '💰 Saldo Global',
-    desc: 'O número grande no topo é a soma de todas as suas carteiras em tempo real. Toque no ícone de olho (👁) para esconder os valores quando precisar de privacidade.',
+    desc: 'O número grande no topo é a soma de todas as suas carteiras em tempo real. Toque no ícone 👁 no canto superior direito da tela para ocultar todos os valores quando precisar de privacidade — ideal para usar o app em locais públicos.',
   },
   {
     title: '🏦 Suas Carteiras',

@@ -20,8 +20,9 @@ function formatDateShort(dateStr) {
 }
 
 export default function BudgetSummaryCard({
-  transactions, cards, rendaMensal, budgetPcts, currentMonth, onNavigateSettings,
+  transactions, cards, rendaMensal, budgetPcts, currentMonth, onNavigateSettings, hideValues = false,
 }) {
+  const fmtVal = (n) => hideValues ? '•••' : fmtVal(n);
   const [expanded,    setExpanded]    = useState(true);
   const [selectedCat, setSelectedCat] = useState(null); // id da categoria aberta
 
@@ -181,7 +182,7 @@ export default function BudgetSummaryCard({
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 13, color: pctGeral > 90 ? 'var(--saida)' : 'var(--text-secondary)' }}>
-              {formatBRL(totalGasto)} / {formatBRL(totalBudget)}
+              {fmtVal(totalGasto)} / {fmtVal(totalBudget)}
             </span>
             {expanded ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
           </div>
@@ -240,9 +241,9 @@ export default function BudgetSummaryCard({
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontSize: 12, fontWeight: 600, color: over ? 'var(--saida)' : cat.color }}>
-                        {formatBRL(gasto)}
+                        {fmtVal(gasto)}
                       </span>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>/ {formatBRL(budget)}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>/ {fmtVal(budget)}</span>
                       <ChevronRight size={12} color="var(--text-muted)" style={{ flexShrink: 0 }} />
                     </div>
                   </div>
@@ -258,7 +259,7 @@ export default function BudgetSummaryCard({
 
                   {over && (
                     <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--saida)', textAlign: 'right' }}>
-                      Excedeu em {formatBRL(gasto - budget)}
+                      Excedeu em {fmtVal(gasto - budget)}
                     </p>
                   )}
                 </button>
@@ -330,9 +331,9 @@ export default function BudgetSummaryCard({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                   <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                     <span style={{ fontSize: 18, fontWeight: 700, color: activeOver ? 'var(--saida)' : activeCat.color }}>
-                      {formatBRL(activeTotal)}
+                      {fmtVal(activeTotal)}
                     </span>
-                    {' '}de {formatBRL(activeBudget)}
+                    {' '}de {fmtVal(activeBudget)}
                   </span>
                   <span style={{
                     fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
@@ -351,7 +352,7 @@ export default function BudgetSummaryCard({
                 </div>
                 {activeOver && (
                   <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--saida)' }}>
-                    ⚠️ Excedeu em {formatBRL(activeTotal - activeBudget)}
+                    ⚠️ Excedeu em {fmtVal(activeTotal - activeBudget)}
                   </p>
                 )}
               </div>
@@ -394,7 +395,7 @@ export default function BudgetSummaryCard({
                           <div key={desc} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
                             <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>• {desc}</span>
                             <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>
-                              {formatBRL(total)} <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 400, marginLeft: 4 }}>({pctSub}%)</span>
+                              {fmtVal(total)} <span style={{ color: 'var(--text-muted)', fontSize: 10, fontWeight: 400, marginLeft: 4 }}>({pctSub}%)</span>
                             </span>
                           </div>
                         );
@@ -482,7 +483,7 @@ export default function BudgetSummaryCard({
                         color: activeOver ? 'var(--saida)' : activeCat.color,
                         flexShrink: 0,
                       }}>
-                        {formatBRL(item.valor)}
+                        {fmtVal(item.valor)}
                       </span>
                     </div>
                   ))}
@@ -497,7 +498,7 @@ export default function BudgetSummaryCard({
                       Total da categoria
                     </span>
                     <span style={{ fontSize: 15, fontWeight: 800, color: activeOver ? 'var(--saida)' : activeCat.color }}>
-                      {formatBRL(activeTotal)}
+                      {fmtVal(activeTotal)}
                     </span>
                   </div>
                 </>

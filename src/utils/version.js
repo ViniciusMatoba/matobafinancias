@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.94';
+export const APP_VERSION = '1.6.95';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.95',
+    date: '23/06/2026',
+    changes: [
+      'Feature: botão 👁 no header da tela Início para ocultar/exibir todos os valores monetários (saldo, carteiras, cartão, orçamento) — preferência salva no dispositivo',
+      'Tour: descrição do Saldo Global atualizada para referenciar o novo botão de privacidade',
+    ],
+  },
   {
     version: '1.6.94',
     date: '23/06/2026',
