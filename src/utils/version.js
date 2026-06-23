@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.91';
+export const APP_VERSION = '1.6.92';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.92',
+    date: '23/06/2026',
+    changes: [
+      'Onboarding: 2 novos passos ao final do setup — apresentação do Bot do Telegram (com link direto) e cadastro de cartão de crédito',
+      'Onboarding: ao escolher "Cadastrar cartão agora", app abre diretamente em Configurações após o setup',
+    ],
+  },
   {
     version: '1.6.91',
     date: '23/06/2026',

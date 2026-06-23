@@ -1,14 +1,28 @@
 import { useState } from 'react';
-import { ChevronRight, RotateCcw, DollarSign, CheckCircle } from 'lucide-react';
+import { ChevronRight, RotateCcw, DollarSign, CheckCircle, ExternalLink } from 'lucide-react';
 import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 
-const STEPS = ['renda', 'categorias', 'confirmar'];
+const STEPS = ['renda', 'categorias', 'confirmar', 'telegram', 'cartao'];
 
-export default function SetupGoalsScreen({ onSave }) {
+const BTN_PRIMARY = {
+  width: '100%', padding: '15px', borderRadius: 14, fontSize: 15, fontWeight: 600,
+  background: 'linear-gradient(135deg, #6366f1, #a855f7)', border: 'none',
+  color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center',
+  justifyContent: 'center', gap: 8, boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+};
+
+const BTN_GHOST = {
+  width: '100%', padding: '14px', borderRadius: 14, fontSize: 14, fontWeight: 500,
+  background: 'var(--bg-card)', border: '1px solid var(--border)',
+  color: 'var(--text-secondary)', cursor: 'pointer',
+};
+
+export default function SetupGoalsScreen({ onSave, onAfterSetup }) {
   const [step, setStep] = useState(0);
   const [renda, setRenda] = useState('');
   const [pcts, setPcts] = useState({ ...DEFAULT_BUDGET_PCTS });
+  const [wantsCard, setWantsCard] = useState(false);
 
   const rendaNum = parseBRLInput(renda);
   const totalPct = Object.values(pcts).reduce((s, v) => s + Number(v), 0);
@@ -21,19 +35,14 @@ export default function SetupGoalsScreen({ onSave }) {
 
   const resetPercentual = () => setPcts({ ...DEFAULT_BUDGET_PCTS });
 
-  const handleFinish = () => {
-    onSave({
-      rendaMensal: rendaNum,
-      budgetPcts: { ...pcts },
-      onboardingDone: true,
-    });
+  const handleFinish = (goToSettings = false) => {
+    onSave({ rendaMensal: rendaNum, budgetPcts: { ...pcts }, onboardingDone: true });
+    if (goToSettings && onAfterSetup) onAfterSetup({ goToSettings: true });
   };
 
   return (
-    <div style={{
-      minHeight: '100dvh', overflowY: 'auto',
-      background: 'linear-gradient(160deg, #0f172a 0%, #0a0f1e 100%)',
-    }}>
+    <div style={{ minHeight: '100dvh', overflowY: 'auto', background: 'linear-gradient(160deg, #0f172a 0%, #0a0f1e 100%)' }}>
+
       {/* Header fixo */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 10,
@@ -50,16 +59,12 @@ export default function SetupGoalsScreen({ onSave }) {
           }}>
             <DollarSign size={18} color="#fff" />
           </div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>
-            Matoba Finanças
-          </span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Matoba Finanças</span>
         </div>
-        {/* Indicador de etapas */}
         <div style={{ display: 'flex', gap: 6 }}>
           {STEPS.map((_, i) => (
             <div key={i} style={{
-              width: i === step ? 20 : 8, height: 8,
-              borderRadius: 4,
+              width: i === step ? 20 : 8, height: 8, borderRadius: 4,
               background: i <= step ? 'var(--primary)' : 'var(--border)',
               transition: 'all 0.3s',
             }} />
@@ -81,9 +86,7 @@ export default function SetupGoalsScreen({ onSave }) {
 
             <div style={{ marginBottom: 16 }}>
               <input
-                type="text"
-                inputMode="decimal"
-                placeholder="Ex: 5.000,00"
+                type="text" inputMode="decimal" placeholder="Ex: 5.000,00"
                 value={renda}
                 onChange={e => setRenda(formatBRLInput(e.target.value))}
                 onBlur={e => setRenda(normalizeBRLInput(e.target.value))}
@@ -97,41 +100,21 @@ export default function SetupGoalsScreen({ onSave }) {
               )}
             </div>
 
-            <div style={{
-              background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
-              borderRadius: 12, padding: '10px 14px', marginBottom: 16,
-              display: 'flex', gap: 8, alignItems: 'flex-start',
-            }}>
+            <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, padding: '10px 14px', marginBottom: 16, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
               <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 Ex: salário bruto R$5.000, mas cai R$3.800 na conta? Informe <strong style={{ color: 'var(--text-primary)' }}>R$3.800</strong>. Não precisa ser exato — você pode atualizar a qualquer momento em <strong style={{ color: 'var(--text-primary)' }}>Configurações → Orçamento</strong>.
               </p>
             </div>
 
-            <div style={{
-              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
-              borderRadius: 14, padding: '14px 16px', marginBottom: 24,
-            }}>
-              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>
-                📊 Divisão Percentual — Como funciona?
-              </p>
+            <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 14, padding: '14px 16px', marginBottom: 24 }}>
+              <p style={{ margin: '0 0 6px', fontSize: 13, fontWeight: 600, color: 'var(--primary)' }}>📊 Divisão Percentual — Como funciona?</p>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                A Divisão Percentual recomenda distribuir a renda em 6 categorias com tetos definidos.
-                A prioridade é sempre <strong style={{ color: 'var(--text-primary)' }}>investir 25% primeiro</strong> — antes de qualquer gasto.
+                A Divisão Percentual recomenda distribuir a renda em 6 categorias com tetos definidos. A prioridade é sempre <strong style={{ color: 'var(--text-primary)' }}>investir 25% primeiro</strong> — antes de qualquer gasto.
               </p>
             </div>
 
-            <button
-              onClick={() => setStep(1)}
-              disabled={rendaNum <= 0}
-              style={{
-                width: '100%', padding: '15px', borderRadius: 14, fontSize: 16, fontWeight: 600,
-                background: rendaNum > 0 ? 'linear-gradient(135deg, #6366f1, #a855f7)' : 'var(--border)',
-                color: '#fff', cursor: rendaNum > 0 ? 'pointer' : 'default',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                boxShadow: rendaNum > 0 ? '0 4px 20px rgba(99,102,241,0.4)' : 'none',
-              }}
-            >
+            <button onClick={() => setStep(1)} disabled={rendaNum <= 0} style={{ ...BTN_PRIMARY, background: rendaNum > 0 ? BTN_PRIMARY.background : 'var(--border)', boxShadow: rendaNum > 0 ? BTN_PRIMARY.boxShadow : 'none', cursor: rendaNum > 0 ? 'pointer' : 'default' }}>
               Próximo <ChevronRight size={18} />
             </button>
           </div>
@@ -141,17 +124,8 @@ export default function SetupGoalsScreen({ onSave }) {
         {step === 1 && (
           <div>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
-              <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
-                Defina seus limites
-              </p>
-              <button
-                onClick={resetPercentual}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px',
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)',
-                }}
-              >
+              <p style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>Defina seus limites</p>
+              <button onClick={resetPercentual} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 10px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12, color: 'var(--text-secondary)' }}>
                 <RotateCcw size={12} /> RESETAR
               </button>
             </div>
@@ -159,34 +133,21 @@ export default function SetupGoalsScreen({ onSave }) {
               Estes são os percentuais recomendados. Ajuste conforme sua realidade — a soma deve ser 100%.
             </p>
 
-            {/* Total indicator */}
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '10px 14px', borderRadius: 10, marginBottom: 16,
-              background: excede ? 'rgba(239,68,68,0.1)' : totalPct === 100 ? 'rgba(16,185,129,0.1)' : 'var(--bg-card)',
-              border: `1px solid ${excede ? 'rgba(239,68,68,0.3)' : totalPct === 100 ? 'rgba(16,185,129,0.3)' : 'var(--border)'}`,
-            }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 10, marginBottom: 16, background: excede ? 'rgba(239,68,68,0.1)' : totalPct === 100 ? 'rgba(16,185,129,0.1)' : 'var(--bg-card)', border: `1px solid ${excede ? 'rgba(239,68,68,0.3)' : totalPct === 100 ? 'rgba(16,185,129,0.3)' : 'var(--border)'}` }}>
               <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Total distribuído</span>
-              <span style={{
-                fontSize: 16, fontWeight: 700,
-                color: excede ? 'var(--saida)' : totalPct === 100 ? 'var(--entrada)' : 'var(--text-primary)',
-              }}>
+              <span style={{ fontSize: 16, fontWeight: 700, color: excede ? 'var(--saida)' : totalPct === 100 ? 'var(--entrada)' : 'var(--text-primary)' }}>
                 {totalPct}%
                 {totalPct < 100 && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> (faltam {100 - totalPct}%)</span>}
                 {excede && <span style={{ fontSize: 12, fontWeight: 400 }}> (excede em {totalPct - 100}%)</span>}
               </span>
             </div>
 
-            {/* Category sliders */}
             {CATEGORY_ORDER.map(id => {
               const cat = PERCENTUAL_CATEGORIES[id];
               const val = Number(pcts[id]) || 0;
               const amount = (rendaNum * val) / 100;
               return (
-                <div key={id} style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: 14, padding: '14px', marginBottom: 10,
-                }}>
+                <div key={id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px', marginBottom: 10 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ fontSize: 20 }}>{cat.icon}</span>
@@ -196,58 +157,24 @@ export default function SetupGoalsScreen({ onSave }) {
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {rendaNum > 0 && (
-                        <span style={{ fontSize: 12, color: cat.color, fontWeight: 600 }}>
-                          {formatBRL(amount)}
-                        </span>
-                      )}
+                      {rendaNum > 0 && <span style={{ fontSize: 12, color: cat.color, fontWeight: 600 }}>{formatBRL(amount)}</span>}
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <input
-                          type="number"
-                          min="0" max="100"
-                          value={val}
-                          onChange={e => handlePctChange(id, e.target.value)}
-                          style={{
-                            width: 52, padding: '4px 6px', textAlign: 'center',
-                            fontSize: 14, fontWeight: 700, color: cat.color,
-                            borderRadius: 8,
-                          }}
-                        />
+                        <input type="number" min="0" max="100" value={val} onChange={e => handlePctChange(id, e.target.value)} style={{ width: 52, padding: '4px 6px', textAlign: 'center', fontSize: 14, fontWeight: 700, color: cat.color, borderRadius: 8 }} />
                         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>%</span>
                       </div>
                     </div>
                   </div>
-                  {/* Barra de progresso visual do percentual */}
                   <div style={{ height: 4, background: 'var(--bg-surface)', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%', width: `${val}%`,
-                      background: cat.color, borderRadius: 2, transition: 'width 0.3s',
-                    }} />
+                    <div style={{ height: '100%', width: `${val}%`, background: cat.color, borderRadius: 2, transition: 'width 0.3s' }} />
                   </div>
-                  <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                    {cat.exemplos}
-                  </p>
+                  <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>{cat.exemplos}</p>
                 </div>
               );
             })}
 
             <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-              <button
-                onClick={() => setStep(0)}
-                style={{ flex: 1, padding: '14px', borderRadius: 12, background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 14 }}
-              >
-                Voltar
-              </button>
-              <button
-                onClick={() => setStep(2)}
-                disabled={excede || totalPct === 0}
-                style={{
-                  flex: 2, padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600,
-                  background: !excede && totalPct > 0 ? 'linear-gradient(135deg, #6366f1, #a855f7)' : 'var(--border)',
-                  color: '#fff', cursor: !excede && totalPct > 0 ? 'pointer' : 'default',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}
-              >
+              <button onClick={() => setStep(0)} style={{ flex: 1, padding: '14px', borderRadius: 12, background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 14 }}>Voltar</button>
+              <button onClick={() => setStep(2)} disabled={excede || totalPct === 0} style={{ flex: 2, padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600, background: !excede && totalPct > 0 ? 'linear-gradient(135deg, #6366f1, #a855f7)' : 'var(--border)', color: '#fff', cursor: !excede && totalPct > 0 ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                 Revisar <ChevronRight size={18} />
               </button>
             </div>
@@ -257,9 +184,7 @@ export default function SetupGoalsScreen({ onSave }) {
         {/* ── STEP 2: Confirmar ── */}
         {step === 2 && (
           <div>
-            <p style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Tudo certo! 🎉
-            </p>
+            <p style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>Tudo certo! 🎉</p>
             <p style={{ margin: '0 0 24px', fontSize: 14, color: 'var(--text-secondary)' }}>
               Seu orçamento mensal de <strong style={{ color: 'var(--entrada)' }}>{formatBRL(rendaNum)}</strong> distribuído assim:
             </p>
@@ -269,12 +194,7 @@ export default function SetupGoalsScreen({ onSave }) {
               const val = Number(pcts[id]) || 0;
               const amount = (rendaNum * val) / 100;
               return (
-                <div key={id} style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '12px 14px', marginBottom: 8,
-                  background: cat.bg, borderRadius: 12,
-                  border: `1px solid ${cat.color}33`,
-                }}>
+                <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 8, background: cat.bg, borderRadius: 12, border: `1px solid ${cat.color}33` }}>
                   <span style={{ fontSize: 22, flexShrink: 0 }}>{cat.icon}</span>
                   <div style={{ flex: 1 }}>
                     <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{cat.label}</p>
@@ -287,35 +207,119 @@ export default function SetupGoalsScreen({ onSave }) {
               );
             })}
 
-            <p style={{
-              margin: '16px 0', padding: '12px 14px',
-              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
-              borderRadius: 12, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5,
-            }}>
+            <p style={{ margin: '16px 0', padding: '12px 14px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
               💡 Você pode alterar esses valores a qualquer momento em <strong style={{ color: 'var(--text-primary)' }}>Configurações → Orçamento</strong>.
             </p>
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => setStep(1)}
-                style={{ flex: 1, padding: '14px', borderRadius: 12, background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 14 }}
-              >
-                Ajustar
-              </button>
-              <button
-                onClick={handleFinish}
-                style={{
-                  flex: 2, padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600,
-                  background: 'linear-gradient(135deg, #6366f1, #a855f7)', color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
-                }}
-              >
-                <CheckCircle size={18} /> Começar!
+              <button onClick={() => setStep(1)} style={{ flex: 1, padding: '14px', borderRadius: 12, background: 'var(--bg-card)', color: 'var(--text-secondary)', fontSize: 14 }}>Ajustar</button>
+              <button onClick={() => setStep(3)} style={{ flex: 2, padding: '14px', borderRadius: 12, fontSize: 15, fontWeight: 600, background: 'linear-gradient(135deg, #6366f1, #a855f7)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
+                Continuar <ChevronRight size={18} />
               </button>
             </div>
           </div>
         )}
+
+        {/* ── STEP 3: Bot do Telegram ── */}
+        {step === 3 && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 52, marginBottom: 10 }}>🤖</div>
+              <p style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Bot do Telegram
+              </p>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                Um assistente financeiro que funciona direto no seu Telegram — sem precisar abrir o app.
+              </p>
+            </div>
+
+            {/* Recursos do bot */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {[
+                { icon: '💰', text: 'Consulte seu saldo atual a qualquer hora' },
+                { icon: '📊', text: 'Veja quanto já gastou por categoria no mês' },
+                { icon: '💳', text: 'Confira a fatura estimada de cada cartão' },
+                { icon: '📈', text: 'Acesse a projeção de saldo futuro' },
+                { icon: '🔔', text: 'Receba alertas automáticos de vencimentos e saldo baixo' },
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 20 }}>{item.icon}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 12, padding: '10px 14px', marginBottom: 20, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>ℹ️</span>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Ao tocar em "Ativar agora", o Telegram abrirá. Inicie uma conversa com o bot e depois acesse <strong style={{ color: 'var(--text-primary)' }}>Configurações → Telegram</strong> para inserir o código de vinculação.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <a
+                href="https://t.me/MatobaFinancasBot"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ ...BTN_PRIMARY, textDecoration: 'none' }}
+              >
+                <ExternalLink size={16} /> Ativar agora no Telegram
+              </a>
+              <button onClick={() => setStep(4)} style={BTN_GHOST}>
+                Configurar depois
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP 4: Cartão de crédito ── */}
+        {step === 4 && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 52, marginBottom: 10 }}>💳</div>
+              <p style={{ margin: '0 0 6px', fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Cartão de crédito
+              </p>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                Cadastre seu cartão para que o app calcule a fatura automaticamente e inclua os vencimentos na projeção.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {[
+                { icon: '📅', text: 'Fatura estimada calculada com base nos seus lançamentos' },
+                { icon: '📈', text: 'Vencimentos aparecem automaticamente na Projeção' },
+                { icon: '🔔', text: 'Alertas de vencimento pelo Telegram e notificações' },
+                { icon: '💰', text: 'Limite disponível atualizado em tempo real' },
+              ].map((item, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'var(--bg-card)', borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: 20 }}>{item.icon}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{item.text}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, padding: '10px 14px', marginBottom: 20, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>💡</span>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                Você precisará informar o <strong style={{ color: 'var(--text-primary)' }}>dia de fechamento</strong> e o <strong style={{ color: 'var(--text-primary)' }}>dia de vencimento</strong> do cartão — essas datas estão no aplicativo do seu banco ou na fatura.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                onClick={() => { setWantsCard(true); handleFinish(true); }}
+                style={BTN_PRIMARY}
+              >
+                <CheckCircle size={16} /> Cadastrar cartão agora
+              </button>
+              <button onClick={() => handleFinish(false)} style={BTN_GHOST}>
+                Fazer depois
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

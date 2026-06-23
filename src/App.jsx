@@ -94,7 +94,12 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
     }
 
     if (!config.onboardingDone) {
-      return <SetupGoalsScreen onSave={saveConfig} />;
+      return (
+        <SetupGoalsScreen
+          onSave={saveConfig}
+          onAfterSetup={(opts) => { if (opts?.goToSettings) setView('settings'); }}
+        />
+      );
     }
 
     const lazyFallback = (
