@@ -187,7 +187,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             onUpdateWallet={updateWallet}
             onRemoveWallet={removeWallet}
             onLogout={logout}
-            onResetTour={async () => { await saveConfig({ tourDone: false }); }}
+            onResetTour={async () => { await saveConfig({ tourDone: false, toursVistas: [] }); }}
             onUpdateApp={handleUpdate}
             onUpdateTransaction={update}
           />

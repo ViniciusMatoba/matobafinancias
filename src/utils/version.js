@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.93';
+export const APP_VERSION = '1.6.94';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.94',
+    date: '23/06/2026',
+    changes: [
+      'Reiniciar Tour: reseta também os banners contextuais por tela (toursVistas), não apenas o tour guiado principal',
+    ],
+  },
   {
     version: '1.6.93',
     date: '23/06/2026',

@@ -1,8 +1,7 @@
 {
-  "version": "1.6.92",
+  "version": "1.6.93",
   "date": "23/06/2026",
   "notes": [
-    "Onboarding: 2 novos passos ao final do setup — apresentação do Bot do Telegram (com link direto) e cadastro de cartão de crédito",
-    "Onboarding: ao escolher \"Cadastrar cartão agora\", app abre diretamente em Configurações após o setup"
+    "Onboarding Telegram: aviso de que é necessário ter o Telegram instalado + instrução de download + botão renomeado para \"Abrir ou baixar o Telegram\""
   ]
 }
