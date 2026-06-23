@@ -1,9 +1,8 @@
 {
-  "version": "1.6.85",
+  "version": "1.6.84",
   "date": "23/06/2026",
   "notes": [
-    "Fix bot N4/N5: orçamento por categoria não contava diário passado — remove historical:true para igualar ao app",
-    "Fix app + bot: dupla contagem de parcelas de cartão no orçamento — BudgetSummaryCard agora filtra projeções virtuais quando fatura real existe",
-    "Fix bot N6: alerta de saldo negativo ignorava entradas dos próximos 7 dias — refatorado para usar calcSaldoSimples(in7)"
+    "Fix bot: botões do teclado (💰 Saldo, 💳 Cartões etc.) não funcionavam — normalização de comando agora usa o texto completo da mensagem, não só a primeira palavra",
+    "Fix bot /resumo e /mes: dupla contagem de parcelas de cartão — mesmo fix aplicado em N12 (v1.6.83)"
   ]
 }
