@@ -1,8 +1,10 @@
 {
-  "version": "1.6.84",
+  "version": "1.6.86",
   "date": "23/06/2026",
   "notes": [
-    "Fix bot: botões do teclado (💰 Saldo, 💳 Cartões etc.) não funcionavam — normalização de comando agora usa o texto completo da mensagem, não só a primeira palavra",
-    "Fix bot /resumo e /mes: dupla contagem de parcelas de cartão — mesmo fix aplicado em N12 (v1.6.83)"
+    "Fix bot: saldo divergia do app quando há transações tipo diário — calcSaldoSimples agora usa historical:true igual ao frontend",
+    "Fix bot N7: resumo semanal reescrito com expandRange (igual ao /semana) — elimina loop manual inconsistente",
+    "Fix bot /semana: filtro de projeção virtual de cartão + historical:true para espelhar app",
+    "Fix bot N19: projeções virtuais de cartão excluídas do gasto de hoje — evita alertas de gasto atípico falsos"
   ]
 }
