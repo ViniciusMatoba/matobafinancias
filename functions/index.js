@@ -332,7 +332,8 @@ function expandRange(transactions, from, to, { historical = false } = {}) {
 // walletInitials: soma dos saldoInicial de todas as carteiras do usuário
 function calcSaldoSimples(transactions, upTo, walletInitials = 0) {
   const FAR_PAST = '2020-01-01';
-  const occs = expandRange(transactions, FAR_PAST, upTo);
+  // historical:true espelha o frontend (calcSaldo com historical:true) — inclui tipo='diario' passado no saldo
+  const occs = expandRange(transactions, FAR_PAST, upTo, { historical: true });
   const txSaldo = occs.reduce((acc, o) => {
     const sign = TYPE_SIGN[o.tipo] ?? -1;
     return acc + sign * o.valor;
@@ -535,56 +536,20 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   }
 
   // N7 — Resumo semanal (suporta múltiplos dias configurados)
+  // Usa expandRange (igual ao /semana) para garantir mesmos valores
   const rawDiaSem = prefs.diaSemanaResumo;
   const diasSemArr = Array.isArray(rawDiaSem) ? rawDiaSem : [rawDiaSem ?? 1];
   if (tipos.n7 !== false && diasSemArr.includes(weekday)) {
     const d7ago = new Date(hoje); d7ago.setDate(d7ago.getDate() - 7);
-    const fromStr = dateStrFromDate(d7ago);
+    const fromStr7 = dateStrFromDate(d7ago);
+    const comFaturaReal7 = cartaoComFaturaRealNoMes(transactions, fromStr7, todayStr);
+    const occs7 = expandRange(transactions, fromStr7, todayStr, { historical: true });
     let entradas = 0, saidas = 0;
-
-    for (const tx of transactions) {
-      if (!tx.dataInicio || tx.dataInicio > todayStr) continue;
-      const v    = Number(tx.valor) || 0;
-      if (!v) continue;
-      const isEnt = tx.tipo === 'entrada';
-
-      if (tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
-        if (tx.dataInicio >= fromStr) {
-          if (isEnt) entradas += v; else saidas += v;
-        }
-      } else if (tx.frequencia === 'mensal') {
-        // Expande ocorrências mensais dentro da janela (preservando dia original)
-        const origDay7 = new Date(tx.dataInicio + 'T00:00:00').getDate();
-        let cur = new Date(tx.dataInicio + 'T00:00:00');
-        const endDate = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
-        while (dateStrFromDate(cur) <= endDate) {
-          const ds = dateStrFromDate(cur);
-          if (ds >= fromStr) {
-            if (isEnt) entradas += v; else saidas += v;
-          }
-          addOneMonthClampedTo(cur, origDay7);
-        }
-      } else if (tx.frequencia === 'semanal') {
-        let cur = new Date(tx.dataInicio + 'T00:00:00');
-        const endDate = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
-        while (dateStrFromDate(cur) <= endDate) {
-          const ds = dateStrFromDate(cur);
-          if (ds >= fromStr) {
-            if (isEnt) entradas += v; else saidas += v;
-          }
-          cur.setDate(cur.getDate() + 7);
-        }
-      } else if (tx.frequencia === 'diario') {
-        // Valor já é diário; soma os dias da janela que o tx cobre
-        const inicio = tx.dataInicio > fromStr ? tx.dataInicio : fromStr;
-        const fim    = tx.dataFim && tx.dataFim < todayStr ? tx.dataFim : todayStr;
-        if (inicio <= fim) {
-          const dias = Math.round((new Date(fim) - new Date(inicio)) / 86400000) + 1;
-          if (isEnt) entradas += v * dias; else saidas += v * dias;
-        }
-      }
+    for (const o of occs7) {
+      if (o.tx?.id?.includes('-proj-') && comFaturaReal7.has(o.tx?.cartaoId)) continue;
+      if (o.tipo === 'entrada') entradas += o.valor;
+      else saidas += o.valor;
     }
-
     msgs.push(`📊 *Resumo semanal*\n✅ Entradas: ${formatBRL(entradas)}\n❌ Saídas: ${formatBRL(saidas)}\n💰 Saldo da semana: *${formatBRL(entradas - saidas)}*`);
   }
 
@@ -869,10 +834,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   if (tipos.n19 !== false) {
     const todayS2 = dateStrFromDate(hoje);
     const ago30   = (() => { const d = new Date(hoje); d.setDate(d.getDate() - 30); return dateStrFromDate(d); })();
-    const occsHoje30 = expandRange(transactions, ago30, todayS2);
-    const gastoHoje2 = occsHoje30.filter(o => o.date === todayS2 && o.tipo !== 'entrada')
+    const occsHoje30 = expandRange(transactions, ago30, todayS2, { historical: true });
+    // Cartões com fatura real hoje — evita contar projeções virtuais de meses anteriores
+    const comFaturaRealHoje = cartaoComFaturaRealNoMes(transactions, todayS2, todayS2);
+    const isVirtualCartao = (o) => o.tx?.id?.includes('-proj-') && comFaturaRealHoje.has(o.tx?.cartaoId);
+    const gastoHoje2 = occsHoje30.filter(o => o.date === todayS2 && o.tipo !== 'entrada' && !isVirtualCartao(o))
       .reduce((s, o) => s + o.valor, 0);
-    const somaUltimos30 = occsHoje30.filter(o => o.tipo !== 'entrada')
+    const somaUltimos30 = occsHoje30.filter(o => o.tipo !== 'entrada' && !isVirtualCartao(o))
       .reduce((s, o) => s + o.valor, 0);
     const media = somaUltimos30 / 30;
     if (gastoHoje2 > media * 2 && gastoHoje2 > 50) {
@@ -1178,12 +1146,14 @@ async function handleSemana(chatId, uid) {
   const fromStr = dateStrFromDate(d7);
 
   const { transactions } = await loadUserData(uid);
-  const occs = expandRange(transactions, fromStr, hoje);
+  const comFaturaRealSem = cartaoComFaturaRealNoMes(transactions, fromStr, hoje);
+  const occs = expandRange(transactions, fromStr, hoje, { historical: true });
 
   let entradas = 0, saidas = 0;
   const byDay = {};
 
   for (const o of occs) {
+    if (o.tx?.id?.includes('-proj-') && comFaturaRealSem.has(o.tx?.cartaoId)) continue;
     if (!byDay[o.date]) byDay[o.date] = { e: 0, s: 0 };
     if (o.tipo === 'entrada') { entradas += o.valor; byDay[o.date].e += o.valor; }
     else                      { saidas   += o.valor; byDay[o.date].s += o.valor; }

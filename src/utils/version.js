@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.85';
+export const APP_VERSION = '1.6.86';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.86',
+    date: '23/06/2026',
+    changes: [
+      'Fix bot: saldo divergia do app quando há transações tipo diário — calcSaldoSimples agora usa historical:true igual ao frontend',
+      'Fix bot N7: resumo semanal reescrito com expandRange (igual ao /semana) — elimina loop manual inconsistente',
+      'Fix bot /semana: filtro de projeção virtual de cartão + historical:true para espelhar app',
+      'Fix bot N19: projeções virtuais de cartão excluídas do gasto de hoje — evita alertas de gasto atípico falsos',
+    ],
+  },
   {
     version: '1.6.85',
     date: '23/06/2026',
