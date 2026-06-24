@@ -835,7 +835,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   if (tipos.n19 !== false) {
     const todayS2 = dateStrFromDate(hoje);
     const ago30   = (() => { const d = new Date(hoje); d.setDate(d.getDate() - 30); return dateStrFromDate(d); })();
-    const occsHoje30 = expandRange(transactions, ago30, todayS2, { historical: true });
+    const occsHoje30 = expandRange(transactions, ago30, todayS2);
     // Cartões com fatura real hoje — evita contar projeções virtuais de meses anteriores
     const comFaturaRealHoje = cartaoComFaturaRealNoMes(transactions, todayS2, todayS2);
     const isVirtualCartao = (o) => o.tx?.id?.includes('-proj-') && comFaturaRealHoje.has(o.tx?.cartaoId);

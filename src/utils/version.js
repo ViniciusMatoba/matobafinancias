@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.100';
+export const APP_VERSION = '1.6.101';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.101',
+    date: '24/06/2026',
+    changes: [
+      'Fix bot N19: média de gastos dos últimos 30 dias não inclui mais diários passados — alerta de dia atípico agora compara apenas gastos reais confirmados',
+    ],
+  },
   {
     version: '1.6.100',
     date: '24/06/2026',

@@ -1,8 +1,7 @@
 {
-  "version": "1.6.99",
-  "date": "23/06/2026",
+  "version": "1.6.100",
+  "date": "24/06/2026",
   "notes": [
-    "Fix estrutural: changelog consolidado em fonte única (version.js) — array duplicado removido do SettingsScreen",
-    "Histórico completo desde v1.2.0 agora visível nas Notas de Atualização"
+    "Fix bot: saldo do resumo diário agora corresponde ao Saldo Global do app — removido historical:true de calcSaldoSimples que incluía despesas diárias passadas indevidamente"
   ]
 }
