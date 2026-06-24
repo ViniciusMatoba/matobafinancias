@@ -1,7 +1,7 @@
 {
-  "version": "1.6.98",
-  "date": "23/06/2026",
+  "version": "1.6.100",
+  "date": "24/06/2026",
   "notes": [
-    "Fix: notas de atualização agora exibem todas as versões recentes (v1.6.0+) com data visível — histórico anterior separado por divisor visual"
+    "Fix bot: saldo do resumo diário agora corresponde ao Saldo Global do app — removido historical:true de calcSaldoSimples que incluía despesas diárias passadas indevidamente"
   ]
 }
