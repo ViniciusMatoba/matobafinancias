@@ -1,7 +1,7 @@
 {
-  "version": "1.6.101",
+  "version": "1.6.100",
   "date": "24/06/2026",
   "notes": [
-    "Fix bot N19: média de gastos dos últimos 30 dias não inclui mais diários passados — alerta de dia atípico agora compara apenas gastos reais confirmados"
+    "Fix bot: saldo do resumo diário agora corresponde ao Saldo Global do app — removido historical:true de calcSaldoSimples que incluía despesas diárias passadas indevidamente"
   ]
 }
