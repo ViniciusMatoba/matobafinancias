@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.99';
+export const APP_VERSION = '1.6.100';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.100',
+    date: '24/06/2026',
+    changes: [
+      'Fix bot: saldo do resumo diário agora corresponde ao Saldo Global do app — removido historical:true de calcSaldoSimples que incluía despesas diárias passadas indevidamente',
+    ],
+  },
   {
     version: '1.6.99',
     date: '23/06/2026',

@@ -332,8 +332,9 @@ function expandRange(transactions, from, to, { historical = false } = {}) {
 // walletInitials: soma dos saldoInicial de todas as carteiras do usuário
 function calcSaldoSimples(transactions, upTo, walletInitials = 0) {
   const FAR_PAST = '2020-01-01';
-  // historical:true espelha o frontend (calcSaldo com historical:true) — inclui tipo='diario' passado no saldo
-  const occs = expandRange(transactions, FAR_PAST, upTo, { historical: true });
+  // SEM historical:true — espelha HomeScreen que usa calcSaldo sem esse flag
+  // historical:true incluía transações tipo 'diario' passadas que o app exclui, causando divergência
+  const occs = expandRange(transactions, FAR_PAST, upTo);
   const txSaldo = occs.reduce((acc, o) => {
     const sign = TYPE_SIGN[o.tipo] ?? -1;
     return acc + sign * o.valor;
