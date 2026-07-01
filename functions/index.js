@@ -669,10 +669,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
 
       if (tx.frequencia === 'mensal') {
         const txDay = parseInt(tx.dataInicio.split('-')[2], 10);
-        if (d2.getDate() === txDay && in2Str >= tx.dataInicio && (!tx.dataFim || in2Str <= tx.dataFim)) {
+        // Extrai dia/mês diretamente de in2Str (evita d2.getDate() em UTC do servidor)
+        const [, in2MM, in2DD] = in2Str.split('-');
+        const diaIn2 = parseInt(in2DD, 10);
+        if (diaIn2 === txDay && in2Str >= tx.dataInicio && (!tx.dataFim || in2Str <= tx.dataFim)) {
           const jaPago = Array.isArray(tx.conferidos) && tx.conferidos.includes(in2Str);
           if (!jaPago) {
-            msgs.push(`⏰ *Conta fixa vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${d2.getDate()}/${String(d2.getMonth()+1).padStart(2,'0')}.`);
+            msgs.push(`⏰ *Conta fixa vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${in2DD}/${in2MM}.`);
           }
         }
       } else if (tx.frequencia === 'semanal') {
@@ -690,7 +693,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         if (achouOcorrencia) {
           const jaPago = Array.isArray(tx.conferidos) && tx.conferidos.includes(in2Str);
           if (!jaPago) {
-            msgs.push(`⏰ *Conta semanal vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${d2.getDate()}/${String(d2.getMonth()+1).padStart(2,'0')}.`);
+            msgs.push(`⏰ *Conta semanal vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${in2DD}/${in2MM}.`);
           }
         }
       }
@@ -858,7 +861,8 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const somaUltimos30 = occsHoje30.filter(o => o.tipo !== 'entrada' && !isVirtualCartao(o))
       .reduce((s, o) => s + o.valor, 0);
     const media = somaUltimos30 / 30;
-    if (gastoHoje2 > media * 2 && gastoHoje2 > 50) {
+    // media > 0 evita falso positivo quando não há gastos históricos (ex: primeiro gasto do mês)
+    if (media > 0 && gastoHoje2 > media * 2 && gastoHoje2 > 50) {
       const mult = (gastoHoje2 / media).toFixed(1);
       let msg = `⚠️ *Dia atípico de gastos!*\n\n`;
       msg += `Você registrou *${formatBRL(gastoHoje2)}* hoje — `;

@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.102';
+export const APP_VERSION = '1.6.103';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.103',
+    date: '01/07/2026',
+    changes: [
+      'Fix bot N10: data "vence em 2 dias" extraída de string ISO — elimina bug de timezone UTC vs Brasília no dia/mês exibido',
+      'Fix bot N19: alerta de dia atípico agora exige media > 0 — evita falso positivo no primeiro gasto do período',
+    ],
+  },
   {
     version: '1.6.102',
     date: '01/07/2026',
