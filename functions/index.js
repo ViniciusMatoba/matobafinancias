@@ -91,8 +91,22 @@ async function sendPushNotification(token, markdownText) {
 
 // ─── Helpers de data (fuso Brasília UTC-3) ────────────────────────────────────
 function getNowBrasilia() {
-  // Date em Brasília
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
+  // Usa formatToParts para extrair componentes de data em Brasília de forma confiável.
+  // new Date().toLocaleString() é frágil no Node 22+ (U+202F antes de AM/PM quebra o parse).
+  const now = new Date();
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+  });
+  const p = Object.fromEntries(
+    fmt.formatToParts(now)
+      .filter(x => x.type !== 'literal')
+      .map(x => [x.type, parseInt(x.value, 10)])
+  );
+  // Cria Date com valores de Brasília interpretados como UTC — getDate()/getMonth() retornam hora local BR
+  return new Date(Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second));
 }
 
 function todayStrBrasilia() {

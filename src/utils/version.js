@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.101';
+export const APP_VERSION = '1.6.102';
 export const APP_VERSION_DATE = '23/06/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.102',
+    date: '01/07/2026',
+    changes: [
+      'Fix bot: getNowBrasilia() reescrita com Intl.DateTimeFormat.formatToParts — elimina bug do Node 22 que retornava mês errado (relatório N12 comparava meses incorretos)',
+    ],
+  },
   {
     version: '1.6.101',
     date: '24/06/2026',
