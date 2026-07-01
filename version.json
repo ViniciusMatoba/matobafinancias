@@ -1,7 +1,7 @@
 {
-  "version": "1.6.100",
-  "date": "24/06/2026",
+  "version": "1.6.102",
+  "date": "01/07/2026",
   "notes": [
-    "Fix bot: saldo do resumo diário agora corresponde ao Saldo Global do app — removido historical:true de calcSaldoSimples que incluía despesas diárias passadas indevidamente"
+    "Fix bot: getNowBrasilia() reescrita com Intl.DateTimeFormat.formatToParts — elimina bug do Node 22 que retornava mês errado (relatório N12 comparava meses incorretos)"
   ]
 }
