@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
-import { formatBRL, formatDate, todayStr, getProximoVencimento, addMonths } from '../../utils/formatters';
-import { expandOccurrences } from '../../utils/projectionCalc';
+import { formatBRL, formatDate, todayStr, getProximoVencimento } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
 export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistorico, hideValues = false }) {
@@ -50,21 +49,12 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
         const urgFech = diasFech <= 0;
         const avFech  = diasFech <= 2;
 
-        // Lançamentos do ciclo atual — mesma janela de calcFaturaCard: (prevVenc, proximoVenc]
-        const prevVenc = addMonths(proximoVenc, -1);
-        const realLançamentos = transactions.filter(
+        // Lançamentos do ciclo atual — exatamente o vencimento da fatura aberta (data-driven)
+        const lançamentos = transactions.filter(
           t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
-            && t.dataInicio >= prevVenc && t.dataInicio <= proximoVenc
+            && t.dataInicio === proximoVenc
         );
-        // Sem lançamento real: mostra parcelas futuras projetadas de transações passadas
-        const lançamentos = realLançamentos.length > 0
-          ? realLançamentos
-          : transactions
-              .filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido && t.dataInicio <= prevVenc)
-              .flatMap(t => expandOccurrences(t, prevVenc, proximoVenc))
-              .filter(o => o.date > prevVenc && o.date <= proximoVenc)
-              .map(o => ({ ...o.tx, dataInicio: o.date }));
-        const isVirtual = realLançamentos.length === 0 && lançamentos.length > 0;
+        const isVirtual = false;
 
         return (
           <div key={card.id} style={{

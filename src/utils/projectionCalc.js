@@ -207,37 +207,38 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
  * @returns {{ faturaAtual: number, comprometidoFuturo: number, limiteDisponivel: number, proximoVenc: string }}
  */
 export function calcFaturaCard(card, transactions, today) {
-  const proximoVenc = getProximoVencimento(card, today);
-  // Ciclo atual: (vencimento anterior, próximo vencimento]
-  const prevVenc = addMonths(proximoVenc, -1);
-
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
   );
 
-  let faturaAtual        = 0;
-  let comprometidoFuturo = 0;
-
-  const realInWindow = cardTxs.filter(t => t.dataInicio >= prevVenc && t.dataInicio <= proximoVenc);
-
-  if (realInWindow.length > 0) {
-    // Lançamentos reais têm prioridade
-    realInWindow.forEach(tx => { faturaAtual += Number(tx.valor) || 0; });
-  } else {
-    // Sem lançamento real: projeta parcelas de transações passadas (compras parceladas)
-    cardTxs
-      .filter(t => t.dataInicio <= prevVenc)
-      .flatMap(t => expandOccurrences(t, prevVenc, proximoVenc))
-      .filter(o => o.date > prevVenc && o.date <= proximoVenc)
-      .forEach(o => { faturaAtual += o.valor; });
+  // Sem lançamentos pendentes: cartão quitado, usa próximo vencimento calendário
+  if (cardTxs.length === 0) {
+    const proximoVenc = getProximoVencimento(card, today);
+    const limite = card.limite || 0;
+    return { faturaAtual: 0, comprometidoFuturo: 0, limiteDisponivel: limite, proximoVenc };
   }
 
-  // Lançamentos reais futuros (após proximoVenc)
-  cardTxs.filter(t => t.dataInicio > proximoVenc).forEach(tx => {
-    comprometidoFuturo += Number(tx.valor) || 0;
+  // Agrupa por dataInicio (= data de vencimento atribuída pelo formulário)
+  const byVenc = {};
+  cardTxs.forEach(t => {
+    const v = t.dataInicio;
+    if (!byVenc[v]) byVenc[v] = [];
+    byVenc[v].push(t);
+  });
+  const vencDates = Object.keys(byVenc).sort();
+
+  // Fatura atual = vencimento mais antigo com pendências (data-driven, não calendário)
+  const faturaVenc = vencDates[0];
+  let faturaAtual = 0;
+  byVenc[faturaVenc].forEach(tx => { faturaAtual += Number(tx.valor) || 0; });
+
+  // Comprometido futuro = todos os vencimentos posteriores
+  let comprometidoFuturo = 0;
+  vencDates.slice(1).forEach(v => {
+    byVenc[v].forEach(tx => { comprometidoFuturo += Number(tx.valor) || 0; });
   });
 
-  // Parcelas futuras de itens parcelados de todos os lançamentos do cartão
+  // Parcelas futuras de itens parcelados
   cardTxs.forEach(tx => {
     if (!tx.itens?.length) return;
     tx.itens.forEach(item => {
@@ -248,14 +249,8 @@ export function calcFaturaCard(card, transactions, today) {
     });
   });
 
-  // Quando faturaAtual veio de parcelas virtuais, subtrai para não dupla-contar
-  // (o cálculo item-based já inclui a parcela do mês corrente em remaining)
-  if (realInWindow.length === 0) {
-    comprometidoFuturo = Math.max(0, comprometidoFuturo - faturaAtual);
-  }
-
   const limite = card.limite || 0;
   const limiteDisponivel = Math.max(0, limite - faturaAtual - comprometidoFuturo);
 
-  return { faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc };
+  return { faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc: faturaVenc };
 }

@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.104';
+export const APP_VERSION = '1.6.105';
 export const APP_VERSION_DATE = '28/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.105',
+    date: '28/07/2026',
+    changes: [
+      'Fix fatura cartão: cálculo agora é data-driven — fatura aberta = vencimento mais antigo com pendências, igual à lógica da tela de Projeção. Resolve Nubank (mês seguinte) e Mercado Pago (R$0)',
+    ],
+  },
   {
     version: '1.6.104',
     date: '28/07/2026',
