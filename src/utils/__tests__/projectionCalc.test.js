@@ -291,8 +291,15 @@ describe('calcFaturaCard', () => {
     expect(faturaAtual).toBe(100)
   })
 
-  it('NÃO inclui lançamento exatamente em prevVenc (limite exclusivo)', () => {
+  it('inclui lançamento exatamente em prevVenc (limite inclusivo — caso pós-fechamento)', () => {
+    // Após diaFechamento, getProximoVencimento avança: prevVenc passa a ser o vencimento
+    // do ciclo atual. Lançamentos com dataInicio == prevVenc devem entrar na fatura.
     const { faturaAtual } = calcFaturaCard(card, [makeTx('2026-05-25')], '2026-06-17')
+    expect(faturaAtual).toBe(100)
+  })
+
+  it('NÃO inclui lançamento anterior a prevVenc (fatura já paga do ciclo anterior)', () => {
+    const { faturaAtual } = calcFaturaCard(card, [makeTx('2026-04-25')], '2026-06-17')
     expect(faturaAtual).toBe(0)
   })
 

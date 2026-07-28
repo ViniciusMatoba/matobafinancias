@@ -218,7 +218,7 @@ export function calcFaturaCard(card, transactions, today) {
   let faturaAtual        = 0;
   let comprometidoFuturo = 0;
 
-  const realInWindow = cardTxs.filter(t => t.dataInicio > prevVenc && t.dataInicio <= proximoVenc);
+  const realInWindow = cardTxs.filter(t => t.dataInicio >= prevVenc && t.dataInicio <= proximoVenc);
 
   if (realInWindow.length > 0) {
     // Lançamentos reais têm prioridade

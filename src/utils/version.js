@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.103';
-export const APP_VERSION_DATE = '23/06/2026';
+export const APP_VERSION = '1.6.104';
+export const APP_VERSION_DATE = '28/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.104',
+    date: '28/07/2026',
+    changes: [
+      'Fix fatura cartão: lançamentos com dataInicio = prevVenc agora incluídos na fatura aberta — corrige Nubank mostrando mês seguinte após fechamento e Mercado Pago mostrando R$0',
+    ],
+  },
   {
     version: '1.6.103',
     date: '01/07/2026',

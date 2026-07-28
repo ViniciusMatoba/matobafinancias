@@ -1,7 +1,8 @@
 {
-  "version": "1.6.102",
+  "version": "1.6.103",
   "date": "01/07/2026",
   "notes": [
-    "Fix bot: getNowBrasilia() reescrita com Intl.DateTimeFormat.formatToParts — elimina bug do Node 22 que retornava mês errado (relatório N12 comparava meses incorretos)"
+    "Fix bot N10: data \"vence em 2 dias\" extraída de string ISO — elimina bug de timezone UTC vs Brasília no dia/mês exibido",
+    "Fix bot N19: alerta de dia atípico agora exige media > 0 — evita falso positivo no primeiro gasto do período"
   ]
 }

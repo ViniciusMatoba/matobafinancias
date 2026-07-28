@@ -54,7 +54,7 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
         const prevVenc = addMonths(proximoVenc, -1);
         const realLançamentos = transactions.filter(
           t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
-            && t.dataInicio > prevVenc && t.dataInicio <= proximoVenc
+            && t.dataInicio >= prevVenc && t.dataInicio <= proximoVenc
         );
         // Sem lançamento real: mostra parcelas futuras projetadas de transações passadas
         const lançamentos = realLançamentos.length > 0
