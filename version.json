@@ -1,7 +1,8 @@
 {
-  "version": "1.6.104",
-  "date": "28/07/2026",
+  "version": "1.6.103",
+  "date": "01/07/2026",
   "notes": [
-    "Fix fatura cartão: lançamentos com dataInicio = prevVenc agora incluídos na fatura aberta — corrige Nubank mostrando mês seguinte após fechamento e Mercado Pago mostrando R$0"
+    "Fix bot N10: data \"vence em 2 dias\" extraída de string ISO — elimina bug de timezone UTC vs Brasília no dia/mês exibido",
+    "Fix bot N19: alerta de dia atípico agora exige media > 0 — evita falso positivo no primeiro gasto do período"
   ]
 }
