@@ -1,12 +1,12 @@
-export const APP_VERSION = '1.6.106';
+export const APP_VERSION = '1.6.107';
 export const APP_VERSION_DATE = '28/07/2026';
 
 export const CHANGELOG = [
   {
-    version: '1.6.106',
+    version: '1.6.107',
     date: '28/07/2026',
     changes: [
-      'Fix fatura cartão: usa expandOccurrences igual à tela de Projeção — trata corretamente transações únicas, parceladas e recorrentes. Fatura overdue (não paga após vencimento) aparece antes do próximo ciclo',
+      'Removido: cards de fatura de cartão da tela inicial — faturas já aparecem corretamente na seção Próximas Contas',
     ],
   },
   {
