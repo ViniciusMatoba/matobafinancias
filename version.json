@@ -1,7 +1,7 @@
 {
-  "version": "1.6.105",
+  "version": "1.6.107",
   "date": "28/07/2026",
   "notes": [
-    "Fix fatura cartão: cálculo agora é data-driven — fatura aberta = vencimento mais antigo com pendências, igual à lógica da tela de Projeção. Resolve Nubank (mês seguinte) e Mercado Pago (R$0)"
+    "Removido: cards de fatura de cartão da tela inicial — faturas já aparecem corretamente na seção Próximas Contas"
   ]
 }
