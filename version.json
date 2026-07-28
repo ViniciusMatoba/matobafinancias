@@ -1,8 +1,7 @@
 {
-  "version": "1.6.103",
-  "date": "01/07/2026",
+  "version": "1.6.105",
+  "date": "28/07/2026",
   "notes": [
-    "Fix bot N10: data \"vence em 2 dias\" extraída de string ISO — elimina bug de timezone UTC vs Brasília no dia/mês exibido",
-    "Fix bot N19: alerta de dia atípico agora exige media > 0 — evita falso positivo no primeiro gasto do período"
+    "Fix fatura cartão: cálculo agora é data-driven — fatura aberta = vencimento mais antigo com pendências, igual à lógica da tela de Projeção. Resolve Nubank (mês seguinte) e Mercado Pago (R$0)"
   ]
 }
