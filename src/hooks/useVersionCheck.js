@@ -109,8 +109,12 @@ export function useVersionCheck() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
-    // Verificação imediata quando o SW detecta nova versão (disparo pelo ReloadPrompt)
-    const handlePwaReady = () => check();
+    // SW confirmou nova versão esperando — mostra banner imediatamente,
+    // sem depender do version.json (que pode estar em cache no CDN do GitHub Pages)
+    const handlePwaReady = () => {
+      setUpdateAvailable(true);
+      check(); // busca version.json em background para pegar o número da versão
+    };
     window.addEventListener('pwa-update-ready', handlePwaReady);
 
     return () => {

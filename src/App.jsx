@@ -347,7 +347,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
   return (
     <>
       {/* Banner global de nova versão */}
-      {updateAvailable && latestVersion && (
+      {updateAvailable && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9500,
           background: 'linear-gradient(90deg, #6366f1, #a855f7)',
@@ -359,7 +359,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             <span style={{ fontSize: 18, flexShrink: 0 }}>🆕</span>
             <div style={{ minWidth: 0 }}>
               <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#fff' }}>
-                Versão {latestVersion} disponível!
+                {latestVersion ? `Versão ${latestVersion} disponível!` : 'Nova versão disponível!'}
               </p>
               {latestNotes?.[0] && (
                 <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.82)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

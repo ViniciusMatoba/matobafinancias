@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.107';
+export const APP_VERSION = '1.6.108';
 export const APP_VERSION_DATE = '28/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.108',
+    date: '28/07/2026',
+    changes: [
+      'Fix notificação de atualização PWA: banner aparece imediatamente ao SW detectar nova versão, sem depender do version.json (que pode estar em cache no CDN do GitHub Pages)',
+    ],
+  },
   {
     version: '1.6.107',
     date: '28/07/2026',
