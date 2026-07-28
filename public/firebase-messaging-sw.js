@@ -26,6 +26,10 @@ registerRoute(
 );
 
 // ─── Ciclo de vida do SW ──────────────────────────────────────────────────────
+// skipWaiting no install: novo SW ativa imediatamente sem esperar tabs fecharem.
+// O app detecta controllerchange e recarrega sozinho (ver ReloadPrompt).
+self.addEventListener('install', () => self.skipWaiting());
+
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });

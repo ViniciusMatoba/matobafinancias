@@ -28,7 +28,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
     addCard, updateCard, removeCard,
     addWallet, updateWallet, removeWallet,
     addGoal, updateGoal, removeGoal,
-    updateAvailable, latestVersion, latestNotes, isUpdating, handleUpdate,
+    isUpdating, handleUpdate,
     view,
     formOpen, setFormOpen,
     editing, setEditing, setEditingOccDate,
@@ -346,37 +346,6 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
 
   return (
     <>
-      {/* Banner global de nova versão */}
-      {updateAvailable && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9500,
-          background: 'linear-gradient(90deg, #6366f1, #a855f7)',
-          padding: '12px 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-          boxShadow: '0 4px 20px rgba(99,102,241,0.45)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 18, flexShrink: 0 }}>🆕</span>
-            <div style={{ minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#fff' }}>
-                {latestVersion ? `Versão ${latestVersion} disponível!` : 'Nova versão disponível!'}
-              </p>
-              {latestNotes?.[0] && (
-                <p style={{ margin: 0, fontSize: 11, color: 'rgba(255,255,255,0.82)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {latestNotes[0]}
-                </p>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={handleUpdate}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#fff', color: '#6366f1', padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', cursor: 'pointer', flexShrink: 0, boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-          >
-            🔄 Atualizar
-          </button>
-        </div>
-      )}
-
       {renderScreen()}
       <ReloadPrompt />
 

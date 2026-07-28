@@ -1,29 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { DollarSign } from 'lucide-react';
 
 export default function ReloadPrompt() {
   const [updating, setUpdating] = useState(false);
 
+  // Detecta quando o SW novo assumiu o controle (controllerchange).
+  // Com skipWaiting no install, isso acontece automaticamente após cada deploy.
+  // Mostra a tela de loading e recarrega para servir os novos assets.
+  useEffect(() => {
+    if (!navigator.serviceWorker) return;
+    const handleControllerChange = () => {
+      setUpdating(true);
+      setTimeout(() => window.location.reload(), 1_500);
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+  }, []);
+
   useRegisterSW({
-    // onNeedRefresh: disparado quando um novo SW está instalado e aguardando.
-    // Com registerType 'prompt', o SW NÃO ativa sozinho — o banner do
-    // useVersionCheck aparece em até 60s e o usuário clica "Atualizar".
-    // O fallback de 10 min garante que o app eventualmente atualize mesmo
-    // se o usuário ignorar o banner.
-    onNeedRefresh() {
-      // Avisa useVersionCheck para checar version.json imediatamente
-      window.dispatchEvent(new CustomEvent('pwa-update-ready'));
-      // Fallback: força reload após 10 min caso o usuário ignore o banner
-      setTimeout(() => {
-        setUpdating(true);
-        setTimeout(() => window.location.reload(), 8_000);
-      }, 10 * 60 * 1000);
-    },
     onRegistered(r) {
       if (!r) return;
       const check = () => r.update().catch(() => {});
-      // Verifica ao abrir, ao voltar ao foco e a cada 60s (sincronizado com useVersionCheck)
+      // Verifica ao abrir, ao voltar ao foco e a cada 60s
       check();
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') check();
@@ -31,7 +30,7 @@ export default function ReloadPrompt() {
       setInterval(check, 60_000);
     },
     onRegisterError(err) {
-      console.log('SW registration error', err);
+      console.error('SW registration error', err);
     },
   });
 

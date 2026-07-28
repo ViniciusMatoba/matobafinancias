@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.108';
+export const APP_VERSION = '1.6.109';
 export const APP_VERSION_DATE = '28/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.109',
+    date: '28/07/2026',
+    changes: [
+      'Fix atualização PWA: SW agora usa skipWaiting automático — app detecta controllerchange e recarrega sozinho com tela de loading, sem depender de banner ou version.json',
+    ],
+  },
   {
     version: '1.6.108',
     date: '28/07/2026',
