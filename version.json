@@ -1,7 +1,7 @@
 {
-  "version": "1.6.108",
+  "version": "1.6.107",
   "date": "28/07/2026",
   "notes": [
-    "Fix notificação de atualização PWA: banner aparece imediatamente ao SW detectar nova versão, sem depender do version.json (que pode estar em cache no CDN do GitHub Pages)"
+    "Removido: cards de fatura de cartão da tela inicial — faturas já aparecem corretamente na seção Próximas Contas"
   ]
 }
