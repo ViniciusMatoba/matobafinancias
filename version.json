@@ -1,7 +1,7 @@
 {
-  "version": "1.6.102",
-  "date": "01/07/2026",
+  "version": "1.6.104",
+  "date": "28/07/2026",
   "notes": [
-    "Fix bot: getNowBrasilia() reescrita com Intl.DateTimeFormat.formatToParts — elimina bug do Node 22 que retornava mês errado (relatório N12 comparava meses incorretos)"
+    "Fix fatura cartão: lançamentos com dataInicio = prevVenc agora incluídos na fatura aberta — corrige Nubank mostrando mês seguinte após fechamento e Mercado Pago mostrando R$0"
   ]
 }
