@@ -1,7 +1,7 @@
 {
-  "version": "1.6.106",
+  "version": "1.6.105",
   "date": "28/07/2026",
   "notes": [
-    "Fix fatura cartão: usa expandOccurrences igual à tela de Projeção — trata corretamente transações únicas, parceladas e recorrentes. Fatura overdue (não paga após vencimento) aparece antes do próximo ciclo"
+    "Fix fatura cartão: cálculo agora é data-driven — fatura aberta = vencimento mais antigo com pendências, igual à lógica da tela de Projeção. Resolve Nubank (mês seguinte) e Mercado Pago (R$0)"
   ]
 }
