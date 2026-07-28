@@ -1,7 +1,7 @@
 {
-  "version": "1.6.107",
+  "version": "1.6.109",
   "date": "28/07/2026",
   "notes": [
-    "Removido: cards de fatura de cartão da tela inicial — faturas já aparecem corretamente na seção Próximas Contas"
+    "Fix atualização PWA: SW agora usa skipWaiting automático — app detecta controllerchange e recarrega sozinho com tela de loading, sem depender de banner ou version.json"
   ]
 }
