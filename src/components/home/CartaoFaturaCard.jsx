@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CreditCard, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatBRL, formatDate, todayStr, getProximoVencimento } from '../../utils/formatters';
+import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 
 export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistorico, hideValues = false }) {
@@ -37,11 +38,12 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
         const corBarra = pctUsado < 0.5 ? '#10b981' : pctUsado < 0.8 ? '#f59e0b' : '#ef4444';
         const corDisponivel = pctUsado < 0.5 ? 'var(--entrada)' : pctUsado < 0.8 ? '#f59e0b' : 'var(--saida)';
 
-        const proximoVenc = getProximoVencimento(card, today);
+        // proximoVenc vem de calcFaturaCard (já resolvido: overdue ou próximo ciclo)
+        const proximoVenc = card.proximoVenc;
         const diasVenc = diasAte(proximoVenc);
         const diasFech = diasAte(proximoFechamento(card));
 
-        const vencLabel = diasVenc === 0 ? 'Vence HOJE' : diasVenc === 1 ? 'Vence amanhã' : `Vence em ${diasVenc}d`;
+        const vencLabel = diasVenc < 0 ? `Venceu há ${Math.abs(diasVenc)}d` : diasVenc === 0 ? 'Vence HOJE' : diasVenc === 1 ? 'Vence amanhã' : `Vence em ${diasVenc}d`;
         const fechLabel = diasFech === 0 ? 'Fecha HOJE' : diasFech === 1 ? 'Fecha amanhã' : `Fecha em ${diasFech}d`;
 
         const urgVenc = diasVenc <= 0;
@@ -49,11 +51,12 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
         const urgFech = diasFech <= 0;
         const avFech  = diasFech <= 2;
 
-        // Lançamentos do ciclo atual — exatamente o vencimento da fatura aberta (data-driven)
-        const lançamentos = transactions.filter(
-          t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
-            && t.dataInicio === proximoVenc
-        );
+        // Lançamentos da fatura aberta — mesma lógica da Projeção: expandOccurrences no vencimento exato
+        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+        const lançamentos = cardTxs
+          .flatMap(t => expandOccurrences(t, proximoVenc, proximoVenc))
+          .filter(o => !o.tx.conferido)
+          .map(o => ({ ...o.tx, dataInicio: o.date }));
         const isVirtual = false;
 
         return (

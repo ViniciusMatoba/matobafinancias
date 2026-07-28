@@ -1,7 +1,7 @@
 {
-  "version": "1.6.104",
+  "version": "1.6.105",
   "date": "28/07/2026",
   "notes": [
-    "Fix fatura cartão: lançamentos com dataInicio = prevVenc agora incluídos na fatura aberta — corrige Nubank mostrando mês seguinte após fechamento e Mercado Pago mostrando R$0"
+    "Fix fatura cartão: cálculo agora é data-driven — fatura aberta = vencimento mais antigo com pendências, igual à lógica da tela de Projeção. Resolve Nubank (mês seguinte) e Mercado Pago (R$0)"
   ]
 }

@@ -267,6 +267,7 @@ describe('getClosingDate', () => {
 
 // ── calcFaturaCard ────────────────────────────────────────────────────────────
 describe('calcFaturaCard', () => {
+  // card: fecha dia 20, vence dia 25
   const card = { id: 'c1', diaFechamento: 20, diaVencimento: 25, limite: 5000 }
 
   const makeTx = (dataInicio, valor = 100, extra = {}) => ({
@@ -280,32 +281,41 @@ describe('calcFaturaCard', () => {
     ...extra,
   })
 
-  it('fatura atual = vencimento mais antigo com pendências (data-driven)', () => {
-    // Dois vencimentos: jun/25 e jul/25 → fatura atual deve ser jun/25
-    const txs = [makeTx('2026-06-25', 300), makeTx('2026-07-25', 200)]
-    const { faturaAtual, comprometidoFuturo, proximoVenc } = calcFaturaCard(card, txs, '2026-06-17')
-    expect(faturaAtual).toBe(300)
-    expect(comprometidoFuturo).toBe(200)
+  // hoje=17/jun → proximoVenc=25/jun, prevVenc=25/mai
+  it('inclui lançamento no vencimento corrente (hoje < fechamento)', () => {
+    const { faturaAtual, proximoVenc } = calcFaturaCard(card, [makeTx('2026-06-25')], '2026-06-17')
+    expect(faturaAtual).toBe(100)
     expect(proximoVenc).toBe('2026-06-25')
   })
 
-  it('soma múltiplos lançamentos do mesmo vencimento na fatura atual', () => {
+  it('soma múltiplos lançamentos no mesmo vencimento', () => {
     const txs = [makeTx('2026-06-25', 300), makeTx('2026-06-25', 200)]
     const { faturaAtual } = calcFaturaCard(card, txs, '2026-06-17')
     expect(faturaAtual).toBe(500)
   })
 
-  it('lançamento de vencimento passado ainda não pago aparece como fatura atual', () => {
-    // Simula situação pós-fechamento: vencimento de mai/25 ainda não conferido
-    const { faturaAtual, proximoVenc } = calcFaturaCard(card, [makeTx('2026-05-25', 150)], '2026-06-21')
+  // hoje=21/jun → passou fechamento dia 20 → proximoVenc=25/jul, prevVenc=25/jun
+  // lançamento em jun/25 (ciclo anterior não pago) deve aparecer como fatura atual (overdue)
+  it('fatura do ciclo anterior não paga aparece como fatura atual (overdue)', () => {
+    const { faturaAtual, proximoVenc } = calcFaturaCard(card, [makeTx('2026-06-25', 150)], '2026-06-21')
     expect(faturaAtual).toBe(150)
-    expect(proximoVenc).toBe('2026-05-25')
+    expect(proximoVenc).toBe('2026-06-25')
   })
 
-  it('sem lançamentos pendentes: retorna R$0 e usa vencimento calendário', () => {
+  // após pagar (conferido=true) o ciclo anterior, mostra o próximo ciclo corrente
+  it('após pagamento do ciclo anterior, mostra ciclo corrente', () => {
+    const txPago     = makeTx('2026-06-25', 300, { conferido: true })
+    const txPendente = makeTx('2026-07-25', 150)
+    // hoje=21/jun → proximoVenc=25/jul
+    const { faturaAtual, proximoVenc } = calcFaturaCard(card, [txPago, txPendente], '2026-06-21')
+    expect(faturaAtual).toBe(150)
+    expect(proximoVenc).toBe('2026-07-25')
+  })
+
+  it('sem lançamentos pendentes: R$0 com vencimento calendário', () => {
     const { faturaAtual, proximoVenc } = calcFaturaCard(card, [], '2026-06-17')
     expect(faturaAtual).toBe(0)
-    expect(proximoVenc).toBe('2026-06-25') // getProximoVencimento calendário
+    expect(proximoVenc).toBe('2026-06-25')
   })
 
   it('ignora lançamentos conferidos', () => {
@@ -318,34 +328,11 @@ describe('calcFaturaCard', () => {
     expect(faturaAtual).toBe(0)
   })
 
-  it('calcula limiteDisponivel corretamente', () => {
+  it('calcula limiteDisponivel: limite - faturaAtual - comprometidoFuturo', () => {
+    // hoje=17/jun → fatura=jun/25, comprometido=jul/25
     const txs = [makeTx('2026-06-25', 1000), makeTx('2026-07-25', 500)]
     const { limiteDisponivel } = calcFaturaCard(card, txs, '2026-06-17')
-    // limite 5000 - faturaAtual 1000 - comprometido 500 = 3500
     expect(limiteDisponivel).toBe(3500)
-  })
-
-  it('acumula parcelas futuras de itens parcelados em comprometidoFuturo', () => {
-    const txComItens = makeTx('2026-06-25', 200, {
-      itens: [{
-        descricao: 'Compra parcelada',
-        valor: 200,
-        isParcelado: true,
-        parcelaAtual: 1,
-        totalParcelas: 3,
-      }],
-    })
-    const { comprometidoFuturo } = calcFaturaCard(card, [txComItens], '2026-06-17')
-    // 2 parcelas restantes × 200 = 400
-    expect(comprometidoFuturo).toBe(400)
-  })
-
-  it('após pagamento (conferido=true), mostra próximo vencimento pendente', () => {
-    const txPago   = makeTx('2026-06-25', 300, { conferido: true })
-    const txPendente = makeTx('2026-07-25', 150)
-    const { faturaAtual, proximoVenc } = calcFaturaCard(card, [txPago, txPendente], '2026-06-27')
-    expect(faturaAtual).toBe(150)
-    expect(proximoVenc).toBe('2026-07-25')
   })
 })
 

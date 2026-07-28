@@ -207,47 +207,29 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
  * @returns {{ faturaAtual: number, comprometidoFuturo: number, limiteDisponivel: number, proximoVenc: string }}
  */
 export function calcFaturaCard(card, transactions, today) {
+  const proximoVenc = getProximoVencimento(card, today);
+  const prevVenc    = addMonths(proximoVenc, -1);
+
   const cardTxs = transactions.filter(
-    t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
+    t => t.tipo === 'cartao' && t.cartaoId === card.id
   );
 
-  // Sem lançamentos pendentes: cartão quitado, usa próximo vencimento calendário
-  if (cardTxs.length === 0) {
-    const proximoVenc = getProximoVencimento(card, today);
-    const limite = card.limite || 0;
-    return { faturaAtual: 0, comprometidoFuturo: 0, limiteDisponivel: limite, proximoVenc };
-  }
+  // Lógica idêntica à tela de Projeção: expandOccurrences para o vencimento exato.
+  // Isso trata corretamente unico, parcelado e recorrentes.
+  const pendentesVenc = (vencDate) =>
+    cardTxs
+      .flatMap(t => expandOccurrences(t, vencDate, vencDate))
+      .filter(o => !o.tx.conferido)
+      .reduce((s, o) => s + o.valor, 0);
 
-  // Agrupa por dataInicio (= data de vencimento atribuída pelo formulário)
-  const byVenc = {};
-  cardTxs.forEach(t => {
-    const v = t.dataInicio;
-    if (!byVenc[v]) byVenc[v] = [];
-    byVenc[v].push(t);
-  });
-  const vencDates = Object.keys(byVenc).sort();
+  // Se há pendências no ciclo anterior (fatura overdue ainda não paga),
+  // ela é a "fatura atual". Caso contrário, mostra o ciclo corrente.
+  const prevPendente = pendentesVenc(prevVenc);
+  const faturaVenc   = prevPendente > 0 ? prevVenc : proximoVenc;
+  const faturaAtual  = prevPendente > 0 ? prevPendente : pendentesVenc(proximoVenc);
 
-  // Fatura atual = vencimento mais antigo com pendências (data-driven, não calendário)
-  const faturaVenc = vencDates[0];
-  let faturaAtual = 0;
-  byVenc[faturaVenc].forEach(tx => { faturaAtual += Number(tx.valor) || 0; });
-
-  // Comprometido futuro = todos os vencimentos posteriores
-  let comprometidoFuturo = 0;
-  vencDates.slice(1).forEach(v => {
-    byVenc[v].forEach(tx => { comprometidoFuturo += Number(tx.valor) || 0; });
-  });
-
-  // Parcelas futuras de itens parcelados
-  cardTxs.forEach(tx => {
-    if (!tx.itens?.length) return;
-    tx.itens.forEach(item => {
-      if (!item.isParcelado) return;
-      const remaining = (item.totalParcelas || 1) - (item.parcelaAtual || 1);
-      if (remaining <= 0) return;
-      comprometidoFuturo += remaining * (Number(item.valor) || 0);
-    });
-  });
+  // Comprometido futuro: próximo vencimento após a fatura atual
+  const comprometidoFuturo = pendentesVenc(addMonths(faturaVenc, 1));
 
   const limite = card.limite || 0;
   const limiteDisponivel = Math.max(0, limite - faturaAtual - comprometidoFuturo);
