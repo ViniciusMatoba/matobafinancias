@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CreditCard, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
+import { CreditCard, ChevronDown, ChevronUp, Plus, X, Link2, Unlink } from 'lucide-react';
 import { formatBRL, formatDate, todayStr, addMonths, getProximoVencimento } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -9,6 +9,7 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
   const { add, update, showToast } = useAppState();
   const [expandedId, setExpandedId] = useState(null);
   const [quickAddCard, setQuickAddCard] = useState(null);
+  const [vincularCard, setVincularCard] = useState(null);
   const [formData, setFormData] = useState({
     valor: '',
     descricao: '',
@@ -193,7 +194,9 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
         const avFech  = diasFech <= 2;
 
         // Lançamentos da fatura aberta — mesma lógica da Projeção: expandOccurrences no vencimento exato
-        const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+        const cardTxs = transactions.filter(
+          t => (t.tipo === 'cartao' && t.cartaoId === card.id) || t.cartaoVinculo === card.id
+        );
         const lançamentos = cardTxs
           .flatMap(t => expandOccurrences(t, proximoVenc, proximoVenc))
           .filter(o => !o.tx.conferido)
@@ -277,6 +280,18 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
                     }}
                   >
                     <Plus size={12} /> Gasto
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); setVincularCard(card); }}
+                    title="Vincular provisão existente a este cartão"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 4,
+                      background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)',
+                      borderRadius: 8, padding: '4px 8px', fontSize: 10, fontWeight: 700,
+                      color: 'var(--primary)', cursor: 'pointer', transition: 'all 0.2s', marginRight: 4
+                    }}
+                  >
+                    <Link2 size={12} /> Vincular
                   </button>
                   {onVerHistorico && (
                     <button
@@ -473,6 +488,131 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
           </div>
         );
       })}
+
+      {/* ── Modal Vincular Provisão ── */}
+      {vincularCard && (() => {
+        const vinculadas = transactions.filter(t => t.cartaoVinculo === vincularCard.id);
+        const disponiveis = transactions.filter(
+          t => t.tipo !== 'cartao' && !t.cartaoVinculo && (t.tipo === 'saida' || t.tipo === 'entrada')
+        ).sort((a, b) => (b.dataInicio || '').localeCompare(a.dataInicio || ''));
+
+        return (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            background: 'rgba(5,5,10,0.85)', backdropFilter: 'blur(6px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+          }}>
+            <div style={{
+              background: 'var(--bg-card)', border: '1px solid var(--border)',
+              borderRadius: 16, width: '100%', maxWidth: 380, overflow: 'hidden',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.5)', maxHeight: '80vh', display: 'flex', flexDirection: 'column'
+            }}>
+              <div style={{
+                padding: '14px 16px', background: 'var(--bg-surface)',
+                borderBottom: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexShrink: 0,
+              }}>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                  Vincular Provisão → {vincularCard.nome}
+                </p>
+                <button onClick={() => setVincularCard(null)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ overflowY: 'auto', flex: 1, padding: '12px 16px' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                  Selecione uma provisão (lançamento já registrado) para vinculá-la a este cartão. O valor dela será somado à fatura.
+                </p>
+
+                {vinculadas.length > 0 && (
+                  <>
+                    <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      Já vinculadas
+                    </p>
+                    {vinculadas.map(t => (
+                      <div key={t.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 10px', borderRadius: 10, marginBottom: 6,
+                        background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {t.descricao || 'Sem descrição'}
+                          </p>
+                          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                            {t.dataInicio} · {formatBRL(t.valor || 0)} · {t.frequencia}
+                          </p>
+                        </div>
+                        <button
+                          onClick={async () => { await update(t.id, { cartaoVinculo: null }); }}
+                          title="Desvincular"
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 4,
+                            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                            borderRadius: 8, padding: '4px 8px', fontSize: 10, fontWeight: 700,
+                            color: '#ef4444', cursor: 'pointer', flexShrink: 0,
+                          }}
+                        >
+                          <Unlink size={11} /> Desvincular
+                        </button>
+                      </div>
+                    ))}
+                    <div style={{ height: 1, background: 'var(--border)', margin: '10px 0' }} />
+                  </>
+                )}
+
+                <p style={{ margin: '0 0 6px', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Disponíveis para vincular
+                </p>
+                {disponiveis.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0' }}>
+                    Nenhuma provisão disponível para vincular.
+                  </p>
+                ) : (
+                  disponiveis.map(t => (
+                    <button
+                      key={t.id}
+                      onClick={async () => { await update(t.id, { cartaoVinculo: vincularCard.id }); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 10px', borderRadius: 10, marginBottom: 6, width: '100%',
+                        background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                        cursor: 'pointer', textAlign: 'left',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {t.descricao || 'Sem descrição'}
+                        </p>
+                        <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                          {t.dataInicio} · {formatBRL(t.valor || 0)} · {t.frequencia}
+                        </p>
+                      </div>
+                      <Link2 size={14} color="var(--primary)" style={{ flexShrink: 0 }} />
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+                <button
+                  onClick={() => setVincularCard(null)}
+                  style={{
+                    width: '100%', padding: '11px', borderRadius: 10,
+                    background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                    color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600, cursor: 'pointer'
+                  }}
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Modal de Adição Rápida ── */}
       {quickAddCard && (

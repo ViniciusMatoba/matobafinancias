@@ -211,7 +211,7 @@ export function calcFaturaCard(card, transactions, today) {
   const prevVenc    = addMonths(proximoVenc, -1);
 
   const cardTxs = transactions.filter(
-    t => t.tipo === 'cartao' && t.cartaoId === card.id
+    t => (t.tipo === 'cartao' && t.cartaoId === card.id) || t.cartaoVinculo === card.id
   );
 
   // Lógica idêntica à tela de Projeção: expandOccurrences para o vencimento exato.

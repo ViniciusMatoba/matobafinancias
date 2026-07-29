@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.111';
+export const APP_VERSION = '1.6.112';
 export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.112',
+    date: '29/07/2026',
+    changes: [
+      'Cartões Home: botão [🔗 Vincular] permite associar uma provisão já cadastrada a um cartão — o valor dela passa a compor a fatura exibida no card',
+      'Cartões Home: provisões vinculadas podem ser desvinculadas a qualquer momento pelo mesmo modal',
+      'calcFaturaCard: agora inclui transações com campo cartaoVinculo além das nativas tipo cartão',
+    ],
+  },
   {
     version: '1.6.111',
     date: '29/07/2026',
