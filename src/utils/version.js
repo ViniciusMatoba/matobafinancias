@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.110';
+export const APP_VERSION = '1.6.111';
 export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.111',
+    date: '29/07/2026',
+    changes: [
+      'Dashboard Financeiro: re-introduzido o painel de cartões de crédito na tela inicial (Home) com limites, barra de progresso de limite de crédito comprometido e lista expansível de lançamentos',
+      'Faturas Futuras: novo indicador de Próximas Faturas exibindo a soma acumulada de parcelas futuras e o detalhamento mês a mês da agenda de parcelamento ativo',
+      'Adição Rápida de Gastos: novo botão [➕ Gasto] nos cartões da Home, abrindo modal simplificado para cadastrar compras avulsas ou parceladas (distribuindo as parcelas nas faturas corretas do Firestore em tempo real)',
+    ],
+  },
   {
     version: '1.6.110',
     date: '29/07/2026',

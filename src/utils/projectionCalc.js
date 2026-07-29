@@ -228,11 +228,29 @@ export function calcFaturaCard(card, transactions, today) {
   const faturaVenc   = prevPendente > 0 ? prevVenc : proximoVenc;
   const faturaAtual  = prevPendente > 0 ? prevPendente : pendentesVenc(proximoVenc);
 
-  // Comprometido futuro: próximo vencimento após a fatura atual
-  const comprometidoFuturo = pendentesVenc(addMonths(faturaVenc, 1));
+  // Comprometido futuro: soma de todas as faturas dos próximos 24 meses
+  const parcelasFuturasDetalhadas = [];
+  let totalComprometidoFuturo = 0;
+  for (let k = 1; k <= 24; k++) {
+    const vencDate = addMonths(faturaVenc, k);
+    const totalMonth = pendentesVenc(vencDate);
+    if (totalMonth > 0) {
+      parcelasFuturasDetalhadas.push({
+        vencimento: vencDate,
+        valor: totalMonth
+      });
+      totalComprometidoFuturo += totalMonth;
+    }
+  }
 
   const limite = card.limite || 0;
-  const limiteDisponivel = Math.max(0, limite - faturaAtual - comprometidoFuturo);
+  const limiteDisponivel = Math.max(0, limite - faturaAtual - totalComprometidoFuturo);
 
-  return { faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc: faturaVenc };
+  return { 
+    faturaAtual, 
+    comprometidoFuturo: totalComprometidoFuturo, 
+    limiteDisponivel, 
+    proximoVenc: faturaVenc,
+    parcelasFuturasDetalhadas
+  };
 }

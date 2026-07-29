@@ -1,7 +1,7 @@
 {
-  "version": "1.6.109",
-  "date": "28/07/2026",
+  "version": "1.6.111",
+  "date": "29/07/2026",
   "notes": [
-    "Fix atualização PWA: SW agora usa skipWaiting automático — app detecta controllerchange e recarrega sozinho com tela de loading, sem depender de banner ou version.json"
+    "Painel de cartões na Home, cálculo acumulado e detalhado por mês das faturas futuras e botão rápido de gasto com parcelamento"
   ]
 }
