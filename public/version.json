@@ -1,7 +1,7 @@
 {
-  "version": "1.6.108",
+  "version": "1.6.109",
   "date": "28/07/2026",
   "notes": [
-    "Fix notificação de atualização PWA: banner aparece imediatamente ao SW detectar nova versão, sem depender do version.json (que pode estar em cache no CDN do GitHub Pages)"
+    "Fix atualização PWA: SW agora usa skipWaiting automático — app detecta controllerchange e recarrega sozinho com tela de loading, sem depender de banner ou version.json"
   ]
 }

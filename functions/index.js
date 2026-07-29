@@ -481,7 +481,15 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   if (tipos.n1 !== false) {
     for (const card of cards) {
       if (card.diaVencimento === day) {
-        msgs.push(`💳 *Fatura vence hoje!*\n${card.nome} — não esqueça de efetuar o pagamento.`);
+        const proximoVenc = getProximoVencimentoBot(card, todayStr);
+        const realTx = transactions.find(
+          t => t.tipo === 'cartao' && t.cartaoId === card.id && t.dataInicio === proximoVenc
+        );
+        msgs.push({
+          text: `💳 *Fatura vence hoje!*\n${card.nome} — não esqueça de efetuar o pagamento.`,
+          txId: realTx ? realTx.id : `virtual:${card.id}`,
+          occDate: proximoVenc
+        });
       }
     }
   }
@@ -494,7 +502,15 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       const dX = new Date(hoje); dX.setDate(dX.getDate() + diasAviso);
       for (const card of cards) {
         if (card.diaVencimento === dX.getDate()) {
-          msgs.push(`📅 *Fatura em ${diasAviso} dia${diasAviso > 1 ? 's' : ''}*\n${card.nome} vence no dia *${card.diaVencimento}*.`);
+          const proximoVenc = getProximoVencimentoBot(card, todayStr);
+          const realTx = transactions.find(
+            t => t.tipo === 'cartao' && t.cartaoId === card.id && t.dataInicio === proximoVenc
+          );
+          msgs.push({
+            text: `📅 *Fatura em ${diasAviso} dia${diasAviso > 1 ? 's' : ''}*\n${card.nome} vence no dia *${card.diaVencimento}*.`,
+            txId: realTx ? realTx.id : `virtual:${card.id}`,
+            occDate: proximoVenc
+          });
         }
       }
     }
@@ -675,7 +691,11 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         if (diaIn2 === txDay && in2Str >= tx.dataInicio && (!tx.dataFim || in2Str <= tx.dataFim)) {
           const jaPago = Array.isArray(tx.conferidos) && tx.conferidos.includes(in2Str);
           if (!jaPago) {
-            msgs.push(`⏰ *Conta fixa vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${in2DD}/${in2MM}.`);
+            msgs.push({
+              text: `⏰ *Conta fixa vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${in2DD}/${in2MM}.`,
+              txId: tx.id,
+              occDate: in2Str
+            });
           }
         }
       } else if (tx.frequencia === 'semanal') {
@@ -693,7 +713,12 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         if (achouOcorrencia) {
           const jaPago = Array.isArray(tx.conferidos) && tx.conferidos.includes(in2Str);
           if (!jaPago) {
-            msgs.push(`⏰ *Conta semanal vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${in2DD}/${in2MM}.`);
+            const [, in2MM, in2DD] = in2Str.split('-');
+            msgs.push({
+              text: `⏰ *Conta semanal vence em 2 dias!*\n${tx.descricao || tx.tipo} — valor de *${formatBRL(v)}* está previsto para ${in2DD}/${in2MM}.`,
+              txId: tx.id,
+              occDate: in2Str
+            });
           }
         }
       }
@@ -1620,6 +1645,362 @@ async function handleConfigurar(chatId, uid) {
   });
 }
 
+// ─── Helpers para Ações Rápidas do Bot e Webhook de Automação ─────────────────
+
+async function handlePayCallback(chatId, uid, txId, occDate) {
+  const isVirtual = txId.includes('-proj-');
+  const parentId = isVirtual ? txId.split('-proj-')[0] : txId;
+  
+  const txRef = db.collection('transactions').doc(uid).collection('entries').doc(parentId);
+  const txDoc = await txRef.get();
+  if (!txDoc.exists) {
+    throw new Error("Lançamento não encontrado.");
+  }
+  const tx = txDoc.data();
+  tx.id = txDoc.id;
+  
+  const today = todayStrBrasilia();
+  
+  if (isVirtual) {
+    const exclusoes = [...(tx.exclusoes || [])];
+    if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+    await txRef.update({ exclusoes });
+    
+    await db.collection('transactions').doc(uid).collection('entries').add({
+      tipo: tx.tipo,
+      frequencia: 'unico',
+      descricao: tx.tipo === 'cartao' 
+        ? (tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura')
+        : tx.descricao,
+      valor: tx.valor,
+      dataInicio: today,
+      categoria: tx.categoria || null,
+      dataFim: null,
+      itens: tx.itens || [],
+      cartaoId: tx.cartaoId || null,
+      conferido: true
+    });
+  } else {
+    if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+      await txRef.update({ dataInicio: today, conferido: true });
+    } else {
+      const exclusoes = [...(tx.exclusoes || [])];
+      if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+      await txRef.update({ exclusoes });
+      
+      await db.collection('transactions').doc(uid).collection('entries').add({
+        tipo: tx.tipo,
+        frequencia: 'unico',
+        descricao: tx.descricao,
+        valor: tx.valor,
+        dataInicio: today,
+        categoria: tx.categoria || null,
+        dataFim: null,
+        conferido: true
+      });
+    }
+  }
+}
+
+async function handlePayCardCallback(chatId, uid, cardId, occDate) {
+  const cardRef = db.collection('cards').doc(uid).collection('list').doc(cardId);
+  const cardDoc = await cardRef.get();
+  if (!cardDoc.exists) {
+    throw new Error("Cartão não encontrado.");
+  }
+  const card = cardDoc.data();
+  card.id = cardDoc.id;
+
+  const today = todayStrBrasilia();
+  
+  const { transactions } = await loadUserData(uid);
+  const { faturaAtual, proximoVenc, prevVenc } = calcFaturaCardBot(card, transactions, today);
+  
+  const cardTxs = transactions.filter(
+    t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
+  );
+  
+  const occs = expandRange(
+    cardTxs.filter(t => t.dataInicio <= prevVenc),
+    prevVenc, proximoVenc
+  ).filter(o => o.date > prevVenc && o.date <= proximoVenc);
+  
+  for (const o of occs) {
+    const parentId = o.tx.id.split('-proj-')[0];
+    const parentRef = db.collection('transactions').doc(uid).collection('entries').doc(parentId);
+    const parentDoc = await parentRef.get();
+    if (parentDoc.exists) {
+      const exclusoes = [...(parentDoc.data().exclusoes || [])];
+      if (!exclusoes.includes(o.date)) {
+        exclusoes.push(o.date);
+        await parentRef.update({ exclusoes });
+      }
+    }
+  }
+  
+  const newItens = [];
+  occs.forEach(o => {
+    if (o.tx?.itens?.length > 0) {
+      o.tx.itens.forEach(item => newItens.push(item));
+    }
+  });
+
+  await db.collection('transactions').doc(uid).collection('entries').add({
+    tipo: 'cartao',
+    frequencia: 'unico',
+    descricao: `Pagamento Fatura - ${card.nome}`,
+    valor: faturaAtual,
+    dataInicio: today,
+    categoria: null,
+    dataFim: null,
+    itens: newItens,
+    cartaoId: cardId,
+    conferido: true
+  });
+}
+
+async function handlePostponeCallback(chatId, uid, txId, occDate, days) {
+  const isVirtual = txId.includes('-proj-');
+  const parentId = isVirtual ? txId.split('-proj-')[0] : txId;
+  
+  const txRef = db.collection('transactions').doc(uid).collection('entries').doc(parentId);
+  const txDoc = await txRef.get();
+  if (!txDoc.exists) {
+    throw new Error("Lançamento não encontrado.");
+  }
+  const tx = txDoc.data();
+  tx.id = txDoc.id;
+  
+  const postponedDate = addDaysFn(occDate, parseInt(days));
+  
+  if (isVirtual) {
+    const exclusoes = [...(tx.exclusoes || [])];
+    if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+    await txRef.update({ exclusoes });
+    
+    await db.collection('transactions').doc(uid).collection('entries').add({
+      tipo: tx.tipo,
+      frequencia: 'unico',
+      descricao: tx.tipo === 'cartao' 
+        ? (tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura')
+        : tx.descricao,
+      valor: tx.valor,
+      dataInicio: postponedDate,
+      categoria: tx.categoria || null,
+      dataFim: null,
+      itens: tx.itens || [],
+      cartaoId: tx.cartaoId || null,
+      conferido: false
+    });
+  } else {
+    if (!tx.frequencia || tx.frequencia === 'unico' || tx.frequencia === 'parcelado') {
+      await txRef.update({ dataInicio: postponedDate });
+    } else {
+      const exclusoes = [...(tx.exclusoes || [])];
+      if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
+      await txRef.update({ exclusoes });
+      
+      await db.collection('transactions').doc(uid).collection('entries').add({
+        tipo: tx.tipo,
+        frequencia: 'unico',
+        descricao: tx.descricao,
+        valor: tx.valor,
+        dataInicio: postponedDate,
+        categoria: tx.categoria || null,
+        dataFim: null,
+        conferido: false
+      });
+    }
+  }
+}
+
+function parseBankNotification(text) {
+  const valorMatch = text.match(/R\$\s*([0-9.,]+)/i);
+  if (!valorMatch) return null;
+  const valorStr = valorMatch[1];
+  const valor = parseBRL(valorStr);
+  if (valor <= 0) return null;
+  
+  let cleanText = text.replace(valorMatch[0], '').replace(/\s+/g, ' ').trim();
+  
+  const t = text.toLowerCase();
+  const isCredito = t.includes('crédito') || t.includes('credito') || t.includes('cartão') || t.includes('compra aprovada no seu');
+  
+  let banco = "";
+  if (t.includes('nubank')) banco = "Nubank";
+  else if (t.includes('inter')) banco = "Inter";
+  else if (t.includes('itaú') || t.includes('itau')) banco = "Itaú";
+  else if (t.includes('bradesco')) banco = "Bradesco";
+  else if (t.includes('santander')) banco = "Santander";
+  else if (t.includes('c6')) banco = "C6 Bank";
+  else if (t.includes('banco do brasil') || t.includes(' bb ')) banco = "Banco do Brasil";
+  
+  let estabelecimento = "Despesa Webhook";
+  const estMatch = cleanText.match(/(?:no|na|em|para|de)\s+([^.]+)/i);
+  if (estMatch) {
+    let est = estMatch[1].trim();
+    est = est.replace(/\s+com\s+o\s+valor.*$/i, '');
+    est = est.replace(/\s+no\s+crédito.*$/i, '');
+    est = est.replace(/\s+no\s+débito.*$/i, '');
+    est = est.replace(/\s+pelo\s+app.*$/i, '');
+    est = est.replace(/[.!?]/g, '');
+    if (est.length > 1) {
+      estabelecimento = est.charAt(0).toUpperCase() + est.slice(1);
+    }
+  }
+  
+  return { valor, estabelecimento, isCredito, banco };
+}
+
+function findSuggestedCategory(txs, desc) {
+  const cleanDesc = desc.trim().toLowerCase();
+  const matchTx = txs.find(t => t.descricao && t.descricao.trim().toLowerCase() === cleanDesc && t.categoria);
+  if (matchTx) return matchTx.categoria;
+  
+  for (const t of txs) {
+    if (t.tipo === 'cartao' && Array.isArray(t.itens)) {
+      const matchItem = t.itens.find(i => i.descricao && i.descricao.trim().toLowerCase() === cleanDesc && i.categoria);
+      if (matchItem) return matchItem.categoria;
+    }
+  }
+  return null;
+}
+
+function matchCardByName(cards, bankName) {
+  if (!bankName) return cards[0] || null;
+  const b = bankName.toLowerCase();
+  return cards.find(c => c.nome && c.nome.toLowerCase().includes(b)) || cards[0] || null;
+}
+
+function matchWalletByName(wallets, bankName) {
+  if (!bankName) return wallets[0] || null;
+  const b = bankName.toLowerCase();
+  return wallets.find(w => w.nome && w.nome.toLowerCase().includes(b)) || wallets[0] || null;
+}
+
+async function handleConfirmPendingTx(chatId, uid, pendingId, catId, msgId) {
+  const pendingRef = db.collection('users').doc(uid).collection('pendingTransactions').doc(pendingId);
+  const pendingDoc = await pendingRef.get();
+  if (!pendingDoc.exists) {
+    return sendMessage(chatId, "❌ Transação pendente não encontrada ou já processada.");
+  }
+  const pending = pendingDoc.data();
+  
+  const CATEGORY_LABELS = {
+    liberdade: '💎 Liberdade',
+    custos_fixos: '🏠 Custos Fixos',
+    conforto: '🛋 Conforto',
+    metas: '🎯 Metas',
+    prazeres: '🎉 Prazeres',
+    conhecimento: '📚 Conhecimento'
+  };
+  
+  const catLabel = CATEGORY_LABELS[catId] || catId;
+  const today = todayStrBrasilia();
+  
+  if (pending.tipo === 'saida') {
+    await db.collection('transactions').doc(uid).collection('entries').add({
+      tipo: 'saida',
+      frequencia: 'unico',
+      descricao: pending.descricao,
+      valor: pending.valor,
+      dataInicio: pending.dataCompra || today,
+      categoria: catId,
+      carteiraId: pending.carteiraId || null,
+      conferido: true,
+      via: 'webhook'
+    });
+  } else if (pending.tipo === 'cartao') {
+    const cardId = pending.cartaoId;
+    const cardRef = db.collection('cards').doc(uid).collection('list').doc(cardId);
+    const cardDoc = await cardRef.get();
+    if (!cardDoc.exists) {
+      throw new Error("Cartão correspondente não encontrado.");
+    }
+    const card = cardDoc.data();
+    
+    const purchaseDate = pending.dataCompra || today;
+    const proximoVenc = getProximoVencimentoBot(card, purchaseDate);
+    
+    const txsSnap = await db.collection('transactions').doc(uid).collection('entries')
+      .where('tipo', '==', 'cartao')
+      .where('cartaoId', '==', cardId)
+      .where('dataInicio', '==', proximoVenc)
+      .limit(1)
+      .get();
+      
+    const newItem = {
+      descricao: pending.descricao,
+      valor: pending.valor,
+      categoria: catId,
+      dataCompra: purchaseDate,
+      isParcelado: false
+    };
+    
+    if (!txsSnap.empty) {
+      const invoiceDoc = txsSnap.docs[0];
+      const invoice = invoiceDoc.data();
+      const currentItens = Array.isArray(invoice.itens) ? invoice.itens : [];
+      const updatedItens = [...currentItens, newItem];
+      const newTotal = updatedItens.reduce((sum, item) => sum + (Number(item.valor) || 0), 0);
+      
+      await invoiceDoc.ref.update({
+        itens: updatedItens,
+        valor: newTotal
+      });
+    } else {
+      await db.collection('transactions').doc(uid).collection('entries').add({
+        tipo: 'cartao',
+        frequencia: 'unico',
+        descricao: `Fatura - ${card.nome}`,
+        valor: pending.valor,
+        dataInicio: proximoVenc,
+        categoria: null,
+        dataFim: null,
+        itens: [newItem],
+        cartaoId: cardId,
+        conferido: false
+      });
+    }
+  }
+  
+  await pendingRef.delete();
+  
+  const okText = `✅ *Gasto de ${formatBRL(pending.valor)} no "${pending.descricao}" salvo em ${catLabel}!*`;
+  await tgFetch('editMessageText', {
+    chat_id: chatId,
+    message_id: msgId,
+    text: okText,
+    parse_mode: 'Markdown',
+    reply_markup: { inline_keyboard: [] }
+  });
+}
+
+async function handleIgnorePendingTx(chatId, uid, pendingId, msgId) {
+  const pendingRef = db.collection('users').doc(uid).collection('pendingTransactions').doc(pendingId);
+  const pendingDoc = await pendingRef.get();
+  if (pendingDoc.exists) {
+    const pending = pendingDoc.data();
+    await pendingRef.delete();
+    const ignoreText = `❌ *Gasto de ${formatBRL(pending.valor)} no "${pending.descricao}" ignorado.*`;
+    await tgFetch('editMessageText', {
+      chat_id: chatId,
+      message_id: msgId,
+      text: ignoreText,
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: [] }
+    });
+  } else {
+    await tgFetch('editMessageText', {
+      chat_id: chatId,
+      message_id: msgId,
+      text: `❌ *Gasto ignorado.*`,
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: [] }
+    });
+  }
+}
+
 // ─── Handler de callback_query (botões inline) ────────────────────────────────
 async function handleCallbackQuery(cbq) {
   const chatId    = cbq.message?.chat?.id;
@@ -1639,6 +2020,97 @@ async function handleCallbackQuery(cbq) {
   if (snap.empty) return;
   const uid   = snap.docs[0].id;
   let tipos   = await getTelegramTipos(uid);
+
+  // ── Interceptadores de Ações Rápidas (Pagar, Adiar, Confirmar Webhook)
+  if (data.startsWith('pay:')) {
+    const parts = data.split(':');
+    const txId = parts[1];
+    const occDate = parts[2];
+    try {
+      await handlePayCallback(chatId, uid, txId, occDate);
+      const updatedText = (cbq.message?.text || '') + `\n\n✅ *Pago em ${todayStrBrasilia().split('-').reverse().join('/')}*`;
+      await tgFetch('editMessageText', {
+        chat_id: chatId,
+        message_id: msgId,
+        text: updatedText,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [] }
+      });
+    } catch (err) {
+      logger.error('[pay callback]', err);
+      await sendMessage(chatId, `❌ Erro ao registrar pagamento: ${err.message}`);
+    }
+    return;
+  }
+
+  if (data.startsWith('paycard:')) {
+    const parts = data.split(':');
+    const cardId = parts[1];
+    const occDate = parts[2];
+    try {
+      await handlePayCardCallback(chatId, uid, cardId, occDate);
+      const updatedText = (cbq.message?.text || '') + `\n\n✅ *Fatura paga em ${todayStrBrasilia().split('-').reverse().join('/')}*`;
+      await tgFetch('editMessageText', {
+        chat_id: chatId,
+        message_id: msgId,
+        text: updatedText,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [] }
+      });
+    } catch (err) {
+      logger.error('[paycard callback]', err);
+      await sendMessage(chatId, `❌ Erro ao registrar pagamento da fatura: ${err.message}`);
+    }
+    return;
+  }
+
+  if (data.startsWith('postpone:')) {
+    const parts = data.split(':');
+    const txId = parts[1];
+    const occDate = parts[2];
+    const days = parts[3];
+    try {
+      await handlePostponeCallback(chatId, uid, txId, occDate, days);
+      const postDateFmt = addDaysFn(occDate, parseInt(days)).split('-').reverse().join('/');
+      const updatedText = (cbq.message?.text || '') + `\n\n📅 *Adiado para ${postDateFmt}*`;
+      await tgFetch('editMessageText', {
+        chat_id: chatId,
+        message_id: msgId,
+        text: updatedText,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [] }
+      });
+    } catch (err) {
+      logger.error('[postpone callback]', err);
+      await sendMessage(chatId, `❌ Erro ao adiar lançamento: ${err.message}`);
+    }
+    return;
+  }
+
+  if (data.startsWith('tx_ok:')) {
+    const parts = data.split(':');
+    const pendingId = parts[1];
+    const catId = parts[2];
+    try {
+      await handleConfirmPendingTx(chatId, uid, pendingId, catId, msgId);
+    } catch (err) {
+      logger.error('[confirm pending callback]', err);
+      await sendMessage(chatId, `❌ Erro ao confirmar lançamento: ${err.message}`);
+    }
+    return;
+  }
+
+  if (data.startsWith('tx_no:')) {
+    const parts = data.split(':');
+    const pendingId = parts[1];
+    try {
+      await handleIgnorePendingTx(chatId, uid, pendingId, msgId);
+    } catch (err) {
+      logger.error('[ignore pending callback]', err);
+      await sendMessage(chatId, `❌ Erro ao ignorar despesa: ${err.message}`);
+    }
+    return;
+  }
 
   // ── Toggle individual
   if (data.startsWith('tgl_')) {
@@ -2675,7 +3147,8 @@ exports.dailyNotifications = onSchedule(
             const pushMsgs  = checkNotifications(cards, transactions, config, pushPrefs, goals, walletInitials);
             for (const msg of pushMsgs) {
               try {
-                await sendPushNotification(fcmToken, msg);
+                const text = typeof msg === 'string' ? msg : msg.text;
+                await sendPushNotification(fcmToken, text);
               } catch (pushErr) {
                 logger.error(`[PUSH] Erro FCM uid=${uid}:`, pushErr);
                 const code = pushErr?.errorInfo?.code || pushErr?.code;
@@ -2699,7 +3172,34 @@ exports.dailyNotifications = onSchedule(
             const tgMsgs  = checkNotifications(cards, transactions, config, tgPrefs, goals, walletInitials);
             let tgBlocked = false;
             for (const msg of tgMsgs) {
-              const tgRes = await sendMessage(chatId, msg);
+              const msgObj = typeof msg === 'string' ? { text: msg } : msg;
+              let extra = {};
+              if (msgObj.txId && msgObj.occDate) {
+                if (msgObj.txId.startsWith('virtual:')) {
+                  const cardId = msgObj.txId.split(':')[1];
+                  extra = {
+                    reply_markup: {
+                      inline_keyboard: [
+                        [
+                          { text: '✅ Pago', callback_data: `paycard:${cardId}:${msgObj.occDate}` }
+                        ]
+                      ]
+                    }
+                  };
+                } else {
+                  extra = {
+                    reply_markup: {
+                      inline_keyboard: [
+                        [
+                          { text: '✅ Pago', callback_data: `pay:${msgObj.txId}:${msgObj.occDate}` },
+                          { text: '📅 Adiar 5 dias', callback_data: `postpone:${msgObj.txId}:${msgObj.occDate}:5` }
+                        ]
+                      ]
+                    }
+                  };
+                }
+              }
+              const tgRes = await sendMessage(chatId, msgObj.text, extra);
               if (tgRes && tgRes.ok === false) {
                 const isBlocked = tgRes.error_code === 403 || 
                   (tgRes.error_code === 400 && tgRes.description?.includes('chat not found'));
@@ -2857,6 +3357,146 @@ exports.setTelegramWebhook = onRequest(
       // GET: retorna status atual do webhook
       const info = await tgFetch('getWebhookInfo', {});
       res.json(info);
+    }
+  }
+);
+
+// ─── EXPORT 4: Webhook de Automação de Gastos (MacroDroid/Tasker) ─────────────
+exports.smsWebhook = onRequest(
+  { region: REGION, timeoutSeconds: 30, invoker: 'public' },
+  async (req, res) => {
+    const token = req.query.token;
+    if (!token) {
+      res.status(400).send("Falta o token de autenticação.");
+      return;
+    }
+    
+    try {
+      const usersSnap = await db.collection('users').where('webhookToken', '==', token).limit(1).get();
+      if (usersSnap.empty) {
+        res.status(403).send("Token inválido.");
+        return;
+      }
+      const userDoc = usersSnap.docs[0];
+      const uid = userDoc.id;
+      const userData = userDoc.data();
+      const chatId = userData.telegramChatId;
+      
+      if (!chatId) {
+        res.status(400).send("Telegram não vinculado.");
+        return;
+      }
+      
+      let text = "";
+      if (typeof req.body === 'string') {
+        text = req.body;
+      } else if (req.body && typeof req.body.text === 'string') {
+        text = req.body.text;
+      } else if (req.body && typeof req.body.message === 'string') {
+        text = req.body.message;
+      } else {
+        text = JSON.stringify(req.body);
+      }
+      
+      logger.info(`[Webhook] user=${uid} text="${text}"`);
+      
+      const parsed = parseBankNotification(text);
+      if (!parsed) {
+        res.status(200).send("Texto não reconhecido como notificação bancária válida.");
+        return;
+      }
+      
+      const { valor, estabelecimento, isCredito, banco } = parsed;
+      
+      const entriesSnap = await db.collection('transactions').doc(uid).collection('entries').get();
+      const txs = entriesSnap.docs.map(d => d.data());
+      const suggestedCat = findSuggestedCategory(txs, estabelecimento);
+      
+      let cartaoId = null;
+      let carteiraId = null;
+      
+      if (isCredito) {
+        const cardsSnap = await db.collection('cards').doc(uid).collection('list').get();
+        const cards = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const matchedCard = matchCardByName(cards, banco);
+        if (matchedCard) {
+          cartaoId = matchedCard.id;
+        }
+      } else {
+        const walletsSnap = await db.collection('wallets').where('userId', '==', uid).get();
+        const wallets = walletsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const matchedWallet = matchWalletByName(wallets, banco);
+        if (matchedWallet) {
+          carteiraId = matchedWallet.id;
+        }
+      }
+      
+      const pendingRef = db.collection('users').doc(uid).collection('pendingTransactions').doc();
+      const pendingId = pendingRef.id;
+      const today = todayStrBrasilia();
+      
+      await pendingRef.set({
+        descricao: estabelecimento,
+        valor: valor,
+        tipo: isCredito ? 'cartao' : 'saida',
+        cartaoId: cartaoId,
+        carteiraId: carteiraId,
+        dataCompra: today,
+        createdAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+      
+      const paymentLabel = isCredito ? 'Crédito' : 'Débito/Pix';
+      const bancoLabel = banco ? ` (${banco})` : '';
+      let msgText = `💸 *Novo gasto detectado!*${bancoLabel}\n\n`;
+      msgText += `• Estabelecimento: *${estabelecimento}*\n`;
+      msgText += `• Valor: *${formatBRL(valor)}*\n`;
+      msgText += `• Forma: *${paymentLabel}*\n\n`;
+      msgText += `Como deseja salvar este lançamento?`;
+      
+      const inline_keyboard = [];
+      
+      const CATEGORY_LABELS = {
+        liberdade: '💎 Liberdade',
+        custos_fixos: '🏠 Custos Fixos',
+        conforto: '🛋 Conforto',
+        metas: '🎯 Metas',
+        prazeres: '🎉 Prazeres',
+        conhecimento: '📚 Conhecimento'
+      };
+      
+      if (suggestedCat && CATEGORY_LABELS[suggestedCat]) {
+        inline_keyboard.push([
+          { text: `✅ Salvar em ${CATEGORY_LABELS[suggestedCat]} (Sugerido)`, callback_data: `tx_ok:${pendingId}:${suggestedCat}` }
+        ]);
+      }
+      
+      const catKeys = Object.keys(CATEGORY_LABELS);
+      for (let i = 0; i < catKeys.length; i += 2) {
+        const row = [];
+        const c1 = catKeys[i];
+        const c2 = catKeys[i+1];
+        row.push({ text: CATEGORY_LABELS[c1], callback_data: `tx_ok:${pendingId}:${c1}` });
+        if (c2) {
+          row.push({ text: CATEGORY_LABELS[c2], callback_data: `tx_ok:${pendingId}:${c2}` });
+        }
+        inline_keyboard.push(row);
+      }
+      
+      inline_keyboard.push([
+        { text: `❌ Ignorar Despesa`, callback_data: `tx_no:${pendingId}` }
+      ]);
+      
+      await tgFetch('sendMessage', {
+        chat_id: chatId,
+        text: msgText,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard }
+      });
+      
+      res.status(200).send("Mensagem enviada com sucesso.");
+    } catch (err) {
+      logger.error('[smsWebhook]', err);
+      res.status(500).send(`Erro interno: ${err.message}`);
     }
   }
 );

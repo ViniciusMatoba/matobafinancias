@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.109';
-export const APP_VERSION_DATE = '28/07/2026';
+export const APP_VERSION = '1.6.110';
+export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.110',
+    date: '29/07/2026',
+    changes: [
+      'Telegram Interativo: botões de ação rápida [✅ Pago] e [📅 Adiar 5 dias] nos alertas diários do bot',
+      'Webhook de Automação: integração com MacroDroid/Tasker para cadastrar compras via notificações do celular (sugere categoria, envia opções rápidas e salva em crédito/débito automaticamente)',
+      'Configurações: novo painel para gerenciamento do webhook e guia ilustrativo de configuração do celular',
+      'Projeção Financeira: botão de impressão e layout A4/PDF elegante para exportação de dados diários e anuais',
+    ],
+  },
   {
     version: '1.6.109',
     date: '28/07/2026',

@@ -189,9 +189,22 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Projeção</h1>
-              <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda">
+              <button onClick={() => setHelpOpen(true)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4 }} title="Ajuda" className="no-print">
                 <HelpCircle size={17} />
               </button>
+              {viewTab !== 'historico' && (
+                <button
+                  onClick={() => window.print()}
+                  style={{
+                    background: 'none', border: 'none', color: 'var(--text-muted)',
+                    cursor: 'pointer', display: 'flex', padding: 4, marginLeft: 2
+                  }}
+                  title="Exportar PDF"
+                  className="no-print"
+                >
+                  <span style={{ fontSize: 16 }}>🖨️</span>
+                </button>
+              )}
             </div>
             
             {/* Segmented Control de 3 opções */}
@@ -801,6 +814,255 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
       </div>}
     </div>
     <HelpModal screen="projection" open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+    {/* ── Seção Especial de Impressão (Exclusiva do PDF / Papel A4) ──────────── */}
+    <div className="print-only" style={{ display: 'none' }}>
+      <style>{`
+        @media print {
+          /* Ocultar elementos desnecessários da interface web */
+          header, footer, nav, aside, .no-print, button, select, input,
+          div[style*="position: sticky"], 
+          div[style*="padding: 14px 20px"],
+          div[style*="background: var(--bg-primary)"] {
+            display: none !important;
+          }
+
+          #root {
+            max-width: none !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            min-height: 0 !important;
+            display: block !important;
+          }
+
+          /* Oculta tudo dentro do root exceto a seção de print */
+          #root > div > *:not(.print-only) {
+            display: none !important;
+          }
+
+          body {
+            background: #fff !important;
+            color: #000 !important;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+          }
+
+          .print-only {
+            display: block !important;
+            padding: 20px !important;
+          }
+
+          .print-container {
+            padding: 24px;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #111;
+          }
+
+          .print-header {
+            border-bottom: 2px solid #222;
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+          }
+
+          .print-title {
+            font-size: 26px;
+            font-weight: 700;
+            margin: 0;
+            color: #1a202c;
+          }
+
+          .print-subtitle {
+            font-size: 13px;
+            color: #4a5568;
+            margin: 3px 0 0 0;
+          }
+
+          .print-dates {
+            font-size: 11px;
+            color: #718096;
+            margin-top: 5px;
+          }
+
+          .print-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
+          }
+
+          .print-summary-card {
+            border: 1px solid #cbd5e0;
+            padding: 14px;
+            border-radius: 8px;
+            background-color: #f7fafc;
+          }
+
+          .print-summary-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #4a5568;
+            display: block;
+            margin-bottom: 4px;
+          }
+
+          .print-summary-val {
+            font-size: 18px;
+            font-weight: 700;
+          }
+
+          .print-section-title {
+            font-size: 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border-bottom: 1px solid #a0aec0;
+            padding-bottom: 5px;
+            margin: 28px 0 12px 0;
+            page-break-after: avoid;
+          }
+
+          .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+          }
+
+          .print-table th, .print-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
+            text-align: left;
+            font-size: 11px;
+          }
+
+          .print-table th {
+            background-color: #edf2f7;
+            font-weight: 600;
+            color: #2d3748;
+          }
+
+          .print-table tr:nth-of-type(even) {
+            background-color: #f7fafc;
+          }
+
+          .print-table tr {
+            page-break-inside: avoid;
+          }
+
+          .print-neg {
+            color: #c53030 !important;
+          }
+
+          .print-pos {
+            color: #2f855a !important;
+          }
+        }
+      `}</style>
+
+      <div className="print-container">
+        <div className="print-header">
+          <div>
+            <h1 className="print-title">Matoba Finanças</h1>
+            <p className="print-subtitle">Projeção Financeira — Aba: {viewTab === 'anual' ? 'Anual' : viewTab === 'resumo' ? 'Período' : 'Mensal'}</p>
+            <p className="print-dates">Período: {from.split('-').reverse().join('/')} até {to.split('-').reverse().join('/')}</p>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: 10, color: '#718096' }}>
+            Gerado em: {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}
+          </div>
+        </div>
+
+        {viewTab !== 'anual' && (
+          <div className="print-summary-grid">
+            <div className="print-summary-card">
+              <span className="print-summary-label">Saldo Inicial</span>
+              <strong className="print-summary-val" style={{ color: saldoInicial >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(saldoInicial)}</strong>
+            </div>
+            <div className="print-summary-card">
+              <span className="print-summary-label">Saldo Final</span>
+              <strong className="print-summary-val" style={{ color: saldoFim >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(saldoFim)}</strong>
+            </div>
+            <div className="print-summary-card">
+              <span className="print-summary-label">Mínimo Projetado</span>
+              <strong className="print-summary-val" style={{ color: minSaldo >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(minSaldo)}</strong>
+            </div>
+            <div className="print-summary-card">
+              <span className="print-summary-label">Máximo Projetado</span>
+              <strong className="print-summary-val" style={{ color: '#2f855a' }}>{formatBRL(maxSaldo)}</strong>
+            </div>
+          </div>
+        )}
+
+        {viewTab === 'anual' ? (
+          <div>
+            <h2 className="print-section-title">Resumo Mensal de Planejamento Anual ({selectedYear})</h2>
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '25%' }}>Mês</th>
+                  <th style={{ width: '18%' }}>Entradas</th>
+                  <th style={{ width: '18%' }}>Saídas</th>
+                  <th style={{ width: '18%' }}>Balanço</th>
+                  <th style={{ width: '21%' }}>Saldo Projetado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {annualData.map((m, idx) => (
+                  <tr key={idx}>
+                    <td><strong>{MONTH_NAMES_FULL[m.monthIndex]}</strong></td>
+                    <td className="print-pos">{formatBRL(m.entradas)}</td>
+                    <td className="print-neg">{formatBRL(m.saidas)}</td>
+                    <td className={m.resultado >= 0 ? "print-pos" : "print-neg"}>{formatBRL(m.resultado)}</td>
+                    <td><strong>{formatBRL(m.saldoFim)}</strong></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div>
+            <h2 className="print-section-title">Detalhamento dos Lançamentos e Projeção Diária</h2>
+            <table className="print-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '15%' }}>Data</th>
+                  <th style={{ width: '10%' }}>Dia</th>
+                  <th style={{ width: '55%' }}>Detalhamento das Movimentações</th>
+                  <th style={{ width: '20%', textAlign: 'right' }}>Saldo Final</th>
+                </tr>
+              </thead>
+              <tbody>
+                {days.map(day => {
+                  const hasItems = day.items.length > 0;
+                  const dNum = formatDayNum(day.date);
+                  const dName = dayName(day.date);
+                  const dataFmt = day.date.split('-').reverse().join('/');
+                  
+                  const desc = hasItems
+                    ? day.items.map(it => {
+                        const sign = it.tx.tipo === 'entrada' ? '+' : '-';
+                        const descTx = it.tx.descricao || it.tx.tipo;
+                        return `${descTx} (${sign}${formatBRL(it.valor)})`;
+                      }).join(', ')
+                    : 'Sem movimentações';
+
+                  return (
+                    <tr key={day.date}>
+                      <td>{dataFmt}</td>
+                      <td>{dName}</td>
+                      <td>{desc}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatBRL(day.saldo)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
     </>
   );
 }
