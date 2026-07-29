@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.112';
+export const APP_VERSION = '1.6.113';
 export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.113',
+    date: '29/07/2026',
+    changes: [
+      'Fix modal Vincular Provisão: agora exibe corretamente lançamentos do tipo cartão de outros cartões para vincular',
+    ],
+  },
   {
     version: '1.6.112',
     date: '29/07/2026',

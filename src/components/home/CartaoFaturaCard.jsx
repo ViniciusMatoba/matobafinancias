@@ -493,7 +493,7 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
       {vincularCard && (() => {
         const vinculadas = transactions.filter(t => t.cartaoVinculo === vincularCard.id);
         const disponiveis = transactions.filter(
-          t => t.tipo !== 'cartao' && !t.cartaoVinculo && (t.tipo === 'saida' || t.tipo === 'entrada')
+          t => t.tipo === 'cartao' && t.cartaoId !== vincularCard.id && t.cartaoVinculo !== vincularCard.id
         ).sort((a, b) => (b.dataInicio || '').localeCompare(a.dataInicio || ''));
 
         return (
