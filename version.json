@@ -1,7 +1,7 @@
 {
-  "version": "1.6.113",
+  "version": "1.6.112",
   "date": "29/07/2026",
   "notes": [
-    "Fix modal Vincular Provisão: agora exibe corretamente lançamentos do tipo cartão de outros cartões para vincular"
+    "Cartões Home: botão [🔗 Vincular"
   ]
 }
