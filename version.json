@@ -1,7 +1,7 @@
 {
-  "version": "1.6.111",
+  "version": "1.6.113",
   "date": "29/07/2026",
   "notes": [
-    "Painel de cartões na Home, cálculo acumulado e detalhado por mês das faturas futuras e botão rápido de gasto com parcelamento"
+    "Fix modal Vincular Provisão: agora exibe corretamente lançamentos do tipo cartão de outros cartões para vincular"
   ]
 }
