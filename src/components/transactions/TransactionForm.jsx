@@ -890,8 +890,8 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
           if (!card?.diaVencimento) return;
           const today = todayStr();
           const [y, m, d] = today.split('-').map(Number);
-          const diaFech = card.diaFechamento || card.diaVencimento;
-          const diaVenc = card.diaVencimento;
+          const diaFech = Number(card.diaFechamento) || Number(card.diaVencimento);
+          const diaVenc = Number(card.diaVencimento);
           let mes = m, ano = y;
           if (d > diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }
           if (diaVenc < diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }

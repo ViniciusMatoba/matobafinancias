@@ -7,8 +7,8 @@ import { addDays, addWeeks, addMonths, TYPE_CONFIG, todayStr, getProximoVencimen
  */
 export function getClosingDate(card, vencStr) {
   const [y, m] = vencStr.split('-').map(Number);
-  const diaFech = card.diaFechamento || card.diaVencimento;
-  const diaVenc = card.diaVencimento;
+  const diaFech = Number(card.diaFechamento) || Number(card.diaVencimento);
+  const diaVenc = Number(card.diaVencimento);
   let cm = m, cy = y;
   if (diaVenc < diaFech) { cm -= 1; if (cm < 1) { cm = 12; cy -= 1; } }
   const lastDay = new Date(cy, cm, 0).getDate();

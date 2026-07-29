@@ -162,7 +162,7 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
   // Próxima data de fechamento para um cartão
   const proximoFechamento = (card) => {
     const [y, m, d] = today.split('-').map(Number);
-    const diaFech = card.diaFechamento || card.diaVencimento;
+    const diaFech = Number(card.diaFechamento) || Number(card.diaVencimento);
     let mes = m, ano = y;
     if (d >= diaFech) { mes += 1; if (mes > 12) { mes = 1; ano += 1; } }
     const lastDay = new Date(ano, mes, 0).getDate();
