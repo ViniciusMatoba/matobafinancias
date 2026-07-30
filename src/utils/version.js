@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.113';
+export const APP_VERSION = '1.6.114';
 export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.114',
+    date: '30/07/2026',
+    changes: [
+      'Tela Inicial: removidos os cards de cartão de crédito (CartaoFaturaCard) — faturas continuam visíveis na aba Projeção',
+    ],
+  },
   {
     version: '1.6.113',
     date: '29/07/2026',

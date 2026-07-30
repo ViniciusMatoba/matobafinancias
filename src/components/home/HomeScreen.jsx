@@ -1,13 +1,11 @@
 import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
-import { expandOccurrences, calcSaldo, calcularSobraSegura, calcFaturaCard } from '../../utils/projectionCalc';
+import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import BudgetSummaryCard from './BudgetSummaryCard';
 import AdjustBalanceModal from './AdjustBalanceModal';
 import ProximasContasCard from './ProximasContasCard';
-import CartaoFaturaCard from './CartaoFaturaCard';
-import FaturaHistoricoModal from './FaturaHistoricoModal';
 import HelpModal from '../shared/HelpModal';
 
 const TIPO_ICONS = {
@@ -32,7 +30,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [historyCard, setHistoryCard] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [valuesVisible, setValuesVisible] = useState(
     () => localStorage.getItem('matoba:values-visible') !== 'false'
@@ -77,15 +74,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   }, [wallets, transactions, selectedDate]);
 
   // Estatísticas de limite e saldo dos cartões
-  const cardsStats = useMemo(() => {
-    if (!cards?.length) return [];
-    const today = todayStr();
-    return cards.map(card => {
-      const stats = calcFaturaCard(card, transactions, today);
-      return { ...card, ...stats, totalComprometido: stats.faturaAtual + stats.comprometidoFuturo };
-    });
-  }, [cards, transactions]);
-
   // Ocorrências apenas do dia selecionado
   const dayOccs = useMemo(() =>
     transactions.flatMap(tx =>
@@ -420,20 +408,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
 
 
-      {/* Cards de Fatura por Cartão — dashboard + expansão de lançamentos */}
-      {cardsStats.length > 0 && (
-        <div style={{ padding: '16px 20px 0' }}>
-          <p style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Cartões de Crédito
-          </p>
-          <CartaoFaturaCard
-            cardsStats={cardsStats}
-            transactions={transactions}
-            onVerHistorico={setHistoryCard}
-            hideValues={!valuesVisible}
-          />
-        </div>
-      )}
 
       {/* Card de Próximas Contas — fluxo dos próximos 7 dias */}
       <div style={{ padding: '16px 20px 0' }}>
@@ -606,12 +580,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
     </div>
       <HelpModal screen="home" open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <FaturaHistoricoModal
-        card={historyCard}
-        transactions={transactions}
-        open={!!historyCard}
-        onClose={() => setHistoryCard(null)}
-      />
     </>
   );
 }
