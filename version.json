@@ -1,11 +1,7 @@
 {
-  "version": "1.6.116",
+  "version": "1.6.118",
   "date": "05/08/2026",
   "notes": [
-    "Fix Projeção: saldo inicial agora inclui saldoInicial das carteiras e gastos diários históricos — alinhado com o saldo exibido na Home",
-    "Fix Projeção Anual: planejamento anual também usa saldo inicial correto com carteiras",
-    "Fix calcFaturaCard: fatura não é mais marcada como vencida entre o fechamento e o vencimento real do cartão",
-    "Fix Home: progresso da reserva de emergência agora expande ocorrências recorrentes corretamente",
-    "Fix Projeção: badge de cartão não duplica mais quando diaFechamento = diaVencimento"
+    "Fix Projeção Anual: wallets adicionado às dependências do useMemo — planejamento anual agora recalcula quando carteiras mudam"
   ]
 }
