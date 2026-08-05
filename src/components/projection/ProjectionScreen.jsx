@@ -168,7 +168,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
     }
     
     return months;
-  }, [transactions, selectedYear, viewTab]);
+  }, [transactions, wallets, selectedYear, viewTab]);
 
   // Totais anuais
   const annualSummary = useMemo(() => {
