@@ -59,7 +59,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
     if (!from) return 0;
     const dayBefore = addDays(from, -1);
     const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
-    return calcSaldo(transactions, FAR_PAST, dayBefore, { historical: true }) + wInitials;
+    return calcSaldo(transactions, FAR_PAST, dayBefore) + wInitials;
   }, [transactions, wallets, from, viewTab]);
 
   const days = useMemo(() => {
@@ -123,7 +123,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
     // Saldo no dia anterior ao início do ano
     const prevYearEnd = `${selectedYear - 1}-12-31`;
     const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
-    const startBalance = calcSaldo(transactions, FAR_PAST, prevYearEnd, { historical: true }) + wInitials;
+    const startBalance = calcSaldo(transactions, FAR_PAST, prevYearEnd) + wInitials;
     
     // Projeta todos os dias do ano
     const yearDays = buildDailyProjection(transactions, yearStart, yearEnd, startBalance);

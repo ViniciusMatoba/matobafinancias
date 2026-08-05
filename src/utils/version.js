@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.118';
+export const APP_VERSION = '1.6.119';
 export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.119',
+    date: '05/08/2026',
+    changes: [
+      'Fix Projeção: removido historical:true do cálculo de saldo inicial — restaura consistência com o saldo exibido na Home (mantém wInitials das carteiras)',
+    ],
+  },
   {
     version: '1.6.118',
     date: '05/08/2026',
