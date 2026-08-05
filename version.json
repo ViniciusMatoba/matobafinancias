@@ -1,7 +1,11 @@
 {
-  "version": "1.6.114",
-  "date": "30/07/2026",
+  "version": "1.6.116",
+  "date": "05/08/2026",
   "notes": [
-    "Tela Inicial: removidos os cards de cartão de crédito (CartaoFaturaCard) — faturas continuam visíveis na aba Projeção"
+    "Fix Projeção: saldo inicial agora inclui saldoInicial das carteiras e gastos diários históricos — alinhado com o saldo exibido na Home",
+    "Fix Projeção Anual: planejamento anual também usa saldo inicial correto com carteiras",
+    "Fix calcFaturaCard: fatura não é mais marcada como vencida entre o fechamento e o vencimento real do cartão",
+    "Fix Home: progresso da reserva de emergência agora expande ocorrências recorrentes corretamente",
+    "Fix Projeção: badge de cartão não duplica mais quando diaFechamento = diaVencimento"
   ]
 }
