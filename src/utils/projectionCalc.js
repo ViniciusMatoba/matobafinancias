@@ -222,11 +222,11 @@ export function calcFaturaCard(card, transactions, today) {
       .filter(o => !o.tx.conferido)
       .reduce((s, o) => s + o.valor, 0);
 
-  // Se há pendências no ciclo anterior (fatura overdue ainda não paga),
-  // ela é a "fatura atual". Caso contrário, mostra o ciclo corrente.
+  // Se há pendências no ciclo anterior E o vencimento já passou, é overdue.
+  // Caso contrário (fatura fechada mas ainda não vencida), mostra o ciclo corrente.
   const prevPendente = pendentesVenc(prevVenc);
-  const faturaVenc   = prevPendente > 0 ? prevVenc : proximoVenc;
-  const faturaAtual  = prevPendente > 0 ? prevPendente : pendentesVenc(proximoVenc);
+  const faturaVenc   = (prevPendente > 0 && prevVenc <= today) ? prevVenc : proximoVenc;
+  const faturaAtual  = faturaVenc === prevVenc ? prevPendente : pendentesVenc(proximoVenc);
 
   // Comprometido futuro: soma de todas as faturas dos próximos 24 meses
   const parcelasFuturasDetalhadas = [];

@@ -58,8 +58,9 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
     if (viewTab === 'anual' || viewTab === 'historico') return 0;
     if (!from) return 0;
     const dayBefore = addDays(from, -1);
-    return calcSaldo(transactions, FAR_PAST, dayBefore);
-  }, [transactions, from, viewTab]);
+    const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
+    return calcSaldo(transactions, FAR_PAST, dayBefore, { historical: true }) + wInitials;
+  }, [transactions, wallets, from, viewTab]);
 
   const days = useMemo(() => {
     if (viewTab === 'anual' || viewTab === 'historico' || !from || !to || from > to) return [];
@@ -121,7 +122,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
     
     // Saldo no dia anterior ao início do ano
     const prevYearEnd = `${selectedYear - 1}-12-31`;
-    const startBalance = calcSaldo(transactions, FAR_PAST, prevYearEnd);
+    const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
+    const startBalance = calcSaldo(transactions, FAR_PAST, prevYearEnd, { historical: true }) + wInitials;
     
     // Projeta todos os dias do ano
     const yearDays = buildDailyProjection(transactions, yearStart, yearEnd, startBalance);
@@ -459,7 +461,9 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
 
                           {cardBadges[day.date] && (
                             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: hasItems ? 4 : 0 }}>
-                              {cardBadges[day.date].fechamentos.map(c => (
+                              {cardBadges[day.date].fechamentos
+                                .filter(c => !cardBadges[day.date].vencimentos.some(v => v.id === c.id))
+                                .map(c => (
                                 <span key={`f-${c.id}`} style={{
                                   background: 'rgba(245,158,11,0.15)', color: '#f59e0b',
                                   borderRadius: 6, padding: '2px 7px', fontSize: 10, fontWeight: 600,

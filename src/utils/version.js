@@ -1,7 +1,18 @@
-export const APP_VERSION = '1.6.115';
+export const APP_VERSION = '1.6.116';
 export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.116',
+    date: '05/08/2026',
+    changes: [
+      'Fix Projeção: saldo inicial agora inclui saldoInicial das carteiras e gastos diários históricos — alinhado com o saldo exibido na Home',
+      'Fix Projeção Anual: planejamento anual também usa saldo inicial correto com carteiras',
+      'Fix calcFaturaCard: fatura não é mais marcada como vencida entre o fechamento e o vencimento real do cartão',
+      'Fix Home: progresso da reserva de emergência agora expande ocorrências recorrentes corretamente',
+      'Fix Projeção: badge de cartão não duplica mais quando diaFechamento = diaVencimento',
+    ],
+  },
   {
     version: '1.6.115',
     date: '05/08/2026',

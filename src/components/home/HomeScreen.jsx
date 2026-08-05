@@ -122,10 +122,9 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     }
 
     const vinculado = transactions.filter(t => t.metaId === reserveGoal.id);
-    const saldo = vinculado.reduce((acc, t) => {
-      if (t.tipo === 'saida') return acc - t.valor;
-      return acc + t.valor;
-    }, 0);
+    const saldo = vinculado
+      .flatMap(t => expandOccurrences(t, FAR_PAST, todayStr(), { historical: true }))
+      .reduce((acc, occ) => acc + occ.sinal * occ.valor, 0);
 
     const completed = reserveGoal.metaFinal > 0 && saldo >= reserveGoal.metaFinal;
 
