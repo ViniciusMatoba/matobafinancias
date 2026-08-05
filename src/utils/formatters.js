@@ -108,7 +108,6 @@ export function formatBRLInput(raw) {
     const digits = clean.replace(/\D/g, '');
     if (!digits) return '';
     const n = parseInt(digits, 10);
-    if (n === 0) return '';
     return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
@@ -153,8 +152,9 @@ export function numberToBRLInput(num) {
   if (!num) return '';
   const n = Number(num);
   if (!n) return '';
-  const reais = Math.floor(n);
-  const cents = Math.round((n - reais) * 100);
+  let reais = Math.floor(n);
+  let cents = Math.round((n - reais) * 100);
+  if (cents >= 100) { reais += 1; cents = 0; }
   return reais.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + String(cents).padStart(2, '0');
 }
 

@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.116';
+export const APP_VERSION = '1.6.117';
 export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.117',
+    date: '05/08/2026',
+    changes: [
+      'Fix formatters: numberToBRLInput não exibe mais centavos >= 100 por arredondamento de ponto flutuante',
+      'Fix formatters: campo de valor aceita digitar "0" sem limpar o campo (permite "0,50")',
+    ],
+  },
   {
     version: '1.6.116',
     date: '05/08/2026',
