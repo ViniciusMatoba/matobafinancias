@@ -1,7 +1,7 @@
 {
-  "version": "1.6.119",
+  "version": "1.6.118",
   "date": "05/08/2026",
   "notes": [
-    "Fix Projeção: removido historical:true do cálculo de saldo inicial — restaura consistência com o saldo exibido na Home (mantém wInitials das carteiras)"
+    "Fix Projeção Anual: wallets adicionado às dependências do useMemo — planejamento anual agora recalcula quando carteiras mudam"
   ]
 }
