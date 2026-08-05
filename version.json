@@ -1,7 +1,7 @@
 {
-  "version": "1.6.114",
-  "date": "30/07/2026",
+  "version": "1.6.115",
+  "date": "05/08/2026",
   "notes": [
-    "Tela Inicial: removidos os cards de cartão de crédito (CartaoFaturaCard) — faturas continuam visíveis na aba Projeção"
+    "Fix Projeção: badges e faturas de cartões com dia de vencimento/fechamento 29, 30 ou 31 agora aparecem corretamente em fevereiro e meses com menos dias (clamp para o último dia do mês)"
   ]
 }
