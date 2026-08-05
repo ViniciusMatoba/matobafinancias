@@ -1,8 +1,11 @@
 {
-  "version": "1.6.117",
+  "version": "1.6.116",
   "date": "05/08/2026",
   "notes": [
-    "Fix formatters: numberToBRLInput não exibe mais centavos >= 100 por arredondamento de ponto flutuante",
-    "Fix formatters: campo de valor aceita digitar \"0\" sem limpar o campo (permite \"0,50\")"
+    "Fix Projeção: saldo inicial agora inclui saldoInicial das carteiras e gastos diários históricos — alinhado com o saldo exibido na Home",
+    "Fix Projeção Anual: planejamento anual também usa saldo inicial correto com carteiras",
+    "Fix calcFaturaCard: fatura não é mais marcada como vencida entre o fechamento e o vencimento real do cartão",
+    "Fix Home: progresso da reserva de emergência agora expande ocorrências recorrentes corretamente",
+    "Fix Projeção: badge de cartão não duplica mais quando diaFechamento = diaVencimento"
   ]
 }
