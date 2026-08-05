@@ -73,9 +73,15 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
     if (!cards?.length || !days.length) return {};
     const map = {};
     days.forEach(day => {
-      const d = parseInt(day.date.split('-')[2], 10);
-      const fechamentos = cards.filter(c => c.diaFechamento === d);
-      const vencimentos = cards.filter(c => c.diaVencimento === d);
+      const [dy, dm, dd] = day.date.split('-').map(Number);
+      const d = dd;
+      const lastDayOfMonth = new Date(dy, dm, 0).getDate();
+      const fechamentos = cards.filter(c =>
+        Math.min(Number(c.diaFechamento) || Number(c.diaVencimento), lastDayOfMonth) === d
+      );
+      const vencimentos = cards.filter(c =>
+        Math.min(Number(c.diaVencimento), lastDayOfMonth) === d
+      );
       if (fechamentos.length || vencimentos.length) {
         // Para cada vencimento, usa o fechamento real como limite do ciclo:
         // (fechamento anterior, fechamento deste ciclo]

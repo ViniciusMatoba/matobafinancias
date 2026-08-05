@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.114';
+export const APP_VERSION = '1.6.115';
 export const APP_VERSION_DATE = '29/07/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.115',
+    date: '05/08/2026',
+    changes: [
+      'Fix Projeção: badges e faturas de cartões com dia de vencimento/fechamento 29, 30 ou 31 agora aparecem corretamente em fevereiro e meses com menos dias (clamp para o último dia do mês)',
+    ],
+  },
   {
     version: '1.6.114',
     date: '30/07/2026',
