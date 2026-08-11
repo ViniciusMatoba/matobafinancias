@@ -113,9 +113,21 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.71 — 17/06/2026
+**Versão**: v1.6.119 — 05/08/2026
 
 **Últimas features**:
-- v1.6.71 — Fix calcFaturaCard: soma lançamentos no período (prevClosing, thisClosing] usando getClosingDate real do cartão
-- v1.6.65 — Fix projeção: badge de vencimento filtra ocorrências por data exata do lançamento (expandOccurrences thisVenc→thisVenc)
-- v1.6.61 — Fix notificação de atualização: SW NetworkOnly + evento pwa-update-ready + polling 60s
+- v1.6.119 — Fix Projeção: removido historical:true do saldo inicial — restaura consistência com saldo da Home (mantém wInitials)
+- v1.6.118 — Fix Projeção Anual: wallets adicionado às dependências do useMemo annualData
+- v1.6.117 — Fix formatters: numberToBRLInput overflow de centavos e digitar zero no campo valor
+- v1.6.116 — Fix Projeção: saldo inicial inclui carteiras; fix calcFaturaCard overdue prematuro; fix reserva emergência; fix badge duplicado
+- v1.6.115 — Fix Projeção: badge e fatura de cartão clamp para último dia do mês em fevereiro
+- v1.6.114 — Remove: cards de cartão de crédito da tela inicial
+- v1.6.111 — Re-adicionado CartaoFaturaCard na Home com limite, parcelas futuras e quick-add; fix Number() em diaFechamento/diaVencimento
+- v1.6.110 — Telegram interativo ([✅ Pago] e [📅 Adiar 5 dias]) + webhook MacroDroid/Tasker + WebhookSettings
+- v1.6.109 — Fix PWA: auto-update via skipWaiting + controllerchange + tela de loading
+
+**Arquitetura relevante desta sessão**:
+- `CartaoFaturaCard.jsx` — componente de card de cartão na Home (atualmente removido da Home, arquivo existe)
+- `calcFaturaCard` — usa `cartaoVinculo` além de `cartaoId` para vincular provisões
+- `cardBadges` no ProjectionScreen — usa clamp `Math.min(diaVenc, lastDayOfMonth)` para meses curtos
+- `saldoInicial` no ProjectionScreen — inclui `wInitials` das carteiras, sem `historical:true`

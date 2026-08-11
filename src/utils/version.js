@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.119';
-export const APP_VERSION_DATE = '29/07/2026';
+export const APP_VERSION = '1.6.120';
+export const APP_VERSION_DATE = '11/08/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.120',
+    date: '11/08/2026',
+    changes: [
+      'Fix notificações: alertas N10 (conta fixa/semanal vence em 2 dias) agora verificam exclusoes[] antes de disparar — elimina notificações de ocorrências excluídas/canceladas',
+    ],
+  },
   {
     version: '1.6.119',
     date: '05/08/2026',

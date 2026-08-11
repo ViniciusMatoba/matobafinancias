@@ -688,7 +688,8 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         // Extrai dia/mês diretamente de in2Str (evita d2.getDate() em UTC do servidor)
         const [, in2MM, in2DD] = in2Str.split('-');
         const diaIn2 = parseInt(in2DD, 10);
-        if (diaIn2 === txDay && in2Str >= tx.dataInicio && (!tx.dataFim || in2Str <= tx.dataFim)) {
+        const excluida = Array.isArray(tx.exclusoes) && tx.exclusoes.includes(in2Str);
+        if (!excluida && diaIn2 === txDay && in2Str >= tx.dataInicio && (!tx.dataFim || in2Str <= tx.dataFim)) {
           const jaPago = Array.isArray(tx.conferidos) && tx.conferidos.includes(in2Str);
           if (!jaPago) {
             msgs.push({
@@ -710,7 +711,8 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
           }
           cur.setDate(cur.getDate() + 7);
         }
-        if (achouOcorrencia) {
+        const excluida = Array.isArray(tx.exclusoes) && tx.exclusoes.includes(in2Str);
+        if (!excluida && achouOcorrencia) {
           const jaPago = Array.isArray(tx.conferidos) && tx.conferidos.includes(in2Str);
           if (!jaPago) {
             const [, in2MM, in2DD] = in2Str.split('-');
