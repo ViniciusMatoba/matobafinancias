@@ -1,7 +1,10 @@
 {
-  "version": "1.6.120",
-  "date": "11/08/2026",
+  "version": "1.6.121",
+  "date": "20/08/2026",
   "notes": [
-    "Fix notificações: alertas N10 (conta fixa/semanal vence em 2 dias) agora verificam exclusoes["
+    "Novo: widget \"Pode gastar X/dia\" na Home — saldo projetado até fim do mês dividido pelos dias restantes",
+    "Metas: donut SVG de progresso com percentual no centro e texto motivacional por faixa",
+    "Notificação N6: alerta imediato quando saldo atual já está negativo (além da projeção 7d)",
+    "Relatório semanal N7: inclui projeção do saldo até fim do mês e valor diário disponível"
   ]
 }
