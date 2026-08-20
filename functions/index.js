@@ -554,20 +554,20 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     }
   }
 
-  // N6 — Saldo negativo projetado em 7 dias
-  // Usa calcSaldoSimples até in7: inclui entradas, todas as frequências e projeções virtuais
+  // N6 — Saldo negativo (atual ou projetado em 7 dias)
   if (tipos.n6 !== false) {
     const saldoAtual = calcSaldoSimples(transactions, todayStr, walletInitials);
     const d7 = new Date(hoje); d7.setDate(d7.getDate() + 7);
     const in7 = dateStrFromDate(d7);
     const saldoProjetado = calcSaldoSimples(transactions, in7, walletInitials);
-    if (saldoProjetado < 0) {
+    if (saldoAtual < 0) {
+      msgs.push(`🚨 *Saldo atual negativo!*\nSeu saldo está em *${formatBRL(saldoAtual)}* agora. Revise seus lançamentos e evite novos gastos até regularizar.`);
+    } else if (saldoProjetado < 0) {
       msgs.push(`📉 *Alerta: saldo pode ficar negativo!*\nSaldo atual ${formatBRL(saldoAtual)} · Projeção *${formatBRL(saldoProjetado)}* em 7 dias.`);
     }
   }
 
-  // N7 — Resumo semanal (suporta múltiplos dias configurados)
-  // Usa expandRange (igual ao /semana) para garantir mesmos valores
+  // N7 — Resumo semanal + projeção até fim do mês
   const rawDiaSem = prefs.diaSemanaResumo;
   const diasSemArr = Array.isArray(rawDiaSem) ? rawDiaSem : [rawDiaSem ?? 1];
   if (tipos.n7 !== false && diasSemArr.includes(weekday)) {
@@ -581,7 +581,29 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       if (o.tipo === 'entrada') entradas += o.valor;
       else saidas += o.valor;
     }
-    msgs.push(`📊 *Resumo semanal*\n✅ Entradas: ${formatBRL(entradas)}\n❌ Saídas: ${formatBRL(saidas)}\n💰 Saldo da semana: *${formatBRL(entradas - saidas)}*`);
+
+    // Projeção até fim do mês
+    const lastDay = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0);
+    const endOfMonthStr = dateStrFromDate(lastDay);
+    const saldoAtualN7 = calcSaldoSimples(transactions, todayStr, walletInitials);
+    const saldoFimMes  = calcSaldoSimples(transactions, endOfMonthStr, walletInitials);
+    const diasRestantes = lastDay.getDate() - hoje.getDate();
+
+    const nomeMesN7 = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+    let msgN7 = `📊 *Resumo Semanal*\n\n`;
+    msgN7 += `✅ Entradas: ${formatBRL(entradas)}\n`;
+    msgN7 += `❌ Saídas: ${formatBRL(saidas)}\n`;
+    msgN7 += `💰 Saldo da semana: *${formatBRL(entradas - saidas)}*\n\n`;
+    msgN7 += `📅 *Projeção até fim de ${nomeMesN7.charAt(0).toUpperCase() + nomeMesN7.slice(1)}*\n`;
+    msgN7 += `Saldo atual: ${formatBRL(saldoAtualN7)}\n`;
+    msgN7 += `Saldo projetado (${endOfMonthStr.slice(8)}/${endOfMonthStr.slice(5,7)}): *${formatBRL(saldoFimMes)}*\n`;
+    if (diasRestantes > 0 && saldoFimMes > 0) {
+      const gastoPorDia = saldoFimMes / diasRestantes;
+      msgN7 += `💡 Pode gastar até *${formatBRL(gastoPorDia)}/dia* com os ${diasRestantes} dias restantes.`;
+    } else if (saldoFimMes < 0) {
+      msgN7 += `⚠️ _Projeção indica saldo negativo no fim do mês. Revise os gastos._`;
+    }
+    msgs.push(msgN7.trim());
   }
 
   // N8 — Resumo diário matinal (dias configuráveis: todos / uteis / fds)

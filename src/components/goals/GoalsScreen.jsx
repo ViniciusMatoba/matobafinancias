@@ -709,53 +709,86 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                {goalsWithProgress.map(g => (
+                {goalsWithProgress.map(g => {
+                  const cor = g.cor || COLOR_OPTIONS[0];
+                  const pct = g.progressoPct || 0;
+                  const [r, gg, b] = [parseInt(cor.slice(1,3),16), parseInt(cor.slice(3,5),16), parseInt(cor.slice(5,7),16)];
+                  // Donut SVG
+                  const radius = 26, circ = 2 * Math.PI * radius;
+                  const dash = (pct / 100) * circ;
+                  const motivacao = pct >= 100 ? '🎉 Meta alcançada!' :
+                    pct >= 75 ? '🎯 Quase lá! Falta pouco' :
+                    pct >= 50 ? '⭐ Mais da metade!' :
+                    pct >= 30 ? '🚀 Ótimo progresso!' :
+                    pct >= 10 ? '💪 Continue assim!' :
+                    '🌱 Primeiros passos';
+
+                  return (
                   <div key={g.id} style={{
                     background: 'var(--bg-card)', border: '1px solid var(--border)',
                     borderRadius: 16, overflow: 'hidden'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '16px 16px 12px', position: 'relative' }}>
-                      <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: g.cor || COLOR_OPTIONS[0] }} />
-                      
-                      <div style={{ flex: 1, paddingLeft: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>{g.nome} {g.isIndependencia && <span style={{ fontSize: 13 }} title="Caixinha de Independência Financeira">💎</span>}</p>
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button onClick={() => handleEdit(g)} style={{ background: 'none', padding: 4, color: 'var(--text-muted)' }}><Pencil size={14} /></button>
-                            <button onClick={() => { if(window.confirm('Remover esta meta? O dinheiro não será perdido do saldo geral.')) onRemoveGoal(g.id); }} style={{ background: 'none', padding: 4, color: 'var(--saida)' }}><Trash2 size={14} /></button>
+                    {/* Header: donut à esquerda + info à direita */}
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '16px', gap: 14 }}>
+                      {/* Donut SVG */}
+                      {g.metaFinal > 0 ? (
+                        <div style={{ flexShrink: 0, position: 'relative', width: 64, height: 64 }}>
+                          <svg width="64" height="64" viewBox="0 0 64 64">
+                            <circle cx="32" cy="32" r={radius} fill="none" stroke={`rgba(${r},${gg},${b},0.15)`} strokeWidth="7" />
+                            <circle cx="32" cy="32" r={radius} fill="none" stroke={cor} strokeWidth="7"
+                              strokeDasharray={`${dash} ${circ}`}
+                              strokeLinecap="round"
+                              transform="rotate(-90 32 32)"
+                              style={{ transition: 'stroke-dasharray 0.6s ease' }}
+                            />
+                          </svg>
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: cor }}>{Math.round(pct)}%</span>
                           </div>
                         </div>
-                        
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                          <span style={{ fontSize: 20, fontWeight: 700, color: g.cor || COLOR_OPTIONS[0] }}>
-                            {formatBRL(g.saldo)}
-                          </span>
+                      ) : (
+                        <div style={{
+                          width: 64, height: 64, borderRadius: 16, flexShrink: 0,
+                          background: `rgba(${r},${gg},${b},0.12)`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          <Target size={28} color={cor} />
+                        </div>
+                      )}
+
+                      {/* Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                            {g.nome} {g.isIndependencia && <span style={{ fontSize: 13 }} title="Caixinha de Independência Financeira">💎</span>}
+                          </p>
+                          <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                            <button onClick={() => handleEdit(g)} style={{ background: 'none', padding: 4, color: 'var(--text-muted)' }}><Pencil size={13} /></button>
+                            <button onClick={() => { if(window.confirm('Remover esta meta? O dinheiro não será perdido do saldo geral.')) onRemoveGoal(g.id); }} style={{ background: 'none', padding: 4, color: 'var(--saida)' }}><Trash2 size={13} /></button>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 5, marginBottom: g.metaFinal > 0 ? 4 : 0 }}>
+                          <span style={{ fontSize: 19, fontWeight: 700, color: cor }}>{formatBRL(g.saldo)}</span>
                           {g.metaFinal > 0 && (
-                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                              de {formatBRL(g.metaFinal)}
-                            </span>
+                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>de {formatBRL(g.metaFinal)}</span>
                           )}
                         </div>
+
+                        {g.metaFinal > 0 && (
+                          <p style={{ margin: 0, fontSize: 11, color: `rgba(${r},${gg},${b},0.85)`, fontWeight: 600 }}>
+                            {motivacao}
+                          </p>
+                        )}
                       </div>
                     </div>
-
-                    {g.metaFinal > 0 && (
-                      <div style={{ padding: '0 16px', marginBottom: 12 }}>
-                        <div style={{ height: 6, background: 'var(--bg-surface)', borderRadius: 3, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${g.progressoPct}%`, background: g.cor || COLOR_OPTIONS[0], borderRadius: 3, transition: 'width 0.5s' }} />
-                        </div>
-                        <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                          {g.progressoPct.toFixed(1)}% concluído
-                        </p>
-                      </div>
-                    )}
 
                     <div style={{ padding: '0 16px 16px' }}>
                       <button onClick={() => handleAporte(g)} style={{
                         width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                         padding: '10px', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                        background: `rgba(${parseInt((g.cor || COLOR_OPTIONS[0]).slice(1,3),16)},${parseInt((g.cor || COLOR_OPTIONS[0]).slice(3,5),16)},${parseInt((g.cor || COLOR_OPTIONS[0]).slice(5,7),16)}, 0.1)`,
-                        color: g.cor || COLOR_OPTIONS[0], border: 'none'
+                        background: `rgba(${r},${gg},${b},0.1)`,
+                        color: cor, border: 'none'
                       }}>
                         <TrendingUp size={16} /> Fazer Aporte
                       </button>
@@ -869,7 +902,8 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>

@@ -1,7 +1,7 @@
 {
-  "version": "1.6.119",
-  "date": "05/08/2026",
+  "version": "1.6.120",
+  "date": "11/08/2026",
   "notes": [
-    "Fix Projeção: removido historical:true do cálculo de saldo inicial — restaura consistência com o saldo exibido na Home (mantém wInitials das carteiras)"
+    "Fix notificações: alertas N10 (conta fixa/semanal vence em 2 dias) agora verificam exclusoes["
   ]
 }

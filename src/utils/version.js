@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.120';
+export const APP_VERSION = '1.6.121';
 export const APP_VERSION_DATE = '11/08/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.121',
+    date: '11/08/2026',
+    changes: [
+      'Novo: widget "Pode gastar X/dia" na Home — saldo projetado até fim do mês dividido pelos dias restantes',
+      'Metas: donut SVG de progresso com percentual no centro e texto motivacional por faixa',
+      'Notificação N6: alerta imediato quando saldo atual já está negativo (além da projeção 7d)',
+      'Relatório semanal N7: inclui projeção do saldo até fim do mês e valor diário disponível',
+    ],
+  },
   {
     version: '1.6.120',
     date: '11/08/2026',
