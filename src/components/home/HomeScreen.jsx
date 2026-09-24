@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff, BarChart3 } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -429,6 +429,37 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
               </span>
               <span style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)' }}>
                 Acompanhe objetivos e reservas
+              </span>
+            </span>
+          </span>
+          <ChevronRight size={17} color="var(--text-muted)" />
+        </button>
+
+        <button
+          onClick={() => onNavigate('reports')}
+          style={{
+            width: '100%', marginTop: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 12, padding: '13px 14px',
+            background: 'rgba(99,102,241,0.10)', border: '1px solid rgba(99,102,241,0.24)',
+            borderRadius: 14, color: 'var(--text-primary)', cursor: 'pointer',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <span style={{
+              width: 32, height: 32, borderRadius: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(99,102,241,0.16)', color: 'var(--primary)',
+              flexShrink: 0,
+            }}>
+              <BarChart3 size={17} />
+            </span>
+            <span style={{ textAlign: 'left', minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
+                Painel
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)' }}>
+                Relatórios e análise de gastos
               </span>
             </span>
           </span>

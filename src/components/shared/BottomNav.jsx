@@ -1,11 +1,11 @@
-import { Home, PlusCircle, BarChart3, TrendingUp, Settings, Landmark } from 'lucide-react';
+import { Home, PlusCircle, TrendingUp, Settings, Landmark } from 'lucide-react';
 
 const TABS = [
-  { id: 'home',          icon: Home,        label: 'Início'   },
-  { id: 'reports',       icon: BarChart3,   label: 'Painel'   },
-  { id: 'add',           icon: PlusCircle,  label: null       },
-  { id: 'investimentos', icon: Landmark,    label: 'Investir' },
-  { id: 'settings',      icon: Settings,    label: 'Config'   },
+  { id: 'home',          icon: Home,       label: 'Início'   },
+  { id: 'investimentos', icon: Landmark,   label: 'Investir' },
+  { id: 'add',           icon: PlusCircle, label: null       },
+  { id: 'projection',    icon: TrendingUp, label: 'Projeção' },
+  { id: 'settings',      icon: Settings,   label: 'Config'   },
 ];
 
 export default function BottomNav({ view, onNavigate }) {

@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.126';
+export const APP_VERSION = '1.6.127';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.127',
+    date: '24/09/2026',
+    changes: [
+      'Nav: Projeção volta ao menu inferior; Investir substitui Painel no menu; atalho para Painel adicionado na tela Início',
+    ],
+  },
   {
     version: '1.6.126',
     date: '24/09/2026',

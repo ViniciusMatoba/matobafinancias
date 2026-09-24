@@ -1,7 +1,7 @@
 {
-  "version": "1.6.125",
+  "version": "1.6.126",
   "date": "24/09/2026",
   "notes": [
-    "Home: modal ao clicar no card Total Investido — pergunta se tem carteira no Investidor 10; se sim, pede URL e salva automaticamente; abre o link em seguida"
+    "Nova tela Investimentos (ícone Investir no menu): reserva de emergência com perfil (Concursado/CLT/PJ), meses configuráveis, sugestão automática de despesas fixas, vínculo com caixinha, distribuição 60/40 da sobra enquanto reserva incompleta e 100% ao completar"
   ]
 }
