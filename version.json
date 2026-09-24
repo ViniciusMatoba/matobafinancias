@@ -1,7 +1,7 @@
 {
-  "version": "1.6.128",
+  "version": "1.6.130",
   "date": "24/09/2026",
   "notes": [
-    "Fix sobra segura: usa saldo projetado no fim do período (45 dias) em vez do mínimo pontual — valor agora reflete a sobra real após todas as despesas futuras"
+    "Sobra segura: usa o menor saldo do período (pior ponto nos 45 dias) menos R$500 de buffer; banner exibe nota sobre a gordura do caixa"
   ]
 }
