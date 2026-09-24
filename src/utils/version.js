@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.122';
+export const APP_VERSION = '1.6.123';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.123',
+    date: '24/09/2026',
+    changes: [
+      'Home: card "Total Investido" exibe a soma acumulada de investimentos — aparece apenas quando há valor investido',
+    ],
+  },
   {
     version: '1.6.122',
     date: '24/09/2026',

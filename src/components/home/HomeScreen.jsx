@@ -76,6 +76,13 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     return { valor: saldoFimMes / diasRestantes, diasRestantes, saldoFimMes };
   }, [transactions, wallets, today, isToday]);
 
+  // Total investido acumulado (todas as transações tipo 'investimento' até a data selecionada)
+  const totalInvestido = useMemo(() => {
+    const invTxs = transactions.filter(t => t.tipo === 'investimento');
+    return invTxs.flatMap(t => expandOccurrences(t, FAR_PAST, selectedDate))
+      .reduce((acc, o) => acc + o.valor, 0);
+  }, [transactions, selectedDate]);
+
   // Saldo individual das carteiras
   const walletsStats = useMemo(() => {
     if (!wallets?.length) return [];
@@ -359,10 +366,42 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           </div>
         )}
 
+        {/* Card: Total Investido */}
+        {totalInvestido > 0 && (
+          <div style={{
+            marginTop: 12,
+            background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.22)',
+            borderRadius: 14, padding: '12px 14px',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <div style={{
+              width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+              background: 'rgba(168,85,247,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <PiggyBank size={18} color="var(--investimento)" />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
+                Total Investido
+              </p>
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--investimento)' }}>
+                {fmtVal(totalInvestido)}
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigate('goals')}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4, flexShrink: 0 }}
+              title="Ver Metas e Caixinhas"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+
         <button
           onClick={() => onNavigate('goals')}
           style={{
-            width: '100%', marginTop: gastoPorDia ? 12 : (summaryCards.length > 0 ? 12 : 18),
+            width: '100%', marginTop: (totalInvestido > 0 || gastoPorDia) ? 12 : (summaryCards.length > 0 ? 12 : 18),
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: 12, padding: '13px 14px',
             background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.28)',
