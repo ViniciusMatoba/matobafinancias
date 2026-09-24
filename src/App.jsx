@@ -127,6 +127,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             config={config}
             metaMensal={config.metaMensalDiario}
             onSaveMeta={v => saveConfig({ metaMensalDiario: v })}
+            onSaveConfig={saveConfig}
             onEdit={handleEdit}
             onClone={handleClone}
             onDelete={handleDelete}

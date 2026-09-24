@@ -1,7 +1,8 @@
 {
-  "version": "1.6.123",
+  "version": "1.6.124",
   "date": "24/09/2026",
   "notes": [
-    "Home: card \"Total Investido\" exibe a soma acumulada de investimentos — aparece apenas quando há valor investido"
+    "Home: card Total Investido clicável — abre Investidor 10; sem carteira cadastrada abre o site principal",
+    "Configurações: novo campo para salvar URL da carteira no Investidor 10 com botão de teste"
   ]
 }

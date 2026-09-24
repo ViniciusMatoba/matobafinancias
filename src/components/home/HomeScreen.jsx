@@ -26,11 +26,13 @@ function formatDayHeader(dateStr, isToday) {
 
 const FAR_PAST = '2020-01-01';
 
-export default function HomeScreen({ transactions, cards, wallets, goals, config, onEdit, onClone, onDelete, onPay, onNavigate, onAdjustBalance }) {
+export default function HomeScreen({ transactions, cards, wallets, goals, config, onSaveConfig, onEdit, onClone, onDelete, onPay, onNavigate, onAdjustBalance }) {
   const [dayOffset, setDayOffset] = useState(0);
   const [expandedIds, setExpandedIds] = useState(new Set());
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [inv10Modal, setInv10Modal] = useState(false); // 'ask' | 'url' | false
+  const [inv10UrlInput, setInv10UrlInput] = useState('');
   const [valuesVisible, setValuesVisible] = useState(
     () => localStorage.getItem('matoba:values-visible') !== 'false'
   );
@@ -370,7 +372,13 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         {totalInvestido > 0 && (
           <button
             type="button"
-            onClick={() => window.open(config?.investidor10Url?.trim() || 'https://investidor10.com.br', '_blank')}
+            onClick={() => {
+              if (config?.investidor10Url?.trim()) {
+                window.open(config.investidor10Url.trim(), '_blank');
+              } else {
+                setInv10Modal('ask');
+              }
+            }}
             style={{
               marginTop: 12, width: '100%',
               background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.22)',
@@ -657,6 +665,122 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
     </div>
       <HelpModal screen="home" open={helpOpen} onClose={() => setHelpOpen(false)} />
+
+      {/* Modal Investidor 10 */}
+      {inv10Modal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          zIndex: 1000, padding: '0 0 0 0',
+        }} onClick={() => setInv10Modal(false)}>
+          <div
+            style={{
+              background: 'var(--bg-card)', borderRadius: '20px 20px 0 0',
+              padding: '24px 20px 32px', width: '100%', maxWidth: 480,
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            {inv10Modal === 'ask' && (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                  <div style={{
+                    width: 52, height: 52, borderRadius: 16, margin: '0 auto 12px',
+                    background: 'rgba(168,85,247,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <PiggyBank size={26} color="var(--investimento)" />
+                  </div>
+                  <p style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Investidor 10
+                  </p>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    Você já tem uma carteira cadastrada no Investidor 10?
+                  </p>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => { setInv10UrlInput(config?.investidor10Url || ''); setInv10Modal('url'); }}
+                    style={{
+                      padding: '13px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+                      background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)',
+                      color: 'var(--investimento)', cursor: 'pointer',
+                    }}
+                  >
+                    Sim, tenho carteira
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { window.open('https://investidor10.com.br', '_blank'); setInv10Modal(false); }}
+                    style={{
+                      padding: '13px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+                      background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                      color: 'var(--text-secondary)', cursor: 'pointer',
+                    }}
+                  >
+                    Não, quero conhecer
+                  </button>
+                </div>
+              </>
+            )}
+
+            {inv10Modal === 'url' && (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                  <p style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--text-primary)' }}>
+                    Cole o link da sua carteira
+                  </p>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    Acesse o Investidor 10, abra sua carteira e copie a URL da página.
+                  </p>
+                </div>
+                <input
+                  type="url"
+                  autoFocus
+                  placeholder="https://investidor10.com.br/carteira/..."
+                  value={inv10UrlInput}
+                  onChange={e => setInv10UrlInput(e.target.value)}
+                  style={{
+                    width: '100%', padding: '12px', borderRadius: 12, marginBottom: 12,
+                    background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                    color: 'var(--text-primary)', fontSize: 14, boxSizing: 'border-box',
+                  }}
+                />
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setInv10Modal('ask')}
+                    style={{
+                      flex: 1, padding: '13px', borderRadius: 12, fontSize: 14, fontWeight: 600,
+                      background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                      color: 'var(--text-secondary)', cursor: 'pointer',
+                    }}
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!inv10UrlInput.trim()}
+                    onClick={() => {
+                      const url = inv10UrlInput.trim();
+                      if (onSaveConfig) onSaveConfig({ investidor10Url: url });
+                      window.open(url, '_blank');
+                      setInv10Modal(false);
+                    }}
+                    style={{
+                      flex: 2, padding: '13px', borderRadius: 12, fontSize: 14, fontWeight: 700,
+                      background: inv10UrlInput.trim() ? 'var(--investimento)' : 'var(--bg-surface)',
+                      border: 'none', color: inv10UrlInput.trim() ? '#fff' : 'var(--text-muted)',
+                      cursor: inv10UrlInput.trim() ? 'pointer' : 'not-allowed',
+                    }}
+                  >
+                    Salvar e Abrir
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

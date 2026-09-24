@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.124';
+export const APP_VERSION = '1.6.125';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.125',
+    date: '24/09/2026',
+    changes: [
+      'Home: modal ao clicar no card Total Investido — pergunta se tem carteira no Investidor 10; se sim, pede URL e salva automaticamente; abre o link em seguida',
+    ],
+  },
   {
     version: '1.6.124',
     date: '24/09/2026',
