@@ -1,7 +1,7 @@
 {
-  "version": "1.6.127",
+  "version": "1.6.126",
   "date": "24/09/2026",
   "notes": [
-    "Nav: Projeção volta ao menu inferior; Investir substitui Painel no menu; atalho para Painel adicionado na tela Início"
+    "Nova tela Investimentos (ícone Investir no menu): reserva de emergência com perfil (Concursado/CLT/PJ), meses configuráveis, sugestão automática de despesas fixas, vínculo com caixinha, distribuição 60/40 da sobra enquanto reserva incompleta e 100% ao completar"
   ]
 }
