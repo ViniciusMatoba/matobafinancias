@@ -1,7 +1,7 @@
 {
-  "version": "1.6.127",
+  "version": "1.6.129",
   "date": "24/09/2026",
   "notes": [
-    "Nav: Projeção volta ao menu inferior; Investir substitui Painel no menu; atalho para Painel adicionado na tela Início"
+    "Sobra segura: sempre reserva R$ 500 no caixa — o valor recomendado para guardar/investir é o projetado menos esse buffer"
   ]
 }
