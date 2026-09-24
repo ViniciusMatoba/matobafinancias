@@ -1,7 +1,7 @@
 {
-  "version": "1.6.123",
+  "version": "1.6.125",
   "date": "24/09/2026",
   "notes": [
-    "Home: card \"Total Investido\" exibe a soma acumulada de investimentos — aparece apenas quando há valor investido"
+    "Home: modal ao clicar no card Total Investido — pergunta se tem carteira no Investidor 10; se sim, pede URL e salva automaticamente; abre o link em seguida"
   ]
 }
