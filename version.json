@@ -1,7 +1,7 @@
 {
-  "version": "1.6.129",
+  "version": "1.6.131",
   "date": "24/09/2026",
   "notes": [
-    "Sobra segura: sempre reserva R$ 500 no caixa — o valor recomendado para guardar/investir é o projetado menos esse buffer"
+    "Projeção: saldo diário exibe gradiente verde (>500) → amarelo (500) → vermelho (<0); aplicado também nos saldos inicial, final e mensal"
   ]
 }
