@@ -368,34 +368,32 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
         {/* Card: Total Investido */}
         {totalInvestido > 0 && (
-          <div style={{
-            marginTop: 12,
-            background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.22)',
-            borderRadius: 14, padding: '12px 14px',
-            display: 'flex', alignItems: 'center', gap: 12,
-          }}>
+          <button
+            type="button"
+            onClick={() => window.open(config?.investidor10Url?.trim() || 'https://investidor10.com.br', '_blank')}
+            style={{
+              marginTop: 12, width: '100%',
+              background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.22)',
+              borderRadius: 14, padding: '12px 14px',
+              display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
+            }}
+          >
             <div style={{
               width: 38, height: 38, borderRadius: 10, flexShrink: 0,
               background: 'rgba(168,85,247,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <PiggyBank size={18} color="var(--investimento)" />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
               <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
-                Total Investido
+                Total Investido {config?.investidor10Url ? '· Investidor 10' : ''}
               </p>
               <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--investimento)' }}>
                 {fmtVal(totalInvestido)}
               </p>
             </div>
-            <button
-              onClick={() => onNavigate('goals')}
-              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: 4, flexShrink: 0 }}
-              title="Ver Metas e Caixinhas"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+            <ChevronRight size={16} color="var(--text-muted)" style={{ flexShrink: 0 }} />
+          </button>
         )}
 
         <button

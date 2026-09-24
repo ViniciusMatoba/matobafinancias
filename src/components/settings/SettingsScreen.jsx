@@ -27,6 +27,7 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
   const [webhookOpen, setWebhookOpen] = useState(false);
   const [updatesOpen, setUpdatesOpen] = useState(false);
   const [backupOpen, setBackupOpen] = useState(false);
+  const [investidor10Url, setInvestidor10Url] = useState(config?.investidor10Url || '');
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState('');
   const [csvModal, setCsvModal] = useState(false);
@@ -506,6 +507,63 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
               </div>
             </div>
           )}
+        </div>
+
+        {/* Investidor 10 — link da carteira */}
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 14, marginBottom: 16, padding: '14px 16px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>📈</span>
+            <div>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', display: 'block' }}>
+                Investidor 10
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                Cole a URL da sua carteira para acesso rápido na Home
+              </span>
+            </div>
+          </div>
+          <input
+            type="url"
+            placeholder="https://investidor10.com.br/carteira/..."
+            value={investidor10Url}
+            onChange={e => setInvestidor10Url(e.target.value)}
+            style={{
+              width: '100%', padding: '10px 12px', borderRadius: 10,
+              background: 'var(--bg-surface)', border: '1px solid var(--border)',
+              color: 'var(--text-primary)', fontSize: 13, boxSizing: 'border-box',
+            }}
+          />
+          <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+            <button
+              type="button"
+              onClick={() => {
+                onSaveConfig({ investidor10Url: investidor10Url.trim() });
+              }}
+              style={{
+                flex: 1, padding: '9px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.3)',
+                color: 'var(--investimento)', cursor: 'pointer',
+              }}
+            >
+              Salvar
+            </button>
+            {investidor10Url && (
+              <button
+                type="button"
+                onClick={() => window.open(investidor10Url.trim() || 'https://investidor10.com.br', '_blank')}
+                style={{
+                  padding: '9px 14px', borderRadius: 10, fontSize: 13, fontWeight: 600,
+                  background: 'var(--bg-surface)', border: '1px solid var(--border)',
+                  color: 'var(--text-secondary)', cursor: 'pointer',
+                }}
+              >
+                Testar
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Notas de Atualização — card expansível */}

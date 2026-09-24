@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.123';
+export const APP_VERSION = '1.6.124';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.124',
+    date: '24/09/2026',
+    changes: [
+      'Home: card Total Investido clicável — abre Investidor 10; sem carteira cadastrada abre o site principal',
+      'Configurações: novo campo para salvar URL da carteira no Investidor 10 com botão de teste',
+    ],
+  },
   {
     version: '1.6.123',
     date: '24/09/2026',
