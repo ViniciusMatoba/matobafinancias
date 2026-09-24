@@ -176,10 +176,12 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
 
   const dailyProj = buildDailyProjection(transactions, from, to, saldoAtual);
 
+  const BUFFER_CAIXA = 500;
   const saldoFinal = dailyProj.length > 0 ? dailyProj[dailyProj.length - 1].saldo : saldoAtual;
+  const sobra = saldoFinal - BUFFER_CAIXA;
 
   return {
-    sobra: saldoFinal > 0 ? saldoFinal : 0,
+    sobra: sobra > 0 ? sobra : 0,
     dataVerificada: to
   };
 }

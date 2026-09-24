@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.128';
+export const APP_VERSION = '1.6.129';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.129',
+    date: '24/09/2026',
+    changes: [
+      'Sobra segura: sempre reserva R$ 500 no caixa — o valor recomendado para guardar/investir é o projetado menos esse buffer',
+    ],
+  },
   {
     version: '1.6.128',
     date: '24/09/2026',
