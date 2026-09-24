@@ -163,12 +163,19 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     if (!sobraSegura) return null;
     const formatSobra = formatBRL(sobraSegura.sobra);
     const dataFim = `${sobraSegura.dataVerificada.slice(8,10)}/${sobraSegura.dataVerificada.slice(5,7)}`;
+    const dataMin = sobraSegura.dataMinimoSaldo;
+    const dataMinFmt = dataMin ? `${dataMin.slice(8,10)}/${dataMin.slice(5,7)}` : null;
+    const isTodayMin = dataMin === today;
+    const minLabel = isTodayMin
+      ? `📌 Menor saldo projetado: ${formatBRL(sobraSegura.minimoSaldo)} (hoje — sem despesas fixas previstas no período)`
+      : `📌 Menor saldo projetado: ${formatBRL(sobraSegura.minimoSaldo)} em ${dataMinFmt}`;
 
     if (!reserveStats.completed) {
       if (!reserveStats.exists) {
         return {
           title: 'Reserva de Emergência Recomendada!',
           desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}) — já considerando R$ 500 de gordura no caixa. Vimos que você ainda não criou uma caixinha de "Reserva de Emergência". Recomendamos criar uma com meta recomendada de ${formatBRL(reserveStats.metaRecomendada)} (6 meses de custos fixos) e priorizar este saldo nela!`,
+          minLabel,
           buttonText: 'Criar Reserva de Emergência',
           bg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
           shadow: 'rgba(245,158,11,0.3)',
@@ -179,6 +186,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         return {
           title: 'Acelere sua Reserva de Emergência!',
           desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}) — já considerando R$ 500 de gordura no caixa. Recomendamos priorizar a conclusão da sua caixinha "Reserva de Emergência" (atualmente com ${formatBRL(reserveStats.saldo)} de ${formatBRL(reserveStats.metaFinal)}). Falta apenas ${falta} para garantir sua tranquilidade financeira!`,
+          minLabel,
           buttonText: 'Aportar na Reserva',
           bg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
           shadow: 'rgba(59,130,246,0.3)',
@@ -190,12 +198,13 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     return {
       title: 'Dinheiro sobrando de forma segura! 🎉',
       desc: `Parabéns! Sua Reserva de Emergência está concluída. Projetamos suas despesas até ${dataFim} e você tem ${formatSobra} livres e seguros — já considerando R$ 500 de gordura no caixa. Você pode guardar esse valor agora para acelerar suas outras metas de investimento sem comprometer seu orçamento!`,
+      minLabel,
       buttonText: 'Aportar nas Caixinhas',
       bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
       shadow: 'rgba(16,185,129,0.3)',
       color: '#059669',
     };
-  }, [sobraSegura, reserveStats]);
+  }, [sobraSegura, reserveStats, today]);
 
   const isOccConferido = (occ) => {
     const tx = occ.tx;
@@ -500,9 +509,14 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                 <span style={{ fontSize: 20 }}>🎉</span>
                 <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#fff' }}>{bannerContent.title}</h3>
               </div>
-              <p style={{ margin: '0 0 12px', fontSize: 13, color: 'rgba(255,255,255,0.95)', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 8px', fontSize: 13, color: 'rgba(255,255,255,0.95)', lineHeight: 1.5 }}>
                 {bannerContent.desc}
               </p>
+              {bannerContent.minLabel && (
+                <p style={{ margin: '0 0 10px', fontSize: 11, color: 'rgba(255,255,255,0.88)', background: 'rgba(0,0,0,0.15)', borderRadius: 8, padding: '6px 10px' }}>
+                  {bannerContent.minLabel}
+                </p>
+              )}
               <p style={{ margin: '0 0 16px', fontSize: 11, color: 'rgba(255,255,255,0.8)', fontStyle: 'italic', borderTop: '1px dashed rgba(255,255,255,0.3)', paddingTop: 8 }}>
                 ⚠️ <strong>Ação real no banco:</strong> Este controle no aplicativo é apenas virtual. Para garantir sua meta, abra o aplicativo do seu banco real e deposite este valor de verdade!
               </p>

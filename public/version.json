@@ -1,7 +1,7 @@
 {
-  "version": "1.6.130",
+  "version": "1.6.131",
   "date": "24/09/2026",
   "notes": [
-    "Sobra segura: usa o menor saldo do período (pior ponto nos 45 dias) menos R$500 de buffer; banner exibe nota sobre a gordura do caixa"
+    "Projeção: saldo diário exibe gradiente verde (>500) → amarelo (500) → vermelho (<0); aplicado também nos saldos inicial, final e mensal"
   ]
 }

@@ -178,14 +178,20 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
 
   const BUFFER_CAIXA = 500;
   let minSaldo = saldoAtual;
+  let minDate = from;
   for (const day of dailyProj) {
-    if (day.saldo < minSaldo) minSaldo = day.saldo;
+    if (day.saldo < minSaldo) {
+      minSaldo = day.saldo;
+      minDate = day.date;
+    }
   }
   const sobra = minSaldo - BUFFER_CAIXA;
 
   return {
     sobra: sobra > 0 ? sobra : 0,
-    dataVerificada: to
+    dataVerificada: to,
+    dataMinimoSaldo: minDate,
+    minimoSaldo: minSaldo,
   };
 }
 

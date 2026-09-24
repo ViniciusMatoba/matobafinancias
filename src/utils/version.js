@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.131';
+export const APP_VERSION = '1.6.132';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.132',
+    date: '24/09/2026',
+    changes: [
+      'Banner sobra segura: exibe data e valor do menor saldo projetado no período; quando o mínimo é hoje, informa que não há despesas fixas previstas no período',
+    ],
+  },
   {
     version: '1.6.131',
     date: '24/09/2026',
