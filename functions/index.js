@@ -1117,6 +1117,52 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   return msgs;
 }
 
+// ─── N24 — Alerta de aporte perdido ───────────────────────────────────────────
+// Rastreia quando a sobra projetada é detectada e cobra caso o usuário não
+// registre nenhum aporte (tipo='investimento') dentro de LIMIAR_DIAS.
+async function checkN24AportePerdido(uid, transactions, config, walletInitials, tipos) {
+  if (tipos.n24 === false) return null;
+
+  const LIMIAR_DIAS = 5;
+  const hoje = getNowBrasilia();
+  const todayStr = dateStrFromDate(hoje);
+  const { sobra } = calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje);
+
+  const tracking = config?.reservaTracking || {};
+  const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
+
+  const investedSince = tracking.sobraData
+    ? transactions.some(t => t.tipo === 'investimento' && t.dataInicio > tracking.sobraData)
+    : false;
+
+  // Sem rastreio ativo ou usuário já aportou desde então: (re)inicia o rastreio
+  if (investedSince || !tracking.sobraData) {
+    if (sobra > 0) {
+      await db.collection('config').doc(uid).set({
+        reservaTracking: { sobraData: todayStr, sobraValor: sobra, lastRemindData: null }
+      }, { merge: true }).catch(() => {});
+    } else if (tracking.sobraData) {
+      await db.collection('config').doc(uid).set({
+        reservaTracking: admin.firestore.FieldValue.delete()
+      }, { merge: true }).catch(() => {});
+    }
+    return null;
+  }
+
+  const diasSemAporte = daysBetween(tracking.sobraData, todayStr);
+  if (diasSemAporte < LIMIAR_DIAS) return null;
+
+  const diasDesdeLembrete = tracking.lastRemindData ? daysBetween(tracking.lastRemindData, todayStr) : 999;
+  if (diasDesdeLembrete < LIMIAR_DIAS) return null;
+
+  await db.collection('config').doc(uid).set({
+    reservaTracking: { ...tracking, lastRemindData: todayStr }
+  }, { merge: true }).catch(() => {});
+
+  const [, mm, dd] = tracking.sobraData.split('-');
+  return `🔔 *Aporte pendente!*\n\nVocê tinha *${formatBRL(tracking.sobraValor)}* disponíveis para guardar ou investir desde ${dd}/${mm} e ainda não registrou nenhum aporte.\n\n_Que tal lançar agora no app?_`;
+}
+
 // ─── N18 — Economia do dia (19h, todos os usuários) ──────────────────────────
 function checkN18(transactions, config, tipos) {
   if (tipos.n18 === false) return [];
@@ -1544,6 +1590,135 @@ async function handleMeta(chatId, uid) {
   }
 
   return sendMessage(chatId, text.trim());
+}
+
+// ─── Cálculo de sobra segura (espelha calcularSobraSegura do frontend) ───────
+function calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje) {
+  const BUFFER_CAIXA = 500;
+  const proj45to = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
+  const saldoBase = calcSaldoSimples(transactions, todayStr, walletInitials);
+  const allOccs45 = expandRange(transactions, todayStr, proj45to);
+  const byDate45 = {};
+  for (const o of allOccs45) { if (!byDate45[o.date]) byDate45[o.date] = []; byDate45[o.date].push(o); }
+  let minSaldo = saldoBase, minDate = todayStr;
+  let cur = todayStr, sal = saldoBase;
+  while (cur <= proj45to) {
+    const items = byDate45[cur] || [];
+    const ent = items.filter(i => i.tipo === 'entrada').reduce((s, i) => s + i.valor, 0);
+    const sai = items.filter(i => i.tipo !== 'entrada').reduce((s, i) => s + i.valor, 0);
+    sal = sal + ent - sai;
+    if (sal < minSaldo) { minSaldo = sal; minDate = cur; }
+    const d = new Date(cur + 'T00:00:00'); d.setDate(d.getDate() + 1);
+    cur = dateStrFromDate(d);
+  }
+  return { sobra: Math.max(minSaldo - BUFFER_CAIXA, 0), minSaldo, minDate };
+}
+
+// ─── /reserva — Status da reserva de emergência ──────────────────────────────
+async function handleReserva(chatId, uid) {
+  const FAR_PAST = '2020-01-01';
+  const configDoc = await db.collection('config').doc(uid).get();
+  const config = configDoc.exists ? configDoc.data() : {};
+  const inv = config.investimentos || {};
+
+  if (!inv.perfil) {
+    return sendMessage(chatId,
+      `🌱 *Reserva de Emergência*\n\n` +
+      `Você ainda não configurou sua reserva no app.\n\n` +
+      `Configure seu perfil (Concursado/CLT/PJ) e despesas mensais para começar a acompanhar por aqui.\n\n` +
+      `👉 Acesse o app → aba *Investir*`
+    );
+  }
+
+  const { transactions, walletInitials } = await loadUserData(uid);
+  const goalsSnap = await db.collection('goals').where('userId', '==', uid).get();
+  const goals = goalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+  const metaTotal = (inv.despesasMens || 0) * (inv.mesesMeta || 0);
+  let reservaAtual = 0;
+  if (inv.reservaGoalId) {
+    const reservaGoal = goals.find(g => g.id === inv.reservaGoalId);
+    if (reservaGoal) {
+      const movs = transactions.filter(t =>
+        (t.goalId === inv.reservaGoalId || t.cartaoVinculo === inv.reservaGoalId) &&
+        (t.tipo === 'investimento' || t.tipo === 'entrada')
+      );
+      const total = expandRange(movs, FAR_PAST, todayStrBrasilia())
+        .reduce((acc, o) => acc + (o.tipo === 'entrada' ? o.valor : -o.valor), 0);
+      reservaAtual = Math.max(total !== 0 ? total : (reservaGoal.saldoInicial || 0), 0);
+    }
+  }
+
+  const pct = metaTotal > 0 ? Math.min(100, Math.round((reservaAtual / metaTotal) * 100)) : 0;
+  const { bar } = barra(reservaAtual, metaTotal);
+  const completa = metaTotal > 0 && reservaAtual >= metaTotal;
+
+  let msg = `🔐 *Reserva de Emergência*\n\n`;
+  if (metaTotal > 0) {
+    msg += `\`[${bar}] ${pct}%\`\n`;
+    msg += `${formatBRL(reservaAtual)} de ${formatBRL(metaTotal)}\n\n`;
+    msg += completa
+      ? `✅ *Reserva completa!* 100% da sua sobra já pode ir para investimentos.`
+      : `Falta *${formatBRL(metaTotal - reservaAtual)}* para completar.`;
+  } else {
+    msg += `_Meta ainda não calculada — verifique a configuração no app._`;
+  }
+
+  return sendMessage(chatId, msg.trim());
+}
+
+// ─── /investimentos — Status geral de investimentos e sobra disponível ───────
+async function handleInvestimentos(chatId, uid) {
+  const FAR_PAST = '2020-01-01';
+  const agora = getNowBrasilia();
+  const todayStr = dateStrFromDate(agora);
+
+  const { transactions, walletInitials } = await loadUserData(uid);
+  const configDoc = await db.collection('config').doc(uid).get();
+  const config = configDoc.exists ? configDoc.data() : {};
+  const inv = config.investimentos || {};
+
+  const totalInvestido = expandRange(
+    transactions.filter(t => t.tipo === 'investimento'), FAR_PAST, todayStr
+  ).reduce((acc, o) => acc + o.valor, 0);
+
+  const { sobra } = calcSobraSeguraBot(transactions, walletInitials, todayStr, agora);
+
+  let msg = `📈 *Investimentos*\n\n`;
+  msg += `💰 Total investido: *${formatBRL(totalInvestido)}*\n`;
+  msg += `💡 Sobra disponível para aportar: *${formatBRL(sobra)}*\n\n`;
+
+  if (inv.perfil && inv.mesesMeta && inv.despesasMens) {
+    const metaTotal = inv.despesasMens * inv.mesesMeta;
+    const goalsSnap = await db.collection('goals').where('userId', '==', uid).get();
+    const goals = goalsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    let reservaAtual = 0;
+    if (inv.reservaGoalId) {
+      const reservaGoal = goals.find(g => g.id === inv.reservaGoalId);
+      if (reservaGoal) {
+        const movs = transactions.filter(t =>
+          (t.goalId === inv.reservaGoalId || t.cartaoVinculo === inv.reservaGoalId) &&
+          (t.tipo === 'investimento' || t.tipo === 'entrada')
+        );
+        const total = expandRange(movs, FAR_PAST, todayStr)
+          .reduce((acc, o) => acc + (o.tipo === 'entrada' ? o.valor : -o.valor), 0);
+        reservaAtual = Math.max(total !== 0 ? total : (reservaGoal.saldoInicial || 0), 0);
+      }
+    }
+    const reservaCompleta = reservaAtual >= metaTotal;
+    if (sobra > 0) {
+      if (reservaCompleta) {
+        msg += `└ 100% livre para investir (reserva completa) ✅`;
+      } else {
+        msg += `├ Reserva (60%): ${formatBRL(sobra * 0.6)}\n`;
+        msg += `└ Investimento (40%): ${formatBRL(sobra * 0.4)}`;
+      }
+    }
+  } else {
+    msg += `_Configure seu perfil de reserva no app → aba Investir para ver a divisão recomendada._`;
+  }
+
+  return sendMessage(chatId, msg.trim());
 }
 
 async function handleProjecao(chatId, uid) {
@@ -2686,6 +2861,7 @@ async function handleAjuda(chatId) {
       [{ text: '💰 Saldo' },      { text: '💳 Cartões' },   { text: '🧾 Fatura' }],
       [{ text: '📊 Categorias' }, { text: '🎯 Metas' },     { text: '📈 Projeção' }],
       [{ text: '💡 Insight' },    { text: '📋 Parcelados' },{ text: '📅 Saldo Fim Mês' }],
+      [{ text: '🔐 Reserva' },   { text: '📈 Investimentos' }],
       [{ text: '⚙️ Configurar' }],
       [{ text: '❓ Ajuda' }],
     ],
@@ -2706,6 +2882,10 @@ async function handleAjuda(chatId) {
     `/categoria — Orçamento por categoria com barras de progresso\n` +
     `/meta — Status de cada meta da Divisão Percentual\n` +
     `/insight — Dicas e análises dinâmicas de gastos 💡\n\n` +
+
+    `*🔐 Reserva e Investimentos*\n` +
+    `/reserva — Status da sua reserva de emergência\n` +
+    `/investimentos — Total investido e sobra disponível para aportar\n\n` +
 
     `*💳 Cartões de Crédito*\n` +
     `/cartoes — Seus cartões, limites e vencimentos\n` +
@@ -3139,6 +3319,8 @@ async function processUpdate(update) {
     else if (t.includes('categor')) cmd = '/categoria';
     else if (t.includes('configur') || t.includes('alerta') || t.includes('⚙️')) cmd = '/configurar';
     else if (t.includes('meta')) cmd = '/meta';
+    else if (t.includes('reserva')) cmd = '/reserva';
+    else if (t.includes('investiment')) cmd = '/investimentos';
     else if (t.includes('insig') || t.includes('dica') || t.includes('insight')) cmd = '/insight';
     else if (t.includes('ajuda') || t.includes('help')) cmd = '/ajuda';
     else if (t.includes('parcela')) cmd = '/parcelados';
@@ -3188,6 +3370,8 @@ async function processUpdate(update) {
     case '/resumo':    return handleResumo(chatId, uid);
     case '/categoria': return handleCategoria(chatId, uid);
     case '/meta':      return handleMeta(chatId, uid);
+    case '/reserva':        return handleReserva(chatId, uid);
+    case '/investimentos':  return handleInvestimentos(chatId, uid);
     case '/cartoes':   return handleCartoes(chatId, uid);
     case '/fatura':    return handleFatura(chatId, uid);
     case '/projecao':  return handleProjecao(chatId, uid);
@@ -3426,6 +3610,28 @@ exports.dailyNotifications = onSchedule(
             if (n18Msgs.length > 0 && !tgBlocked)
               logger.info(`[N18] uid=${uid}: economia do dia enviada`);
           }
+
+          // ── N24 — Alerta de aporte perdido (Telegram) ────────────────────
+          if (telegramEnabled) {
+            const n24Tipos = { n24: ((prefs.telegramTipos ?? prefs.tipos ?? {}).n24 !== false) };
+            try {
+              const n24Msg = await checkN24AportePerdido(uid, transactions, config, walletInitials, n24Tipos);
+              if (n24Msg) {
+                const tgRes = await sendMessage(chatId, n24Msg);
+                if (tgRes && tgRes.ok === false) {
+                  const isBlocked = tgRes.error_code === 403 ||
+                    (tgRes.error_code === 400 && tgRes.description?.includes('chat not found'));
+                  if (isBlocked) {
+                    logger.warn(`[TELEGRAM] Envio N24 falhou (bot bloqueado) para uid=${uid}. Desativando.`);
+                    await disableTelegramForUser(uid);
+                  }
+                }
+                logger.info(`[N24] uid=${uid}: alerta de aporte perdido enviado`);
+              }
+            } catch (e24) {
+              logger.error(`[N24] uid=${uid}:`, e24.message);
+            }
+          }
         }
       } catch (err) {
         logger.error(`[NOTIF] Erro ao processar uid=${uid}:`, err);
@@ -3502,6 +3708,8 @@ const BOT_COMMANDS = [
   { command: 'resumo',     description: 'Entradas, saidas e saldo do mes corrente' },
   { command: 'categoria',  description: 'Orcamento por categoria com barras de progresso' },
   { command: 'meta',       description: 'Status das metas da Divisao Percentual' },
+  { command: 'reserva',    description: 'Status da reserva de emergencia' },
+  { command: 'investimentos', description: 'Total investido e sobra disponivel' },
   { command: 'insight',    description: 'Dicas e analises inteligentes de gastos' },
   { command: 'cartoes',    description: 'Cartoes cadastrados e vencimentos' },
   { command: 'fatura',     description: 'Itens e total acumulado na fatura atual' },

@@ -66,6 +66,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 | `projection` | `ProjectionScreen` |
 | `reports` | `ReportsScreen` |
 | `goals` | `GoalsScreen` |
+| `investimentos` | `InvestimentosScreen` |
 | `settings` | `SettingsScreen` |
 
 ---
@@ -73,7 +74,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.5
+- **Versão atual**: v1.6.134
 
 ### Regra de bump
 
@@ -113,20 +114,35 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.119 — 05/08/2026
+**Versão**: v1.6.134 — 24/09/2026
 
 **Últimas features**:
+- v1.6.134 — Cloud Functions N22 (sobra projetada segura diária) e N23 (relatório investimentos/reserva dias 15 e 30) no Telegram
+- v1.6.133 — Remove: widget "Pode gastar por dia" da Home
+- v1.6.132 — Banner sobra segura exibe data e valor do menor saldo projetado no período
+- v1.6.131 — Projeção: gradiente de cor no saldo diário (verde >500 → amarelo 500 → vermelho <0)
+- v1.6.130 — Sobra segura: volta a usar o mínimo do período (não o saldo final) menos buffer de R$500
+- v1.6.129 — Sobra segura: deduz buffer de R$500 de gordura no caixa
+- v1.6.128 — Fix sobra segura: usa saldo projetado no fim do período (revertido em 1.6.130)
+- v1.6.127 — Nav: Projeção volta ao menu inferior; Investir substitui Painel; atalho Painel na Home
+- v1.6.126 — Nova tela Investimentos: reserva de emergência por perfil (Concursado/CLT/PJ), meses configuráveis, sugestão automática de despesas, vínculo com caixinha, distribuição 60/40
+- v1.6.125 — Modal Investidor 10 no card Home (pergunta se tem carteira → pede URL → salva e abre)
+- v1.6.124 — Card Total Investido abre Investidor 10 + campo URL da carteira nas Configurações
+- v1.6.123 — Card "Total Investido" na Home (visível apenas quando há investimentos)
+- v1.6.122 — Fix calcularSobraSegura: usa historical:false para consistência com saldo da Home
+- v1.6.121 — Widget gastoPorDia (removido em 1.6.133), donut de metas, N6 saldo negativo, N7 projeção fim do mês
+- v1.6.120 — Fix notificações N10 ignoram ocorrências excluídas (exclusoes[])
 - v1.6.119 — Fix Projeção: removido historical:true do saldo inicial — restaura consistência com saldo da Home (mantém wInitials)
-- v1.6.118 — Fix Projeção Anual: wallets adicionado às dependências do useMemo annualData
-- v1.6.117 — Fix formatters: numberToBRLInput overflow de centavos e digitar zero no campo valor
-- v1.6.116 — Fix Projeção: saldo inicial inclui carteiras; fix calcFaturaCard overdue prematuro; fix reserva emergência; fix badge duplicado
-- v1.6.115 — Fix Projeção: badge e fatura de cartão clamp para último dia do mês em fevereiro
-- v1.6.114 — Remove: cards de cartão de crédito da tela inicial
-- v1.6.111 — Re-adicionado CartaoFaturaCard na Home com limite, parcelas futuras e quick-add; fix Number() em diaFechamento/diaVencimento
-- v1.6.110 — Telegram interativo ([✅ Pago] e [📅 Adiar 5 dias]) + webhook MacroDroid/Tasker + WebhookSettings
-- v1.6.109 — Fix PWA: auto-update via skipWaiting + controllerchange + tela de loading
 
 **Arquitetura relevante desta sessão**:
+- `InvestimentosScreen.jsx` — tela de alocação: perfil de trabalho, meses de reserva, despesas fixas (auto-sugeridas), vínculo com caixinha (goal), distribuição 60/40 da sobra
+- `config.investimentos` — `{ perfil, mesesMeta, despesasMens, reservaGoalId }` persistido no Firestore
+- `calcularSobraSegura` (projectionCalc.js) — usa o **mínimo** do saldo projetado em 45 dias, subtrai buffer fixo de R$500 (`BUFFER_CAIXA`); retorna também `dataMinimoSaldo` e `minimoSaldo`
+- `saldoColor()` em ProjectionScreen.jsx — gradiente verde/amarelo/vermelho baseado no saldo (>500 verde, 500 amarelo, <0 vermelho)
+- Cloud Function N22 — espelha `calcularSobraSegura` do frontend, envia aviso diário no Telegram quando há sobra
+- Cloud Function N23 — dias 15/30: lê `config.investimentos`, calcula reserva atual via transações vinculadas ao `goalId`, envia relatório ou mensagem motivacional
+- `config.investidor10Url` — URL da carteira no Investidor 10; card "Total Investido" na Home abre link (com modal de cadastro se ainda não configurado)
+- BottomNav atual: Início / Investir / (+) / Projeção / Config — atalho para Painel (reports) fica dentro da Home
 - `CartaoFaturaCard.jsx` — componente de card de cartão na Home (atualmente removido da Home, arquivo existe)
 - `calcFaturaCard` — usa `cartaoVinculo` além de `cartaoId` para vincular provisões
 - `cardBadges` no ProjectionScreen — usa clamp `Math.min(diaVenc, lastDayOfMonth)` para meses curtos

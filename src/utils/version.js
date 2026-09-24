@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.134';
+export const APP_VERSION = '1.6.135';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.135',
+    date: '24/09/2026',
+    changes: [
+      'Investimentos: campo de classe (Renda Fixa/Ações/FIIs/Cripto/Internacional/Outro) nos aportes + donut de alocação por classe na tela Investir',
+      'Telegram: comandos /reserva e /investimentos com status em tempo real',
+      'Cloud Function N24: alerta de aporte perdido no Telegram quando há sobra recomendada há 5+ dias sem nenhum aporte registrado',
+    ],
+  },
   {
     version: '1.6.134',
     date: '24/09/2026',

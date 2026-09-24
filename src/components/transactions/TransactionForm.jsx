@@ -65,7 +65,17 @@ const EMPTY = {
   carteiraId: '',
   metaId: '',
   categoria: '',
+  classeInvestimento: '',
 };
+
+const CLASSES_INVESTIMENTO = [
+  { id: 'renda_fixa',      label: 'Renda Fixa' },
+  { id: 'acoes',           label: 'Ações' },
+  { id: 'fiis',            label: 'FIIs' },
+  { id: 'cripto',          label: 'Cripto' },
+  { id: 'internacional',   label: 'Internacional' },
+  { id: 'outro',           label: 'Outro' },
+];
 
 const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '', conferido: false };
 
@@ -361,6 +371,10 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
 
     if (form.tipo === 'investimento' && form.metaId) {
       data.metaId = form.metaId;
+    }
+
+    if (form.tipo === 'investimento' && form.classeInvestimento) {
+      data.classeInvestimento = form.classeInvestimento;
     }
 
     // Substituir lançamento similar existente
@@ -956,6 +970,19 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
           <select value={form.carteiraId} onChange={e => set('carteiraId', e.target.value)}>
             <option value="">Saldo Global (Não vincular)</option>
             {wallets.map(w => <option key={w.id} value={w.id}>{w.nome}</option>)}
+          </select>
+        </div>
+      )}
+
+      {/* Classe do investimento (Apenas Investimento) */}
+      {form.tipo === 'investimento' && (
+        <div>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+            Classe do investimento <span style={{ color: 'var(--text-muted)' }}>(opcional)</span>
+          </label>
+          <select value={form.classeInvestimento} onChange={e => set('classeInvestimento', e.target.value)}>
+            <option value="">Não classificar</option>
+            {CLASSES_INVESTIMENTO.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>
         </div>
       )}

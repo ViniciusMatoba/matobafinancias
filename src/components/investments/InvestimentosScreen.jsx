@@ -6,11 +6,44 @@ import { calcularSobraSegura } from '../../utils/projectionCalc';
 
 const FAR_PAST = '2020-01-01';
 
+const CLASSES_LABELS = {
+  renda_fixa:    { label: 'Renda Fixa',    cor: '#3b82f6' },
+  acoes:         { label: 'Ações',         cor: '#10b981' },
+  fiis:          { label: 'FIIs',          cor: '#f59e0b' },
+  cripto:        { label: 'Cripto',        cor: '#f97316' },
+  internacional: { label: 'Internacional', cor: '#8b5cf6' },
+  outro:         { label: 'Outro',         cor: '#6b7280' },
+};
+
 const PERFIS = [
   { id: 'concursado', label: 'Concursado/Servidor', mesesMin: 3, mesesMax: 3, rec: 3, desc: 'Alta estabilidade — 3 meses recomendados' },
   { id: 'clt',        label: 'CLT',                 mesesMin: 4, mesesMax: 6, rec: 6, desc: 'Estabilidade moderada — 4 a 6 meses recomendados' },
   { id: 'pj',         label: 'PJ / Autônomo',       mesesMin: 6, mesesMax: 12, rec: 12, desc: 'Renda variável — 6 a 12 meses recomendados' },
 ];
+
+function MultiDonut({ segments, size = 96 }) {
+  const r = (size / 2) - 8;
+  const circ = 2 * Math.PI * r;
+  const cx = size / 2, cy = size / 2;
+  let offset = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth="9" />
+      {segments.map((s, i) => {
+        const dash = (s.pct / 100) * circ;
+        const el = (
+          <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.cor} strokeWidth="9"
+            strokeDasharray={`${dash} ${circ - dash}`}
+            strokeDashoffset={-offset}
+            transform={`rotate(-90 ${cx} ${cy})`}
+            strokeLinecap="butt" />
+        );
+        offset += dash;
+        return el;
+      })}
+    </svg>
+  );
+}
 
 function DonutProgress({ pct, cor, size = 72 }) {
   const r = (size / 2) - 7;
@@ -96,6 +129,30 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
     const invTxs = (transactions || []).filter(t => t.tipo === 'investimento');
     return invTxs.flatMap(t => expandOccurrences(t, FAR_PAST, today))
       .reduce((acc, o) => acc + o.valor, 0);
+  }, [transactions, today]);
+
+  // ── Alocação por classe de investimento ──────────────────────────────────────
+  const alocacaoPorClasse = useMemo(() => {
+    const invTxs = (transactions || []).filter(t => t.tipo === 'investimento');
+    const totals = {};
+    invTxs.forEach(tx => {
+      const classe = tx.classeInvestimento || 'outro';
+      const occs = expandOccurrences(tx, FAR_PAST, today);
+      const soma = occs.reduce((acc, o) => acc + o.valor, 0);
+      totals[classe] = (totals[classe] || 0) + soma;
+    });
+    const total = Object.values(totals).reduce((a, b) => a + b, 0);
+    if (total <= 0) return { total: 0, segments: [] };
+    let acc = 0;
+    const segments = Object.entries(totals)
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([classe, valor]) => {
+        const pct = (valor / total) * 100;
+        const seg = { classe, valor, pct, cor: CLASSES_LABELS[classe]?.cor || '#6b7280', label: CLASSES_LABELS[classe]?.label || classe };
+        return seg;
+      });
+    return { total, segments };
   }, [transactions, today]);
 
   const handleSave = () => {
@@ -324,6 +381,30 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
               Acumulado em todos os lançamentos de investimento
+            </p>
+          </div>
+        )}
+
+        {/* ── Card: Alocação por classe ────────────────────────────────────────── */}
+        {alocacaoPorClasse.total > 0 && (
+          <div style={{ background: 'var(--bg-surface)', borderRadius: 16, padding: 16, border: '1px solid var(--border)' }}>
+            <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+              Alocação por classe
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <MultiDonut segments={alocacaoPorClasse.segments} size={96} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {alocacaoPorClasse.segments.map(s => (
+                  <div key={s.classe} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ width: 10, height: 10, borderRadius: 3, background: s.cor, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>{s.label}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{Math.round(s.pct)}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p style={{ margin: '12px 0 0', fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
+              Baseado na classe informada em cada lançamento de investimento
             </p>
           </div>
         )}
