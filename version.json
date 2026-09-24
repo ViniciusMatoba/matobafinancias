@@ -1,7 +1,7 @@
 {
-  "version": "1.6.128",
+  "version": "1.6.127",
   "date": "24/09/2026",
   "notes": [
-    "Fix sobra segura: usa saldo projetado no fim do período (45 dias) em vez do mínimo pontual — valor agora reflete a sobra real após todas as despesas futuras"
+    "Nav: Projeção volta ao menu inferior; Investir substitui Painel no menu; atalho para Painel adicionado na tela Início"
   ]
 }
