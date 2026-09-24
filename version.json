@@ -1,7 +1,8 @@
 {
-  "version": "1.6.132",
+  "version": "1.6.134",
   "date": "24/09/2026",
   "notes": [
-    "Banner sobra segura: exibe data e valor do menor saldo projetado no período; quando o mínimo é hoje, informa que não há despesas fixas previstas no período"
+    "Cloud Function N22: aviso diário da sobra projetada segura no Telegram com data do menor saldo",
+    "Cloud Function N23: relatório de investimentos/reserva nos dias 15 e 30 — saldos reais se configurado, motivacional se não"
   ]
 }
