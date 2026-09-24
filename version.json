@@ -1,7 +1,7 @@
 {
-  "version": "1.6.130",
+  "version": "1.6.129",
   "date": "24/09/2026",
   "notes": [
-    "Sobra segura: usa o menor saldo do período (pior ponto nos 45 dias) menos R$500 de buffer; banner exibe nota sobre a gordura do caixa"
+    "Sobra segura: sempre reserva R$ 500 no caixa — o valor recomendado para guardar/investir é o projetado menos esse buffer"
   ]
 }
