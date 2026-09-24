@@ -1,7 +1,7 @@
 {
-  "version": "1.6.122",
+  "version": "1.6.123",
   "date": "24/09/2026",
   "notes": [
-    "Fix: banner \"Sobra Segura\" usa o mesmo saldo base da Home (sem historical:true) — valor agora consistente com o saldo exibido na tela"
+    "Home: card \"Total Investido\" exibe a soma acumulada de investimentos — aparece apenas quando há valor investido"
   ]
 }
