@@ -941,6 +941,155 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     }
   }
 
+  // ── N22 — Sobra projetada segura (aviso diário quando há sobra) ─────────────
+  if (tipos.n22 !== false) {
+    const BUFFER_CAIXA = 500;
+    const FAR_PAST = '2020-01-01';
+    const proj45to = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
+    const saldoBase = calcSaldoSimples(transactions, todayStr, walletInitials);
+    // Projeta dia a dia para os próximos 45 dias
+    let minSaldo = saldoBase;
+    let minDate = todayStr;
+    {
+      const allOccs45 = expandRange(transactions, todayStr, proj45to);
+      const byDate45 = {};
+      for (const o of allOccs45) {
+        if (!byDate45[o.date]) byDate45[o.date] = [];
+        byDate45[o.date].push(o);
+      }
+      let cur45 = todayStr;
+      let sal45 = saldoBase;
+      while (cur45 <= proj45to) {
+        const items = byDate45[cur45] || [];
+        const ent = items.filter(i => i.tipo === 'entrada').reduce((s, i) => s + i.valor, 0);
+        const sai = items.filter(i => i.tipo !== 'entrada').reduce((s, i) => s + i.valor, 0);
+        sal45 = sal45 + ent - sai;
+        if (sal45 < minSaldo) { minSaldo = sal45; minDate = cur45; }
+        const d = new Date(cur45 + 'T00:00:00'); d.setDate(d.getDate() + 1);
+        cur45 = dateStrFromDate(d);
+      }
+    }
+    const sobra = minSaldo - BUFFER_CAIXA;
+    if (sobra > 0) {
+      const [, minMM, minDD] = minDate.split('-');
+      const isTodayMin = minDate === todayStr;
+      const minLabel = isTodayMin
+        ? `_Menor saldo no período: ${formatBRL(minSaldo)} (hoje — sem despesas fixas previstas)_`
+        : `_Menor saldo no período: ${formatBRL(minSaldo)} em ${minDD}/${minMM}_`;
+      let msg = `💡 *Sobra Projetada Segura*\n\n`;
+      msg += `Nos próximos 45 dias você tem *${formatBRL(sobra)}* disponíveis para guardar ou investir — já considerando R$ 500 de gordura no caixa.\n\n`;
+      msg += minLabel;
+      msgs.push(msg);
+    }
+  }
+
+  // ── N23 — Lembrete de investimento e reserva (dias 15 e 30) ─────────────────
+  if (tipos.n23 !== false && (day === 15 || day === 30)) {
+    const FAR_PAST = '2020-01-01';
+    const invConfig = config?.investimentos || {};
+    const temPerfil = !!invConfig.perfil;
+    const mesesMeta = invConfig.mesesMeta || 0;
+    const despesasMens = invConfig.despesasMens || 0;
+    const reservaGoalId = invConfig.reservaGoalId || '';
+
+    // Calcula reserva atual (soma das transações vinculadas à caixinha de reserva)
+    let reservaAtual = 0;
+    let metaTotal = 0;
+    if (reservaGoalId && goals.length > 0) {
+      const reservaGoal = goals.find(g => g.id === reservaGoalId);
+      if (reservaGoal) {
+        const movs = transactions.filter(t =>
+          (t.goalId === reservaGoalId || t.cartaoVinculo === reservaGoalId) &&
+          (t.tipo === 'investimento' || t.tipo === 'entrada')
+        );
+        const total = movs.flatMap(t => {
+          const occs = expandRange([t], FAR_PAST, todayStr);
+          return occs;
+        }).reduce((acc, o) => acc + (o.tipo === 'entrada' ? o.valor : -o.valor), 0);
+        reservaAtual = Math.max(total !== 0 ? total : (reservaGoal.saldoInicial || 0), 0);
+        metaTotal = despesasMens * mesesMeta;
+      }
+    }
+
+    // Total investido
+    const totalInvestido = expandRange(
+      transactions.filter(t => t.tipo === 'investimento'), FAR_PAST, todayStr
+    ).reduce((acc, o) => acc + o.valor, 0);
+
+    // Sobra segura
+    const BUFFER_N23 = 500;
+    const saldoBaseN23 = calcSaldoSimples(transactions, todayStr, walletInitials);
+    const proj45N23 = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
+    let minSaldoN23 = saldoBaseN23;
+    {
+      const allOccs45 = expandRange(transactions, todayStr, proj45N23);
+      const byDate45 = {};
+      for (const o of allOccs45) { if (!byDate45[o.date]) byDate45[o.date] = []; byDate45[o.date].push(o); }
+      let cur = todayStr, sal = saldoBaseN23;
+      while (cur <= proj45N23) {
+        const items = byDate45[cur] || [];
+        const ent = items.filter(i => i.tipo === 'entrada').reduce((s, i) => s + i.valor, 0);
+        const sai = items.filter(i => i.tipo !== 'entrada').reduce((s, i) => s + i.valor, 0);
+        sal = sal + ent - sai;
+        if (sal < minSaldoN23) minSaldoN23 = sal;
+        const d = new Date(cur + 'T00:00:00'); d.setDate(d.getDate() + 1);
+        cur = dateStrFromDate(d);
+      }
+    }
+    const sobraN23 = Math.max(minSaldoN23 - BUFFER_N23, 0);
+    const aporteReserva = (metaTotal > 0 && reservaAtual < metaTotal) ? sobraN23 * 0.6 : 0;
+    const aporteInvest  = (metaTotal > 0 && reservaAtual < metaTotal) ? sobraN23 * 0.4 : sobraN23;
+    const reservaCompleta = metaTotal > 0 && reservaAtual >= metaTotal;
+
+    const nomeMes = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
+    const periodo = day === 15 ? 'metade' : 'fim';
+
+    if (!temPerfil) {
+      // Sem configuração: mensagem motivacional
+      let msg = `🌱 *Lembrete de Investimento — ${periodo === 'metade' ? 'Dia 15' : 'Dia 30'}*\n\n`;
+      msg += `Você ainda não configurou sua reserva de emergência no app.\n\n`;
+      msg += `🔐 *Por que começar?*\nUma reserva de emergência de 3 a 12 meses de despesas fixas te protege de imprevistos e te dá liberdade para investir com tranquilidade.\n\n`;
+      msg += `💡 *Dica:* Guarde em conta corrente ou CDB/Tesouro com liquidez diária.\n\n`;
+      msg += `_Acesse o app → aba Investir para configurar!_`;
+      msgs.push(msg);
+    } else {
+      // Com configuração: relatório com saldos reais
+      let msg = `📈 *Relatório de Investimentos — ${periodo === 'metade' ? 'Dia 15' : 'Dia 30'} de ${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}*\n\n`;
+
+      if (metaTotal > 0) {
+        const pct = Math.min(100, Math.round((reservaAtual / metaTotal) * 100));
+        const { bar } = barra(reservaAtual, metaTotal);
+        msg += `🔐 *Reserva de Emergência*\n`;
+        msg += `\`[${bar}] ${pct}%\` — ${formatBRL(reservaAtual)} de ${formatBRL(metaTotal)}\n`;
+        if (reservaCompleta) {
+          msg += `✅ _Reserva completa! Parabéns!_\n\n`;
+        } else {
+          msg += `Falta: *${formatBRL(metaTotal - reservaAtual)}*\n\n`;
+        }
+      }
+
+      if (totalInvestido > 0) {
+        msg += `📊 *Total Investido*: ${formatBRL(totalInvestido)}\n\n`;
+      }
+
+      if (sobraN23 > 0) {
+        msg += `💡 *Sobra disponível para aportar*: *${formatBRL(sobraN23)}*\n`;
+        if (!reservaCompleta && metaTotal > 0) {
+          msg += `├ Reserva (60%): ${formatBRL(aporteReserva)}\n`;
+          msg += `└ Investimento (40%): ${formatBRL(aporteInvest)}\n`;
+        } else {
+          msg += `└ 100% livre para investir!\n`;
+        }
+        msg += `\n_Já considerando R$ 500 de gordura no caixa._\n`;
+      } else {
+        msg += `_Sobra projetada indisponível no momento. Mantenha o controle dos gastos!_\n`;
+      }
+
+      msg += `\n_Acesse o app → aba Investir para acompanhar!_`;
+      msgs.push(msg.trim());
+    }
+  }
+
   // ── N21 — Lembrete de conferência bancária (dia 20) ───────────────────────────
   if (tipos.n21 !== false && day === 20) {
     const currentMonthStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;

@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.133';
+export const APP_VERSION = '1.6.134';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.134',
+    date: '24/09/2026',
+    changes: [
+      'Cloud Function N22: aviso diário da sobra projetada segura no Telegram com data do menor saldo',
+      'Cloud Function N23: relatório de investimentos/reserva nos dias 15 e 30 — saldos reais se configurado, motivacional se não',
+    ],
+  },
   {
     version: '1.6.133',
     date: '24/09/2026',

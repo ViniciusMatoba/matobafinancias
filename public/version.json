@@ -1,7 +1,7 @@
 {
-  "version": "1.6.132",
+  "version": "1.6.133",
   "date": "24/09/2026",
   "notes": [
-    "Banner sobra segura: exibe data e valor do menor saldo projetado no período; quando o mínimo é hoje, informa que não há despesas fixas previstas no período"
+    "Remove: widget \"Pode gastar por dia\" da tela Início"
   ]
 }
