@@ -1,7 +1,7 @@
 {
-  "version": "1.6.131",
+  "version": "1.6.133",
   "date": "24/09/2026",
   "notes": [
-    "Projeção: saldo diário exibe gradiente verde (>500) → amarelo (500) → vermelho (<0); aplicado também nos saldos inicial, final e mensal"
+    "Remove: widget \"Pode gastar por dia\" da tela Início"
   ]
 }
