@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.129';
+export const APP_VERSION = '1.6.130';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.130',
+    date: '24/09/2026',
+    changes: [
+      'Sobra segura: usa o menor saldo do período (pior ponto nos 45 dias) menos R$500 de buffer; banner exibe nota sobre a gordura do caixa',
+    ],
+  },
   {
     version: '1.6.129',
     date: '24/09/2026',

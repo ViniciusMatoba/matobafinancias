@@ -168,7 +168,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       if (!reserveStats.exists) {
         return {
           title: 'Reserva de Emergência Recomendada!',
-          desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}). Vimos que você ainda não criou uma caixinha de "Reserva de Emergência". Recomendamos criar uma com meta recomendada de ${formatBRL(reserveStats.metaRecomendada)} (6 meses de custos fixos) e priorizar este saldo nela!`,
+          desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}) — já considerando R$ 500 de gordura no caixa. Vimos que você ainda não criou uma caixinha de "Reserva de Emergência". Recomendamos criar uma com meta recomendada de ${formatBRL(reserveStats.metaRecomendada)} (6 meses de custos fixos) e priorizar este saldo nela!`,
           buttonText: 'Criar Reserva de Emergência',
           bg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
           shadow: 'rgba(245,158,11,0.3)',
@@ -178,7 +178,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         const falta = formatBRL(reserveStats.metaFinal - reserveStats.saldo);
         return {
           title: 'Acelere sua Reserva de Emergência!',
-          desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}). Recomendamos priorizar a conclusão da sua caixinha "Reserva de Emergência" (atualmente com ${formatBRL(reserveStats.saldo)} de ${formatBRL(reserveStats.metaFinal)}). Falta apenas ${falta} para garantir sua tranquilidade financeira!`,
+          desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}) — já considerando R$ 500 de gordura no caixa. Recomendamos priorizar a conclusão da sua caixinha "Reserva de Emergência" (atualmente com ${formatBRL(reserveStats.saldo)} de ${formatBRL(reserveStats.metaFinal)}). Falta apenas ${falta} para garantir sua tranquilidade financeira!`,
           buttonText: 'Aportar na Reserva',
           bg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
           shadow: 'rgba(59,130,246,0.3)',
@@ -189,7 +189,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
     return {
       title: 'Dinheiro sobrando de forma segura! 🎉',
-      desc: `Parabéns! Sua Reserva de Emergência está concluída. Projetamos suas despesas até ${dataFim} e você tem ${formatSobra} livres e seguros. Você pode guardar esse valor agora para acelerar suas outras metas de investimento sem comprometer seu orçamento!`,
+      desc: `Parabéns! Sua Reserva de Emergência está concluída. Projetamos suas despesas até ${dataFim} e você tem ${formatSobra} livres e seguros — já considerando R$ 500 de gordura no caixa. Você pode guardar esse valor agora para acelerar suas outras metas de investimento sem comprometer seu orçamento!`,
       buttonText: 'Aportar nas Caixinhas',
       bg: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
       shadow: 'rgba(16,185,129,0.3)',

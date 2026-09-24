@@ -1,7 +1,7 @@
 {
   "name": "matoba-financas",
   "private": true,
-  "version": "1.6.129",
+  "version": "1.6.130",
   "type": "module",
   "scripts": {
     "dev": "vite",
