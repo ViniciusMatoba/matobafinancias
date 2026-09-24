@@ -172,7 +172,7 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
   const to = addDays(from, days);
   
   const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
-  const saldoAtual = calcSaldo(transactions, '2020-01-01', addDays(from, -1), { historical: true }) + wInitials;
+  const saldoAtual = calcSaldo(transactions, '2020-01-01', addDays(from, -1)) + wInitials;
 
   const dailyProj = buildDailyProjection(transactions, from, to, saldoAtual);
   

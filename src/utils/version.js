@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.121';
-export const APP_VERSION_DATE = '11/08/2026';
+export const APP_VERSION = '1.6.122';
+export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.122',
+    date: '24/09/2026',
+    changes: [
+      'Fix: banner "Sobra Segura" usa o mesmo saldo base da Home (sem historical:true) — valor agora consistente com o saldo exibido na tela',
+    ],
+  },
   {
     version: '1.6.121',
     date: '11/08/2026',
