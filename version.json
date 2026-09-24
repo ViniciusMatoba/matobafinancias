@@ -1,7 +1,7 @@
 {
-  "version": "1.6.130",
+  "version": "1.6.132",
   "date": "24/09/2026",
   "notes": [
-    "Sobra segura: usa o menor saldo do período (pior ponto nos 45 dias) menos R$500 de buffer; banner exibe nota sobre a gordura do caixa"
+    "Banner sobra segura: exibe data e valor do menor saldo projetado no período; quando o mínimo é hoje, informa que não há despesas fixas previstas no período"
   ]
 }
