@@ -1,7 +1,7 @@
 {
-  "version": "1.6.129",
+  "version": "1.6.128",
   "date": "24/09/2026",
   "notes": [
-    "Sobra segura: sempre reserva R$ 500 no caixa — o valor recomendado para guardar/investir é o projetado menos esse buffer"
+    "Fix sobra segura: usa saldo projetado no fim do período (45 dias) em vez do mínimo pontual — valor agora reflete a sobra real após todas as despesas futuras"
   ]
 }
