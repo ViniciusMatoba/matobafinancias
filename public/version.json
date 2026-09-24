@@ -1,7 +1,7 @@
 {
-  "version": "1.6.131",
+  "version": "1.6.132",
   "date": "24/09/2026",
   "notes": [
-    "Projeção: saldo diário exibe gradiente verde (>500) → amarelo (500) → vermelho (<0); aplicado também nos saldos inicial, final e mensal"
+    "Banner sobra segura: exibe data e valor do menor saldo projetado no período; quando o mínimo é hoje, informa que não há despesas fixas previstas no período"
   ]
 }

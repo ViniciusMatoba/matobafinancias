@@ -65,19 +65,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
     return globalTx + wInitials;
   }, [transactions, wallets, selectedDate]);
 
-  // "Posso gastar X/dia" — saldo projetado até fim do mês dividido pelos dias restantes
-  const gastoPorDia = useMemo(() => {
-    if (!isToday) return null;
-    const [y, m] = today.split('-').map(Number);
-    const lastDay = new Date(y, m, 0);
-    const endOfMonth = `${today.slice(0, 7)}-${String(lastDay.getDate()).padStart(2, '0')}`;
-    const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
-    const saldoFimMes = calcSaldo(transactions, FAR_PAST, endOfMonth) + wInitials;
-    const diasRestantes = lastDay.getDate() - new Date(today).getDate() + 1; // inclui hoje
-    if (diasRestantes <= 0 || saldoFimMes <= 0) return null;
-    return { valor: saldoFimMes / diasRestantes, diasRestantes, saldoFimMes };
-  }, [transactions, wallets, today, isToday]);
-
   // Total investido acumulado (todas as transações tipo 'investimento' até a data selecionada)
   const totalInvestido = useMemo(() => {
     const invTxs = transactions.filter(t => t.tipo === 'investimento');
@@ -349,33 +336,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           </div>
         )}
 
-        {/* Widget: Posso gastar X/dia */}
-        {gastoPorDia && (
-          <div style={{
-            marginTop: summaryCards.length > 0 ? 12 : 18,
-            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.22)',
-            borderRadius: 14, padding: '12px 14px',
-            display: 'flex', alignItems: 'center', gap: 12,
-          }}>
-            <div style={{
-              width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-              background: 'rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <Zap size={18} color="var(--primary, #6366f1)" />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: 11, color: 'var(--text-secondary)', marginBottom: 2 }}>
-                Pode gastar por dia ({gastoPorDia.diasRestantes} dias restantes)
-              </p>
-              <p style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--primary, #6366f1)' }}>
-                {fmtVal(gastoPorDia.valor)}
-              </p>
-            </div>
-            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)', textAlign: 'right', flexShrink: 0 }}>
-              Projeção<br />até fim<br />do mês
-            </p>
-          </div>
-        )}
 
         {/* Card: Total Investido */}
         {totalInvestido > 0 && (
@@ -416,7 +376,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
         <button
           onClick={() => onNavigate('goals')}
           style={{
-            width: '100%', marginTop: (totalInvestido > 0 || gastoPorDia) ? 12 : (summaryCards.length > 0 ? 12 : 18),
+            width: '100%', marginTop: totalInvestido > 0 ? 12 : (summaryCards.length > 0 ? 12 : 18),
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: 12, padding: '13px 14px',
             background: 'rgba(168,85,247,0.12)', border: '1px solid rgba(168,85,247,0.28)',

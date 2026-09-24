@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.132';
+export const APP_VERSION = '1.6.133';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.133',
+    date: '24/09/2026',
+    changes: [
+      'Remove: widget "Pode gastar por dia" da tela Início',
+    ],
+  },
   {
     version: '1.6.132',
     date: '24/09/2026',
