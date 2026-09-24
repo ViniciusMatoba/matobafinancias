@@ -11,6 +11,18 @@ const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
 };
 
+// Verde (#10b981) acima de 500, amarelo (#f59e0b) em 500, vermelho (#ef4444) abaixo de 0
+function saldoColor(saldo) {
+  if (saldo >= 500) return '#10b981';
+  if (saldo <= 0)   return '#ef4444';
+  // gradiente de 0→500: vermelho → amarelo
+  const t = saldo / 500; // 0..1
+  const r = Math.round(239 + (245 - 239) * t);  // 239→245
+  const g = Math.round(68  + (158 - 68)  * t);  // 68→158
+  const b = Math.round(68  + (11  - 68)  * t);  // 68→11
+  return `rgb(${r},${g},${b})`;
+}
+
 const DAY_NAMES_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTH_NAMES_FULL = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const FAR_PAST = '2020-01-01';
@@ -354,13 +366,13 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
             }}>
               <div>
                 <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Saldo inicial</p>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoInicial >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(saldoInicial) }}>
                   {formatBRL(saldoInicial)}
                 </p>
               </div>
               <div>
                 <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Saldo final</p>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoFim >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(saldoFim) }}>
                   {formatBRL(saldoFim)}
                 </p>
               </div>
@@ -526,7 +538,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
                           alignItems: 'flex-end', justifyContent: 'center',
                           minWidth: 96, flexShrink: 0, gap: 2,
                         }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: day.saldo >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: saldoColor(day.saldo) }}>
                             {formatBRL(day.saldo)}
                           </span>
                           {day.saldo < 0 && (
@@ -808,7 +820,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
                       </div>
                       <div>
                         <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block' }}>Saldo Acumulado</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: m.saldoFim >= 0 ? 'var(--text-primary)' : 'var(--saida)' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: saldoColor(m.saldoFim) }}>
                           {formatBRL(m.saldoFim)}
                         </span>
                       </div>

@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.130';
+export const APP_VERSION = '1.6.131';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.131',
+    date: '24/09/2026',
+    changes: [
+      'Projeção: saldo diário exibe gradiente verde (>500) → amarelo (500) → vermelho (<0); aplicado também nos saldos inicial, final e mensal',
+    ],
+  },
   {
     version: '1.6.130',
     date: '24/09/2026',
