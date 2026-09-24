@@ -8,10 +8,11 @@ import SetupGoalsScreen from './components/onboarding/SetupGoalsScreen';
 import HomeScreen from './components/home/HomeScreen';
 
 // Telas secundárias carregadas sob demanda (lazy) para reduzir bundle inicial
-const ProjectionScreen = lazy(() => import('./components/projection/ProjectionScreen'));
-const GoalsScreen      = lazy(() => import('./components/goals/GoalsScreen'));
-const SettingsScreen   = lazy(() => import('./components/settings/SettingsScreen'));
-const ReportsScreen    = lazy(() => import('./components/reports/ReportsScreen'));
+const ProjectionScreen    = lazy(() => import('./components/projection/ProjectionScreen'));
+const GoalsScreen         = lazy(() => import('./components/goals/GoalsScreen'));
+const SettingsScreen      = lazy(() => import('./components/settings/SettingsScreen'));
+const ReportsScreen       = lazy(() => import('./components/reports/ReportsScreen'));
+const InvestimentosScreen = lazy(() => import('./components/investments/InvestimentosScreen'));
 import TourGuide from './components/shared/TourGuide';
 import ScreenTip from './components/shared/ScreenTip';
 import BottomNav from './components/shared/BottomNav';
@@ -170,6 +171,15 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             wallets={wallets}
             config={config}
             onNavigate={handleNavigate}
+          />
+        )}
+        {view === 'investimentos' && (
+          <InvestimentosScreen
+            transactions={transactions}
+            wallets={wallets}
+            goals={goals}
+            config={config}
+            onSaveConfig={saveConfig}
           />
         )}
         {view === 'settings' && (

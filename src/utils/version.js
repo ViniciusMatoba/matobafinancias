@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.125';
+export const APP_VERSION = '1.6.126';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.126',
+    date: '24/09/2026',
+    changes: [
+      'Nova tela Investimentos (ícone Investir no menu): reserva de emergência com perfil (Concursado/CLT/PJ), meses configuráveis, sugestão automática de despesas fixas, vínculo com caixinha, distribuição 60/40 da sobra enquanto reserva incompleta e 100% ao completar',
+    ],
+  },
   {
     version: '1.6.125',
     date: '24/09/2026',

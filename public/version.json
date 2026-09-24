@@ -1,8 +1,7 @@
 {
-  "version": "1.6.124",
+  "version": "1.6.125",
   "date": "24/09/2026",
   "notes": [
-    "Home: card Total Investido clicável — abre Investidor 10; sem carteira cadastrada abre o site principal",
-    "Configurações: novo campo para salvar URL da carteira no Investidor 10 com botão de teste"
+    "Home: modal ao clicar no card Total Investido — pergunta se tem carteira no Investidor 10; se sim, pede URL e salva automaticamente; abre o link em seguida"
   ]
 }
