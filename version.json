@@ -1,7 +1,7 @@
 {
-  "version": "1.6.126",
+  "version": "1.6.128",
   "date": "24/09/2026",
   "notes": [
-    "Nova tela Investimentos (ícone Investir no menu): reserva de emergência com perfil (Concursado/CLT/PJ), meses configuráveis, sugestão automática de despesas fixas, vínculo com caixinha, distribuição 60/40 da sobra enquanto reserva incompleta e 100% ao completar"
+    "Fix sobra segura: usa saldo projetado no fim do período (45 dias) em vez do mínimo pontual — valor agora reflete a sobra real após todas as despesas futuras"
   ]
 }
