@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.127';
+export const APP_VERSION = '1.6.128';
 export const APP_VERSION_DATE = '24/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.128',
+    date: '24/09/2026',
+    changes: [
+      'Fix sobra segura: usa saldo projetado no fim do período (45 dias) em vez do mínimo pontual — valor agora reflete a sobra real após todas as despesas futuras',
+    ],
+  },
   {
     version: '1.6.127',
     date: '24/09/2026',

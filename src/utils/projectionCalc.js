@@ -175,14 +175,11 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
   const saldoAtual = calcSaldo(transactions, '2020-01-01', addDays(from, -1)) + wInitials;
 
   const dailyProj = buildDailyProjection(transactions, from, to, saldoAtual);
-  
-  let minSaldo = saldoAtual;
-  for (const day of dailyProj) {
-    if (day.saldo < minSaldo) minSaldo = day.saldo;
-  }
+
+  const saldoFinal = dailyProj.length > 0 ? dailyProj[dailyProj.length - 1].saldo : saldoAtual;
 
   return {
-    sobra: minSaldo > 0 ? minSaldo : 0,
+    sobra: saldoFinal > 0 ? saldoFinal : 0,
     dataVerificada: to
   };
 }
