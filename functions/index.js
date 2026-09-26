@@ -1721,6 +1721,149 @@ async function handleInvestimentos(chatId, uid) {
   return sendMessage(chatId, msg.trim());
 }
 
+// ─── /gastos — Despesas do mês por categoria, com filtro por categoria/termo ──
+const GASTOS_CATS = {
+  liberdade:     { icon: '💎', label: 'Liberdade' },
+  custos_fixos:  { icon: '🏠', label: 'Custos Fixos' },
+  conforto:      { icon: '🛋', label: 'Conforto' },
+  metas:         { icon: '🎯', label: 'Metas' },
+  prazeres:      { icon: '🎉', label: 'Prazeres' },
+  conhecimento:  { icon: '📚', label: 'Conhecimento' },
+  sem_categoria: { icon: '📦', label: 'Sem categoria' },
+};
+
+function mdEscape(s) {
+  return String(s || '').replace(/([_*`\[])/g, '\\$1');
+}
+
+function normTxt(s) {
+  return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+}
+
+// Espelha computeSpentByCategory, mas devolve cada lançamento individual
+function collectMonthExpenses(transactions, currentMonth) {
+  const [year, mon] = currentMonth.split('-').map(Number);
+  const from = `${currentMonth}-01`;
+  const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2, '0')}`;
+  const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
+  const entries = [];
+
+  for (const o of expandRange(transactions, from, to)) {
+    const tx = o.tx;
+    if (!tx || tx.tipo === 'entrada') continue;
+
+    if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+      if (tx.id?.includes('-proj-') && comFaturaReal.has(tx.cartaoId)) continue;
+      for (const item of tx.itens) {
+        const valor = Number(item.valor) || 0;
+        if (!valor) continue;
+        if (!item.isParcelado && !item.dataCompra?.startsWith(currentMonth)) continue;
+        const parc = item.isParcelado && item.totalParcelas ? ` (${item.parcelaAtual || 1}/${item.totalParcelas})` : '';
+        entries.push({
+          date: item.dataCompra?.startsWith(currentMonth) ? item.dataCompra : o.date,
+          desc: `${item.descricao?.trim() || tx.descricao?.trim() || 'Compra no cartão'}${parc} 💳`,
+          valor,
+          cat: item.categoria in GASTOS_CATS ? item.categoria : 'sem_categoria',
+        });
+      }
+      continue;
+    }
+
+    const catRaw = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
+    entries.push({
+      date: o.date,
+      desc: tx.descricao?.trim() || tx.tipo,
+      valor: o.valor,
+      cat: catRaw in GASTOS_CATS ? catRaw : 'sem_categoria',
+    });
+  }
+  return entries;
+}
+
+// Envia blocos de texto respeitando o limite de 4096 caracteres do Telegram
+async function sendChunked(chatId, header, lines) {
+  const LIMIT = 3500;
+  let buf = header;
+  for (const line of lines) {
+    if (buf.length + line.length + 1 > LIMIT) {
+      await sendMessage(chatId, buf.trim());
+      buf = '';
+    }
+    buf += line + '\n';
+  }
+  if (buf.trim()) await sendMessage(chatId, buf.trim());
+}
+
+async function handleGastos(chatId, uid, args) {
+  const agora = getNowBrasilia();
+  const currentMonth = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
+  const nomeMes = MESES_LONGO[agora.getMonth() + 1];
+  const { transactions } = await loadUserData(uid);
+  const entries = collectMonthExpenses(transactions, currentMonth);
+
+  if (entries.length === 0) {
+    return sendMessage(chatId, `📭 Nenhuma despesa lançada em ${nomeMes} até agora.`);
+  }
+
+  const fmtDate = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+  const linha = (e) => `• ${fmtDate(e.date)} — ${mdEscape(e.desc)}: *${formatBRL(e.valor)}*`;
+  const byDate = (a, b) => a.date.localeCompare(b.date);
+  const termo = normTxt(args);
+
+  // ── Sem argumento: visão geral, todas as categorias com seus lançamentos ──
+  if (!termo) {
+    const groups = {};
+    for (const e of entries) (groups[e.cat] = groups[e.cat] || []).push(e);
+    const total = entries.reduce((s, e) => s + e.valor, 0);
+    const ordem = Object.keys(groups).sort(
+      (a, b) => groups[b].reduce((s, e) => s + e.valor, 0) - groups[a].reduce((s, e) => s + e.valor, 0)
+    );
+
+    const lines = [];
+    for (const cat of ordem) {
+      const list = groups[cat].sort(byDate);
+      const sub = list.reduce((s, e) => s + e.valor, 0);
+      const pct = Math.round((sub / total) * 100);
+      lines.push(`\n${GASTOS_CATS[cat].icon} *${GASTOS_CATS[cat].label}* — ${formatBRL(sub)} (${pct}%)`);
+      list.forEach(e => lines.push(linha(e)));
+    }
+    lines.push(`\n_Para ver só uma categoria: /gastos conforto — ou busque um termo: /gastos mercado_`);
+    return sendChunked(chatId,
+      `🧾 *Gastos de ${nomeMes}*\nTotal: *${formatBRL(total)}* em ${entries.length} lançamento${entries.length > 1 ? 's' : ''}\n`,
+      lines);
+  }
+
+  // ── Argumento é uma categoria: todos os lançamentos dela ──────────────────
+  const catMatch = Object.keys(GASTOS_CATS).find(id => {
+    const label = normTxt(GASTOS_CATS[id].label);
+    const idTxt = id.replace(/_/g, ' ');
+    return termo.length >= 3 && (label === termo || idTxt === termo || label.startsWith(termo) || idTxt.startsWith(termo));
+  });
+
+  if (catMatch) {
+    const list = entries.filter(e => e.cat === catMatch).sort(byDate);
+    if (list.length === 0) {
+      return sendMessage(chatId, `${GASTOS_CATS[catMatch].icon} Nenhuma despesa em *${GASTOS_CATS[catMatch].label}* em ${nomeMes}.`);
+    }
+    const sub = list.reduce((s, e) => s + e.valor, 0);
+    return sendChunked(chatId,
+      `${GASTOS_CATS[catMatch].icon} *${GASTOS_CATS[catMatch].label} — ${nomeMes}*\nTotal: *${formatBRL(sub)}* em ${list.length} lançamento${list.length > 1 ? 's' : ''}\n`,
+      list.map(linha));
+  }
+
+  // ── Argumento é um termo livre: busca na descrição e no nome da categoria ─
+  const found = entries
+    .filter(e => normTxt(e.desc).includes(termo) || normTxt(GASTOS_CATS[e.cat].label).includes(termo))
+    .sort(byDate);
+  if (found.length === 0) {
+    return sendMessage(chatId, `🔎 Nada encontrado para "${mdEscape(args)}" em ${nomeMes}.\n\nUse /gastos para ver todas as despesas do mês.`);
+  }
+  const sub = found.reduce((s, e) => s + e.valor, 0);
+  return sendChunked(chatId,
+    `🔎 *"${mdEscape(args)}" — ${nomeMes}*\nTotal: *${formatBRL(sub)}* em ${found.length} lançamento${found.length > 1 ? 's' : ''}\n`,
+    found.map(e => `${linha(e)} _(${GASTOS_CATS[e.cat].label})_`));
+}
+
 async function handleProjecao(chatId, uid) {
   const agora = getNowBrasilia();
   const hoje  = dateStrFromDate(agora);
@@ -2880,6 +3023,7 @@ async function handleAjuda(chatId) {
 
     `*🎯 Orçamento e metas*\n` +
     `/categoria — Orçamento por categoria com barras de progresso\n` +
+    `/gastos — Todas as despesas do mês por categoria _(ex: /gastos conforto ou /gastos mercado)_\n` +
     `/meta — Status de cada meta da Divisão Percentual\n` +
     `/insight — Dicas e análises dinâmicas de gastos 💡\n\n` +
 
@@ -3319,6 +3463,7 @@ async function processUpdate(update) {
     else if (t.includes('categor')) cmd = '/categoria';
     else if (t.includes('configur') || t.includes('alerta') || t.includes('⚙️')) cmd = '/configurar';
     else if (t.includes('meta')) cmd = '/meta';
+    else if (t.includes('gasto')) cmd = '/gastos';
     else if (t.includes('reserva')) cmd = '/reserva';
     else if (t.includes('investiment')) cmd = '/investimentos';
     else if (t.includes('insig') || t.includes('dica') || t.includes('insight')) cmd = '/insight';
@@ -3370,6 +3515,7 @@ async function processUpdate(update) {
     case '/resumo':    return handleResumo(chatId, uid);
     case '/categoria': return handleCategoria(chatId, uid);
     case '/meta':      return handleMeta(chatId, uid);
+    case '/gastos':         return handleGastos(chatId, uid, args);
     case '/reserva':        return handleReserva(chatId, uid);
     case '/investimentos':  return handleInvestimentos(chatId, uid);
     case '/cartoes':   return handleCartoes(chatId, uid);
@@ -3708,6 +3854,7 @@ const BOT_COMMANDS = [
   { command: 'resumo',     description: 'Entradas, saidas e saldo do mes corrente' },
   { command: 'categoria',  description: 'Orcamento por categoria com barras de progresso' },
   { command: 'meta',       description: 'Status das metas da Divisao Percentual' },
+  { command: 'gastos',     description: 'Despesas do mes por categoria (ex: /gastos mercado)' },
   { command: 'reserva',    description: 'Status da reserva de emergencia' },
   { command: 'investimentos', description: 'Total investido e sobra disponivel' },
   { command: 'insight',    description: 'Dicas e analises inteligentes de gastos' },

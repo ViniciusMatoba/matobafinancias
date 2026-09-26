@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.135';
-export const APP_VERSION_DATE = '24/09/2026';
+export const APP_VERSION = '1.6.136';
+export const APP_VERSION_DATE = '26/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.136',
+    date: '26/09/2026',
+    changes: [
+      'Telegram: novo comando /gastos — lista todas as despesas do mês separadas por categoria; /gastos <categoria> mostra os lançamentos da categoria; /gastos <termo> busca por descrição',
+    ],
+  },
   {
     version: '1.6.135',
     date: '24/09/2026',
