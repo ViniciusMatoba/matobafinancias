@@ -1,7 +1,8 @@
 {
-  "version": "1.6.136",
+  "version": "1.6.137",
   "date": "26/09/2026",
   "notes": [
-    "Telegram: novo comando /gastos — lista todas as despesas do mês separadas por categoria; /gastos <categoria> mostra os lançamentos da categoria; /gastos <termo> busca por descrição"
+    "Telegram: /gastos aceita mês (ex: /gastos agosto, /gastos mercado agosto) e modo top (/gastos top, /gastos conforto top) com os 10 maiores lançamentos",
+    "Telegram: novo comando /meses — total gasto por mês (últimos 12, ou /meses 6), com destaque para o mês mais alto, o mais baixo e a média"
   ]
 }

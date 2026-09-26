@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.137';
+export const APP_VERSION = '1.6.138';
 export const APP_VERSION_DATE = '26/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.138',
+    date: '26/09/2026',
+    changes: [
+      'Telegram N25: alerta quando uma categoria passa 30% da média dos últimos 3 meses (1x por categoria/mês; ignora Liberdade e Sem categoria)',
+      'Configurações: alertas N22 (sobra segura), N23 (relatório de investimentos), N24 (aporte pendente) e N25 (acima da média) agora podem ser ligados/desligados no app e no bot',
+    ],
+  },
   {
     version: '1.6.137',
     date: '26/09/2026',

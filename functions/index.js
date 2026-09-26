@@ -1163,6 +1163,59 @@ async function checkN24AportePerdido(uid, transactions, config, walletInitials, 
   return `🔔 *Aporte pendente!*\n\nVocê tinha *${formatBRL(tracking.sobraValor)}* disponíveis para guardar ou investir desde ${dd}/${mm} e ainda não registrou nenhum aporte.\n\n_Que tal lançar agora no app?_`;
 }
 
+// ─── N25 — Categoria acima da média dos últimos meses ────────────────────────
+// Compara o mês corrente (mês inteiro, lançado + previsto) com a média dos até 3
+// meses anteriores, categoria a categoria. Avisa no máximo 1x por categoria/mês.
+async function checkN25AcimaDaMedia(uid, transactions, config, tipos) {
+  if (tipos.n25 === false) return null;
+
+  const LIMIAR = 1.3;     // 30% acima da média
+  const MIN_MEDIA = 50;   // ignora categorias de valor irrelevante
+  const hoje = getNowBrasilia();
+  const keyOf = (offset) => {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() - offset, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const mesAtual = keyOf(0);
+  // historical:true em todos os meses para comparar igual com igual (gastos diários contam)
+  const coletar = (key) => collectMonthExpenses(transactions, key, { historical: true });
+  const somaPorCat = (list) => list.reduce((acc, e) => { acc[e.cat] = (acc[e.cat] || 0) + e.valor; return acc; }, {});
+
+  const hist = [1, 2, 3].map(o => coletar(keyOf(o))).filter(list => list.length > 0);
+  if (hist.length < 2) return null;
+
+  const atual = somaPorCat(coletar(mesAtual));
+  const histSomas = hist.map(somaPorCat);
+  const jaAvisadas = config?.alertasAcimaMedia?.[mesAtual] || [];
+
+  const novas = [];
+  for (const cat of Object.keys(atual)) {
+    if (cat === 'liberdade' || cat === 'sem_categoria') continue; // investir mais não é alerta
+    if (jaAvisadas.includes(cat)) continue;
+    const media = histSomas.reduce((s, m) => s + (m[cat] || 0), 0) / hist.length;
+    if (media < MIN_MEDIA) continue;
+    if (atual[cat] >= media * LIMIAR) {
+      novas.push({ cat, gasto: atual[cat], media, pct: Math.round((atual[cat] / media - 1) * 100) });
+    }
+  }
+  if (novas.length === 0) return null;
+
+  // mergeFields substitui o campo inteiro, descartando meses antigos
+  await db.collection('config').doc(uid).set(
+    { alertasAcimaMedia: { [mesAtual]: [...jaAvisadas, ...novas.map(n => n.cat)] } },
+    { mergeFields: ['alertasAcimaMedia'] }
+  ).catch(() => {});
+
+  novas.sort((a, b) => b.pct - a.pct);
+  let msg = `📈 *Gastos acima do seu padrão*\n\n`;
+  for (const n of novas) {
+    const c = GASTOS_CATS[n.cat];
+    msg += `${c.icon} *${c.label}*: ${formatBRL(n.gasto)} lançados no mês — *${n.pct}% acima* da média dos últimos ${hist.length} meses (${formatBRL(n.media)})\n`;
+  }
+  msg += `\n_Veja os lançamentos: /gastos ${normTxt(GASTOS_CATS[novas[0].cat].label)}_`;
+  return msg;
+}
+
 // ─── N18 — Economia do dia (19h, todos os usuários) ──────────────────────────
 function checkN18(transactions, config, tipos) {
   if (tipos.n18 === false) return [];
@@ -1741,14 +1794,14 @@ function normTxt(s) {
 }
 
 // Espelha computeSpentByCategory, mas devolve cada lançamento individual
-function collectMonthExpenses(transactions, currentMonth) {
+function collectMonthExpenses(transactions, currentMonth, { historical = false } = {}) {
   const [year, mon] = currentMonth.split('-').map(Number);
   const from = `${currentMonth}-01`;
   const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2, '0')}`;
   const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
   const entries = [];
 
-  for (const o of expandRange(transactions, from, to)) {
+  for (const o of expandRange(transactions, from, to, { historical })) {
     const tx = o.tx;
     if (!tx || tx.tipo === 'entrada') continue;
 
@@ -2119,7 +2172,7 @@ const DEFAULT_TG_TIPOS = {
   n1:true,n2:true,n3:true,n4:true,n5:true,n6:true,n7:true,
   n8:true,n9:true,n10:true,n11:true,n12:true,
   n13:true,n14:true,n15:true,n16:true,n17:true,n18:true,
-  n19:true,n20:true,n21:true,
+  n19:true,n20:true,n21:true,n22:true,n23:true,n24:true,n25:true,
 };
 
 const ALERT_LABELS = {
@@ -2130,6 +2183,8 @@ const ALERT_LABELS = {
   n13:'Fecha amanhã',       n14:'Última parcela',       n15:'Saldo mínimo',
   n16:'Caixinhas (dia 1)',  n17:'Metade do mês',        n18:'Economia do dia',
   n19:'Gasto atípico do dia', n20:'Progresso metas (sex)', n21:'Conferência (dia 20)',
+  n22:'Sobra segura',          n23:'Relatório invest. (15/30)', n24:'Aporte pendente',
+  n25:'Acima da média',
 };
 
 // Grupos de alertas para organizar o menu
@@ -2138,8 +2193,9 @@ const ALERT_GROUPS = [
   { emoji:'💰', title:'Orçamento',     ids:['n4','n5','n9'] },
   { emoji:'⚠️', title:'Alertas',       ids:['n6','n10','n11','n14','n15'] },
   { emoji:'📊', title:'Resumos',       ids:['n7','n8','n12','n16','n17'] },
-  { emoji:'💚', title:'Economia',      ids:['n18','n19'] },
+  { emoji:'💚', title:'Economia',      ids:['n18','n19','n25'] },
   { emoji:'🎯', title:'Metas e Banco', ids:['n20','n21'] },
+  { emoji:'📈', title:'Investimentos', ids:['n22','n23','n24'] },
 ];
 
 // Texto do menu de configuração
@@ -3854,6 +3910,28 @@ exports.dailyNotifications = onSchedule(
               }
             } catch (e24) {
               logger.error(`[N24] uid=${uid}:`, e24.message);
+            }
+          }
+
+          // ── N25 — Categoria acima da média (Telegram) ────────────────────
+          if (telegramEnabled) {
+            const n25Tipos = { n25: ((prefs.telegramTipos ?? prefs.tipos ?? {}).n25 !== false) };
+            try {
+              const n25Msg = await checkN25AcimaDaMedia(uid, transactions, config, n25Tipos);
+              if (n25Msg) {
+                const tgRes = await sendMessage(chatId, n25Msg);
+                if (tgRes && tgRes.ok === false) {
+                  const isBlocked = tgRes.error_code === 403 ||
+                    (tgRes.error_code === 400 && tgRes.description?.includes('chat not found'));
+                  if (isBlocked) {
+                    logger.warn(`[TELEGRAM] Envio N25 falhou (bot bloqueado) para uid=${uid}. Desativando.`);
+                    await disableTelegramForUser(uid);
+                  }
+                }
+                logger.info(`[N25] uid=${uid}: alerta de categoria acima da média enviado`);
+              }
+            } catch (e25) {
+              logger.error(`[N25] uid=${uid}:`, e25.message);
             }
           }
         }
