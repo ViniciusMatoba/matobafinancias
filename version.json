@@ -1,9 +1,7 @@
 {
-  "version": "1.6.135",
-  "date": "24/09/2026",
+  "version": "1.6.136",
+  "date": "26/09/2026",
   "notes": [
-    "Investimentos: campo de classe (Renda Fixa/Ações/FIIs/Cripto/Internacional/Outro) nos aportes + donut de alocação por classe na tela Investir",
-    "Telegram: comandos /reserva e /investimentos com status em tempo real",
-    "Cloud Function N24: alerta de aporte perdido no Telegram quando há sobra recomendada há 5+ dias sem nenhum aporte registrado"
+    "Telegram: novo comando /gastos — lista todas as despesas do mês separadas por categoria; /gastos <categoria> mostra os lançamentos da categoria; /gastos <termo> busca por descrição"
   ]
 }
