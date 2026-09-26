@@ -1,8 +1,8 @@
 {
-  "version": "1.6.138",
+  "version": "1.6.137",
   "date": "26/09/2026",
   "notes": [
-    "Telegram N25: alerta quando uma categoria passa 30% da média dos últimos 3 meses (1x por categoria/mês; ignora Liberdade e Sem categoria)",
-    "Configurações: alertas N22 (sobra segura), N23 (relatório de investimentos), N24 (aporte pendente) e N25 (acima da média) agora podem ser ligados/desligados no app e no bot"
+    "Telegram: /gastos aceita mês (ex: /gastos agosto, /gastos mercado agosto) e modo top (/gastos top, /gastos conforto top) com os 10 maiores lançamentos",
+    "Telegram: novo comando /meses — total gasto por mês (últimos 12, ou /meses 6), com destaque para o mês mais alto, o mais baixo e a média"
   ]
 }
