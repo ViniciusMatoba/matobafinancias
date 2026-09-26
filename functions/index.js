@@ -1794,23 +1794,62 @@ async function sendChunked(chatId, header, lines) {
   if (buf.trim()) await sendMessage(chatId, buf.trim());
 }
 
+// Nomes/abreviações de mês (sem acento) → número 1–12
+const MES_TOKENS = (() => {
+  const map = {};
+  MESES_LONGO.forEach((nome, i) => {
+    if (!i) return;
+    const n = normTxt(nome);
+    map[n] = i;
+    map[n.slice(0, 3)] = i;
+  });
+  return map;
+})();
+
+// Separa o argumento em: mês/ano alvo, modo "top" e termo restante (categoria/busca)
+function parseGastosArgs(args, agora) {
+  let month = null, year = null, top = false;
+  const resto = [];
+  for (const tk of normTxt(args).split(/\s+/).filter(Boolean)) {
+    if (MES_TOKENS[tk] && month === null) month = MES_TOKENS[tk];
+    else if (/^(19|20)\d{2}$/.test(tk)) year = Number(tk);
+    else if (['top', 'maiores', 'maior', 'ranking'].includes(tk)) top = true;
+    else resto.push(tk);
+  }
+  const curY = agora.getFullYear(), curM = agora.getMonth() + 1;
+  if (month === null) month = curM;
+  if (year === null) year = month > curM ? curY - 1 : curY;
+  return { month, year, top, termo: resto.join(' ') };
+}
+
 async function handleGastos(chatId, uid, args) {
   const agora = getNowBrasilia();
-  const currentMonth = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
-  const nomeMes = MESES_LONGO[agora.getMonth() + 1];
+  const { month, year, top: topMode, termo } = parseGastosArgs(args, agora);
+  const currentMonth = `${year}-${String(month).padStart(2, '0')}`;
+  const nomeMes = `${MESES_LONGO[month]}${year !== agora.getFullYear() ? ` ${year}` : ''}`;
   const { transactions } = await loadUserData(uid);
   const entries = collectMonthExpenses(transactions, currentMonth);
 
   if (entries.length === 0) {
-    return sendMessage(chatId, `📭 Nenhuma despesa lançada em ${nomeMes} até agora.`);
+    return sendMessage(chatId, `📭 Nenhuma despesa lançada em ${nomeMes}.`);
   }
 
   const fmtDate = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
   const linha = (e) => `• ${fmtDate(e.date)} — ${mdEscape(e.desc)}: *${formatBRL(e.valor)}*`;
   const byDate = (a, b) => a.date.localeCompare(b.date);
-  const termo = normTxt(args);
+  const ordenar = (list) => topMode
+    ? [...list].sort((a, b) => b.valor - a.valor).slice(0, 10)
+    : [...list].sort(byDate);
+  const tituloTop = topMode ? '🏆 Maiores gastos' : null;
 
   // ── Sem argumento: visão geral, todas as categorias com seus lançamentos ──
+  if (!termo && topMode) {
+    const list = ordenar(entries);
+    return sendChunked(chatId,
+      `🏆 *Maiores gastos — ${nomeMes}*\n`,
+      list.map((e, i) => `${i + 1}. ${linha(e)} _(${GASTOS_CATS[e.cat].label})_`));
+  }
+
   if (!termo) {
     const groups = {};
     for (const e of entries) (groups[e.cat] = groups[e.cat] || []).push(e);
@@ -1841,27 +1880,63 @@ async function handleGastos(chatId, uid, args) {
   });
 
   if (catMatch) {
-    const list = entries.filter(e => e.cat === catMatch).sort(byDate);
-    if (list.length === 0) {
+    const all = entries.filter(e => e.cat === catMatch);
+    if (all.length === 0) {
       return sendMessage(chatId, `${GASTOS_CATS[catMatch].icon} Nenhuma despesa em *${GASTOS_CATS[catMatch].label}* em ${nomeMes}.`);
     }
-    const sub = list.reduce((s, e) => s + e.valor, 0);
+    const sub = all.reduce((s, e) => s + e.valor, 0);
     return sendChunked(chatId,
-      `${GASTOS_CATS[catMatch].icon} *${GASTOS_CATS[catMatch].label} — ${nomeMes}*\nTotal: *${formatBRL(sub)}* em ${list.length} lançamento${list.length > 1 ? 's' : ''}\n`,
-      list.map(linha));
+      `${GASTOS_CATS[catMatch].icon} *${GASTOS_CATS[catMatch].label} — ${nomeMes}*${tituloTop ? ' (maiores)' : ''}\nTotal: *${formatBRL(sub)}* em ${all.length} lançamento${all.length > 1 ? 's' : ''}\n`,
+      ordenar(all).map(linha));
   }
 
   // ── Argumento é um termo livre: busca na descrição e no nome da categoria ─
   const found = entries
-    .filter(e => normTxt(e.desc).includes(termo) || normTxt(GASTOS_CATS[e.cat].label).includes(termo))
-    .sort(byDate);
+    .filter(e => normTxt(e.desc).includes(termo) || normTxt(GASTOS_CATS[e.cat].label).includes(termo));
   if (found.length === 0) {
-    return sendMessage(chatId, `🔎 Nada encontrado para "${mdEscape(args)}" em ${nomeMes}.\n\nUse /gastos para ver todas as despesas do mês.`);
+    return sendMessage(chatId, `🔎 Nada encontrado para "${mdEscape(termo)}" em ${nomeMes}.\n\nUse /gastos para ver todas as despesas do mês.`);
   }
   const sub = found.reduce((s, e) => s + e.valor, 0);
   return sendChunked(chatId,
-    `🔎 *"${mdEscape(args)}" — ${nomeMes}*\nTotal: *${formatBRL(sub)}* em ${found.length} lançamento${found.length > 1 ? 's' : ''}\n`,
-    found.map(e => `${linha(e)} _(${GASTOS_CATS[e.cat].label})_`));
+    `🔎 *"${mdEscape(termo)}" — ${nomeMes}*${tituloTop ? ' (maiores)' : ''}\nTotal: *${formatBRL(sub)}* em ${found.length} lançamento${found.length > 1 ? 's' : ''}\n`,
+    ordenar(found).map(e => `${linha(e)} _(${GASTOS_CATS[e.cat].label})_`));
+}
+
+// ─── /meses — Total gasto por mês (últimos N meses) e mês mais alto ──────────
+async function handleMeses(chatId, uid, args) {
+  const agora = getNowBrasilia();
+  const n = Math.min(Math.max(parseInt(args, 10) || 12, 3), 24);
+  const { transactions } = await loadUserData(uid);
+
+  const meses = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const total = collectMonthExpenses(transactions, key).reduce((s, e) => s + e.valor, 0);
+    meses.push({ key, mes: d.getMonth() + 1, ano: d.getFullYear(), total, atual: i === 0 });
+  }
+  const inicio = meses.findIndex(m => m.total > 0);
+  if (inicio === -1) return sendMessage(chatId, '📭 Nenhuma despesa lançada nesse período.');
+  const lista = meses.slice(inicio);
+
+  const max = Math.max(...lista.map(m => m.total));
+  const fechados = lista.filter(m => !m.atual);
+  const maisAlto = [...(fechados.length ? fechados : lista)].sort((a, b) => b.total - a.total)[0];
+  const maisBaixo = [...(fechados.length ? fechados : lista)].sort((a, b) => a.total - b.total)[0];
+  const media = fechados.length ? fechados.reduce((s, m) => s + m.total, 0) / fechados.length : 0;
+  const rotulo = (m) => `${MESES_CURTO[m.mes]}/${String(m.ano).slice(2)}`;
+
+  let msg = `📅 *Gastos por mês — últimos ${lista.length} meses*\n\n`;
+  for (const m of lista) {
+    const { bar } = barra(m.total, max, 10);
+    const marca = m === maisAlto ? ' 🔺' : m === maisBaixo && lista.length > 2 ? ' 🔻' : '';
+    msg += `\`${rotulo(m)} ${bar}\` ${formatBRL(m.total)}${m.atual ? ' _(em andamento)_' : ''}${marca}\n`;
+  }
+  msg += `\n🔺 Mês mais alto: *${MESES_LONGO[maisAlto.mes]}/${maisAlto.ano}* — ${formatBRL(maisAlto.total)}`;
+  if (lista.length > 2) msg += `\n🔻 Mês mais baixo: *${MESES_LONGO[maisBaixo.mes]}/${maisBaixo.ano}* — ${formatBRL(maisBaixo.total)}`;
+  if (fechados.length > 1) msg += `\n📊 Média dos meses fechados: *${formatBRL(media)}*`;
+  msg += `\n\n_Detalhe de um mês: /gastos agosto — maiores: /gastos top_`;
+  return sendMessage(chatId, msg.trim());
 }
 
 async function handleProjecao(chatId, uid) {
@@ -3023,7 +3098,8 @@ async function handleAjuda(chatId) {
 
     `*🎯 Orçamento e metas*\n` +
     `/categoria — Orçamento por categoria com barras de progresso\n` +
-    `/gastos — Todas as despesas do mês por categoria _(ex: /gastos conforto ou /gastos mercado)_\n` +
+    `/gastos — Todas as despesas do mês por categoria _(ex: /gastos conforto, /gastos mercado, /gastos agosto, /gastos top)_\n` +
+    `/meses — Total gasto por mês e qual foi o mês mais alto _(ex: /meses 6)_\n` +
     `/meta — Status de cada meta da Divisão Percentual\n` +
     `/insight — Dicas e análises dinâmicas de gastos 💡\n\n` +
 
@@ -3463,6 +3539,7 @@ async function processUpdate(update) {
     else if (t.includes('categor')) cmd = '/categoria';
     else if (t.includes('configur') || t.includes('alerta') || t.includes('⚙️')) cmd = '/configurar';
     else if (t.includes('meta')) cmd = '/meta';
+    else if (t.includes('meses')) cmd = '/meses';
     else if (t.includes('gasto')) cmd = '/gastos';
     else if (t.includes('reserva')) cmd = '/reserva';
     else if (t.includes('investiment')) cmd = '/investimentos';
@@ -3516,6 +3593,7 @@ async function processUpdate(update) {
     case '/categoria': return handleCategoria(chatId, uid);
     case '/meta':      return handleMeta(chatId, uid);
     case '/gastos':         return handleGastos(chatId, uid, args);
+    case '/meses':          return handleMeses(chatId, uid, args);
     case '/reserva':        return handleReserva(chatId, uid);
     case '/investimentos':  return handleInvestimentos(chatId, uid);
     case '/cartoes':   return handleCartoes(chatId, uid);
@@ -3854,7 +3932,8 @@ const BOT_COMMANDS = [
   { command: 'resumo',     description: 'Entradas, saidas e saldo do mes corrente' },
   { command: 'categoria',  description: 'Orcamento por categoria com barras de progresso' },
   { command: 'meta',       description: 'Status das metas da Divisao Percentual' },
-  { command: 'gastos',     description: 'Despesas do mes por categoria (ex: /gastos mercado)' },
+  { command: 'gastos',     description: 'Despesas do mes por categoria (ex: /gastos agosto, /gastos top)' },
+  { command: 'meses',      description: 'Total gasto por mes e mes mais alto' },
   { command: 'reserva',    description: 'Status da reserva de emergencia' },
   { command: 'investimentos', description: 'Total investido e sobra disponivel' },
   { command: 'insight',    description: 'Dicas e analises inteligentes de gastos' },

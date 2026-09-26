@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.136';
+export const APP_VERSION = '1.6.137';
 export const APP_VERSION_DATE = '26/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.137',
+    date: '26/09/2026',
+    changes: [
+      'Telegram: /gastos aceita mês (ex: /gastos agosto, /gastos mercado agosto) e modo top (/gastos top, /gastos conforto top) com os 10 maiores lançamentos',
+      'Telegram: novo comando /meses — total gasto por mês (últimos 12, ou /meses 6), com destaque para o mês mais alto, o mais baixo e a média',
+    ],
+  },
   {
     version: '1.6.136',
     date: '26/09/2026',

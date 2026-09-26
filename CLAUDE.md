@@ -74,7 +74,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.136
+- **Versão atual**: v1.6.137
 
 ### Regra de bump
 
@@ -114,9 +114,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.136 — 26/09/2026
+**Versão**: v1.6.137 — 26/09/2026
 
 **Últimas features**:
+- v1.6.137 — Telegram `/gastos` com mês e `top`; novo `/meses` (total por mês, mês mais alto/baixo, média)
 - v1.6.136 — Telegram `/gastos` (despesas do mês por categoria; filtro por categoria ou termo livre)
 - v1.6.135 — Classe de investimento nos aportes + donut de alocação; comandos `/reserva` e `/investimentos`; N24 alerta de aporte perdido
 - v1.6.134 — Cloud Functions N22 (sobra projetada segura diária) e N23 (relatório investimentos/reserva dias 15 e 30) no Telegram
