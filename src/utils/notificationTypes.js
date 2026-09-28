@@ -30,7 +30,7 @@ export const TIPO_INFO = {
   n19: { label: 'Gasto atípico do dia',          icon: '⚠️', desc: 'Avisa quando os gastos do dia estão 2× acima da sua média diária dos últimos 30 dias' },
   n20: { label: 'Progresso semanal de metas',    icon: '🎯', desc: 'Toda sexta-feira: atualização do progresso de todas as suas metas financeiras' },
   n21: { label: 'Lembrete de conferência',       icon: '📋', desc: 'Dia 20 de cada mês: lembra de conciliar o extrato bancário com os lançamentos pendentes' },
-  n22: { label: 'Sobra projetada segura',        icon: '💡', desc: 'Avisa quanto você pode guardar ou investir, já descontando R$ 500 de folga no caixa' },
+  n22: { label: 'Sobra projetada segura',        icon: '💡', desc: 'Avisa quanto você pode guardar ou investir, podendo ir tudo para a reserva (resgate imediato), sobrando só os centavos na conta' },
   n23: { label: 'Relatório de investimentos',    icon: '📈', desc: 'Dias 15 e 30: status da reserva de emergência, total investido e sobra para aportar' },
   n24: { label: 'Aporte pendente',               icon: '🔔', desc: 'Telegram: cobra quando há sobra recomendada há 5+ dias e nenhum aporte foi registrado' },
   n25: { label: 'Gasto acima da média',          icon: '📈', desc: 'Telegram: avisa quando uma categoria passa 30% da média dos últimos 3 meses (1x por categoria/mês)' },

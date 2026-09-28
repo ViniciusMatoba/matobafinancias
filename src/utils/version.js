@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.138';
-export const APP_VERSION_DATE = '26/09/2026';
+export const APP_VERSION = '1.6.139';
+export const APP_VERSION_DATE = '28/09/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.139',
+    date: '28/09/2026',
+    changes: [
+      'Sobra segura: removido o colchão de R$ 500 — a reserva tem resgate imediato, então a sobra é o menor saldo do período arredondado para reais inteiros (só os centavos ficam na conta). Vale para Home, tela Investir e Telegram (N22, N23, /investimentos)',
+      'Fix: tela Investir mostrava NaN na sobra e na divisão 60/40 (usava o objeto retornado como número)',
+    ],
+  },
   {
     version: '1.6.138',
     date: '26/09/2026',

@@ -176,7 +176,6 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
 
   const dailyProj = buildDailyProjection(transactions, from, to, saldoAtual);
 
-  const BUFFER_CAIXA = 500;
   let minSaldo = saldoAtual;
   let minDate = from;
   for (const day of dailyProj) {
@@ -185,7 +184,8 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
       minDate = day.date;
     }
   }
-  const sobra = minSaldo - BUFFER_CAIXA;
+  // Sem colchão: a reserva tem resgate imediato, então só os centavos ficam na conta
+  const sobra = Math.floor(minSaldo);
 
   return {
     sobra: sobra > 0 ? sobra : 0,

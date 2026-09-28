@@ -74,7 +74,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.138
+- **Versão atual**: v1.6.139
 
 ### Regra de bump
 
@@ -114,9 +114,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.138 — 26/09/2026
+**Versão**: v1.6.139 — 28/09/2026
 
 **Últimas features**:
+- v1.6.139 — Sobra segura sem colchão de R$500 (menor saldo em 45 dias, arredondado para reais inteiros); fix NaN na tela Investir
 - v1.6.138 — N25 (categoria acima da média dos últimos 3 meses, Telegram); toggles para N22–N25 no app e no bot
 - v1.6.137 — Telegram `/gastos` com mês e `top`; novo `/meses` (total por mês, mês mais alto/baixo, média)
 - v1.6.136 — Telegram `/gastos` (despesas do mês por categoria; filtro por categoria ou termo livre)
@@ -141,7 +142,7 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 **Arquitetura relevante desta sessão**:
 - `InvestimentosScreen.jsx` — tela de alocação: perfil de trabalho, meses de reserva, despesas fixas (auto-sugeridas), vínculo com caixinha (goal), distribuição 60/40 da sobra
 - `config.investimentos` — `{ perfil, mesesMeta, despesasMens, reservaGoalId }` persistido no Firestore
-- `calcularSobraSegura` (projectionCalc.js) — usa o **mínimo** do saldo projetado em 45 dias, subtrai buffer fixo de R$500 (`BUFFER_CAIXA`); retorna também `dataMinimoSaldo` e `minimoSaldo`
+- `calcularSobraSegura` (projectionCalc.js) — usa o **mínimo** do saldo projetado em 45 dias, arredonda para baixo em reais inteiros (sem colchão; era R$500 até a v1.6.138); retorna também `dataMinimoSaldo` e `minimoSaldo`
 - `saldoColor()` em ProjectionScreen.jsx — gradiente verde/amarelo/vermelho baseado no saldo (>500 verde, 500 amarelo, <0 vermelho)
 - Cloud Function N22 — espelha `calcularSobraSegura` do frontend, envia aviso diário no Telegram quando há sobra
 - Cloud Function N23 — dias 15/30: lê `config.investimentos`, calcula reserva atual via transações vinculadas ao `goalId`, envia relatório ou mensagem motivacional

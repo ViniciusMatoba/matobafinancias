@@ -110,7 +110,7 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
   // ── Sobra segura (valor disponível para poupar) ──────────────────────────────
   const sobraSegura = useMemo(() => {
     const r = calcularSobraSegura(transactions || [], wallets || [], 45);
-    return Math.max(r, 0);
+    return Math.max(r.sobra, 0);
   }, [transactions, wallets]);
 
   // ── Derived ──────────────────────────────────────────────────────────────────

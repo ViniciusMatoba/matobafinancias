@@ -943,7 +943,6 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
 
   // ── N22 — Sobra projetada segura (aviso diário quando há sobra) ─────────────
   if (tipos.n22 !== false) {
-    const BUFFER_CAIXA = 500;
     const FAR_PAST = '2020-01-01';
     const proj45to = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
     const saldoBase = calcSaldoSimples(transactions, todayStr, walletInitials);
@@ -969,7 +968,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         cur45 = dateStrFromDate(d);
       }
     }
-    const sobra = minSaldo - BUFFER_CAIXA;
+    const sobra = Math.floor(minSaldo);
     if (sobra > 0) {
       const [, minMM, minDD] = minDate.split('-');
       const isTodayMin = minDate === todayStr;
@@ -977,7 +976,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         ? `_Menor saldo no período: ${formatBRL(minSaldo)} (hoje — sem despesas fixas previstas)_`
         : `_Menor saldo no período: ${formatBRL(minSaldo)} em ${minDD}/${minMM}_`;
       let msg = `💡 *Sobra Projetada Segura*\n\n`;
-      msg += `Nos próximos 45 dias você tem *${formatBRL(sobra)}* disponíveis para guardar ou investir — já considerando R$ 500 de gordura no caixa.\n\n`;
+      msg += `Nos próximos 45 dias você tem *${formatBRL(sobra)}* disponíveis para guardar ou investir — pode ir tudo para a reserva (resgate imediato), sobrando só os centavos na conta.\n\n`;
       msg += minLabel;
       msgs.push(msg);
     }
@@ -1017,7 +1016,6 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     ).reduce((acc, o) => acc + o.valor, 0);
 
     // Sobra segura
-    const BUFFER_N23 = 500;
     const saldoBaseN23 = calcSaldoSimples(transactions, todayStr, walletInitials);
     const proj45N23 = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
     let minSaldoN23 = saldoBaseN23;
@@ -1036,7 +1034,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         cur = dateStrFromDate(d);
       }
     }
-    const sobraN23 = Math.max(minSaldoN23 - BUFFER_N23, 0);
+    const sobraN23 = Math.max(Math.floor(minSaldoN23), 0);
     const aporteReserva = (metaTotal > 0 && reservaAtual < metaTotal) ? sobraN23 * 0.6 : 0;
     const aporteInvest  = (metaTotal > 0 && reservaAtual < metaTotal) ? sobraN23 * 0.4 : sobraN23;
     const reservaCompleta = metaTotal > 0 && reservaAtual >= metaTotal;
@@ -1080,7 +1078,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         } else {
           msg += `└ 100% livre para investir!\n`;
         }
-        msg += `\n_Já considerando R$ 500 de gordura no caixa._\n`;
+        msg += `\n_Sem colchão: só os centavos ficam na conta corrente._\n`;
       } else {
         msg += `_Sobra projetada indisponível no momento. Mantenha o controle dos gastos!_\n`;
       }
@@ -1647,7 +1645,6 @@ async function handleMeta(chatId, uid) {
 
 // ─── Cálculo de sobra segura (espelha calcularSobraSegura do frontend) ───────
 function calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje) {
-  const BUFFER_CAIXA = 500;
   const proj45to = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
   const saldoBase = calcSaldoSimples(transactions, todayStr, walletInitials);
   const allOccs45 = expandRange(transactions, todayStr, proj45to);
@@ -1664,7 +1661,7 @@ function calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje) {
     const d = new Date(cur + 'T00:00:00'); d.setDate(d.getDate() + 1);
     cur = dateStrFromDate(d);
   }
-  return { sobra: Math.max(minSaldo - BUFFER_CAIXA, 0), minSaldo, minDate };
+  return { sobra: Math.max(Math.floor(minSaldo), 0), minSaldo, minDate };
 }
 
 // ─── /reserva — Status da reserva de emergência ──────────────────────────────
