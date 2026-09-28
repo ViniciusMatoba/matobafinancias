@@ -1,8 +1,8 @@
 {
-  "version": "1.6.138",
-  "date": "26/09/2026",
+  "version": "1.6.139",
+  "date": "28/09/2026",
   "notes": [
-    "Telegram N25: alerta quando uma categoria passa 30% da média dos últimos 3 meses (1x por categoria/mês; ignora Liberdade e Sem categoria)",
-    "Configurações: alertas N22 (sobra segura), N23 (relatório de investimentos), N24 (aporte pendente) e N25 (acima da média) agora podem ser ligados/desligados no app e no bot"
+    "Sobra segura: removido o colchão de R$ 500 — a reserva tem resgate imediato, então a sobra é o menor saldo do período arredondado para reais inteiros (só os centavos ficam na conta). Vale para Home, tela Investir e Telegram (N22, N23, /investimentos)",
+    "Fix: tela Investir mostrava NaN na sobra e na divisão 60/40 (usava o objeto retornado como número)"
   ]
 }
