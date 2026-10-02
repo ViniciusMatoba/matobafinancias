@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.139';
-export const APP_VERSION_DATE = '28/09/2026';
+export const APP_VERSION = '1.6.140';
+export const APP_VERSION_DATE = '02/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.140',
+    date: '02/10/2026',
+    changes: [
+      'Projeção: novo card "Saldo hoje (= Saldo Global)" no resumo do mês corrente — exibe o saldo projetado acumulado até hoje, idêntico ao exibido na Home; renomeados "Saldo inicial" → "Início do mês" e "Saldo final" → "Fim do mês" para deixar claro que são os extremos do período, não o saldo de hoje',
+    ],
+  },
   {
     version: '1.6.139',
     date: '28/09/2026',

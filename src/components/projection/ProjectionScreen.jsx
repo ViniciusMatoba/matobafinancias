@@ -125,6 +125,13 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
   const minSaldo = days.length > 0 ? Math.min(...days.map(d => d.saldo)) : saldoInicial;
   const maxSaldo = days.length > 0 ? Math.max(...days.map(d => d.saldo)) : saldoInicial;
 
+  // Saldo de hoje no contexto da projeção (para comparar com Saldo Global da Home)
+  const saldoHoje = useMemo(() => {
+    if (!isAtCurrentMonth || days.length === 0) return null;
+    const todayRow = days.find(d => d.date === today);
+    return todayRow ? todayRow.saldo : null;
+  }, [days, today, isAtCurrentMonth]);
+
   // ── Cálculo do Planejamento Anual ──────────────────────────────────────────
   const annualData = useMemo(() => {
     if (viewTab !== 'anual') return [];
@@ -364,14 +371,22 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
               display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
               boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
             }}>
+              {saldoHoje !== null ? (
+                <div style={{ gridColumn: '1 / -1', paddingBottom: 10, borderBottom: '1px solid rgba(99,102,241,0.2)', marginBottom: 2 }}>
+                  <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Saldo hoje (= Saldo Global)</p>
+                  <p style={{ margin: 0, fontSize: 19, fontWeight: 800, color: saldoColor(saldoHoje) }}>
+                    {formatBRL(saldoHoje)}
+                  </p>
+                </div>
+              ) : null}
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Saldo inicial</p>
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Início do mês</p>
                 <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(saldoInicial) }}>
                   {formatBRL(saldoInicial)}
                 </p>
               </div>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Saldo final</p>
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Fim do mês</p>
                 <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(saldoFim) }}>
                   {formatBRL(saldoFim)}
                 </p>
