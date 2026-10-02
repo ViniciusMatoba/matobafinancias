@@ -1,8 +1,7 @@
 {
-  "version": "1.6.141",
+  "version": "1.6.140",
   "date": "02/10/2026",
   "notes": [
-    "Fix Projeção: saldo positivo baixo (entre R$ 0 e R$ 500) aparecia em vermelho como se fosse negativo — agora só saldo negativo é vermelho; de 0 a 500 o gradiente vai de amarelo a verde",
-    "Projeção: rótulos do resumo acompanham a aba (Início/Fim do mês na aba Mensal, Início/Fim do período na aba Período)"
+    "Projeção: novo card \"Saldo hoje (= Saldo Global)\" no resumo do mês corrente — exibe o saldo projetado acumulado até hoje, idêntico ao exibido na Home; renomeados \"Saldo inicial\" → \"Início do mês\" e \"Saldo final\" → \"Fim do mês\" para deixar claro que são os extremos do período, não o saldo de hoje"
   ]
 }
