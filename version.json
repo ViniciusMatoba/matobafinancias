@@ -1,8 +1,7 @@
 {
-  "version": "1.6.139",
-  "date": "28/09/2026",
+  "version": "1.6.140",
+  "date": "02/10/2026",
   "notes": [
-    "Sobra segura: removido o colchão de R$ 500 — a reserva tem resgate imediato, então a sobra é o menor saldo do período arredondado para reais inteiros (só os centavos ficam na conta). Vale para Home, tela Investir e Telegram (N22, N23, /investimentos)",
-    "Fix: tela Investir mostrava NaN na sobra e na divisão 60/40 (usava o objeto retornado como número)"
+    "Projeção: novo card \"Saldo hoje (= Saldo Global)\" no resumo do mês corrente — exibe o saldo projetado acumulado até hoje, idêntico ao exibido na Home; renomeados \"Saldo inicial\" → \"Início do mês\" e \"Saldo final\" → \"Fim do mês\" para deixar claro que são os extremos do período, não o saldo de hoje"
   ]
 }
