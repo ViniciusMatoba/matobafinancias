@@ -11,15 +11,14 @@ const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
 };
 
-// Verde (#10b981) acima de 500, amarelo (#f59e0b) em 500, vermelho (#ef4444) abaixo de 0
+// Vermelho só para saldo negativo; de 0 a 500 gradiente amarelo → verde; verde a partir de 500
 function saldoColor(saldo) {
+  if (saldo < 0)    return '#ef4444';
   if (saldo >= 500) return '#10b981';
-  if (saldo <= 0)   return '#ef4444';
-  // gradiente de 0→500: vermelho → amarelo
   const t = saldo / 500; // 0..1
-  const r = Math.round(239 + (245 - 239) * t);  // 239→245
-  const g = Math.round(68  + (158 - 68)  * t);  // 68→158
-  const b = Math.round(68  + (11  - 68)  * t);  // 68→11
+  const r = Math.round(245 + (16  - 245) * t);  // 245→16
+  const g = Math.round(158 + (185 - 158) * t);  // 158→185
+  const b = Math.round(11  + (129 - 11)  * t);  // 11→129
   return `rgb(${r},${g},${b})`;
 }
 
@@ -127,10 +126,10 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
 
   // Saldo de hoje no contexto da projeção (para comparar com Saldo Global da Home)
   const saldoHoje = useMemo(() => {
-    if (!isAtCurrentMonth || days.length === 0) return null;
+    if (viewTab === 'mensal' && !isAtCurrentMonth) return null;
     const todayRow = days.find(d => d.date === today);
     return todayRow ? todayRow.saldo : null;
-  }, [days, today, isAtCurrentMonth]);
+  }, [days, today, isAtCurrentMonth, viewTab]);
 
   // ── Cálculo do Planejamento Anual ──────────────────────────────────────────
   const annualData = useMemo(() => {
@@ -380,13 +379,13 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
                 </div>
               ) : null}
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Início do mês</p>
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>{viewTab === 'mensal' ? 'Início do mês' : 'Início do período'}</p>
                 <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(saldoInicial) }}>
                   {formatBRL(saldoInicial)}
                 </p>
               </div>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Fim do mês</p>
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>{viewTab === 'mensal' ? 'Fim do mês' : 'Fim do período'}</p>
                 <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(saldoFim) }}>
                   {formatBRL(saldoFim)}
                 </p>

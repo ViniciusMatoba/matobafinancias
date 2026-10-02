@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.140';
+export const APP_VERSION = '1.6.141';
 export const APP_VERSION_DATE = '02/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.141',
+    date: '02/10/2026',
+    changes: [
+      'Fix Projeção: saldo positivo baixo (entre R$ 0 e R$ 500) aparecia em vermelho como se fosse negativo — agora só saldo negativo é vermelho; de 0 a 500 o gradiente vai de amarelo a verde',
+      'Projeção: rótulos do resumo acompanham a aba (Início/Fim do mês na aba Mensal, Início/Fim do período na aba Período)',
+    ],
+  },
   {
     version: '1.6.140',
     date: '02/10/2026',
