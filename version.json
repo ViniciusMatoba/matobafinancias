@@ -1,10 +1,9 @@
 {
-  "version": "1.6.145",
+  "version": "1.6.147",
   "date": "05/10/2026",
   "notes": [
-    "Despesas por competência: o gasto passa a contar quando aconteceu — compra à vista no cartão na data da compra e parcelas mês a mês a partir dela — e não quando a fatura vence ou é paga. Vale para as categorias da Home, o Painel (categorias, tags, maiores gastos, evolução e CSV), o aviso de orçamento do formulário, o fechamento do mês e o bot (/categoria, /meta, /gastos, /tags, /meses, /resumo, /mes e alertas de orçamento)",
-    "Painel e bot: \"Despesas\" virou \"Gastos\" (quando aconteceu) e mostram \"Saiu do caixa\" ao lado (quando a fatura/conta foi debitada)",
-    "Saldo, Projeção, faturas e vencimentos não mudaram: continuam pelo caixa, protegidos por testes novos",
-    "Fix: compra de fim de mês cuja fatura vence no mês seguinte sumia das categorias; pagar a fatura em outro mês movia os gastos de mês; o Painel repetia compras à vista nos meses futuros; a parcela sumia da Home depois de editar/pagar uma fatura projetada; parcela contada em dobro quando a fatura do mês seguinte era lançada como nova"
+    "Telegram N19 (dia atípico): a fatura que vence hoje não conta mais como gasto do dia (só o que foi comprado hoje), e aporte de investimento não é gasto — acabaram os alertas falsos em dia de fatura ou de aporte",
+    "Telegram N12 (relatório do mês anterior) e N9 (limite geral de gastos): passam a contar os gastos no mês em que aconteceram (compra à vista / parcela), igual ao restante",
+    "Telegram N7 (resumo semanal): os rótulos agora dizem \"Saiu do caixa\" e \"Saldo do caixa na semana\""
   ]
 }
