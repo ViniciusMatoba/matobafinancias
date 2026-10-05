@@ -158,6 +158,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             transactions={transactions}
             wallets={wallets}
             cards={cards}
+            tags={config.tags}
             onEdit={handleEdit}
             onClone={handleClone}
             onDelete={handleDelete}
@@ -220,6 +221,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             goals={goals}
             transactions={transactions}
             config={config}
+            onSaveConfig={saveConfig}
             onSave={handleSave}
             onCancel={() => { setFormOpen(false); setEditing(null); setEditingOccDate(null); }}
           />

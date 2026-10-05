@@ -9,6 +9,7 @@ import { DEFAULT_BUDGET_PCTS } from '../utils/categories';
  * @property {number}              rendaMensal       — renda mensal declarada (R$)
  * @property {Record<string,number>} budgetPcts      — percentual de orçamento por categoria
  * @property {boolean}             onboardingDone
+ * @property {{id:string,label:string,cor:string}[]} tags — tags de despesa criadas pelo usuário
  * @property {boolean}             [tourDone]
  * @property {string}              [telegramChatId]
  */
@@ -18,6 +19,7 @@ export const DEFAULT_CONFIG = {
   rendaMensal: 0,
   budgetPcts: { ...DEFAULT_BUDGET_PCTS },
   onboardingDone: false,
+  tags: [],
 };
 
 export function useConfig(uid) {

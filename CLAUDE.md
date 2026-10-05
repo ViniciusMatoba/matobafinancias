@@ -74,7 +74,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.139
+- **Versão atual**: v1.6.142
 
 ### Regra de bump
 
@@ -114,9 +114,12 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.139 — 28/09/2026
+**Versão**: v1.6.142 — 05/10/2026
 
 **Últimas features**:
+- v1.6.142 — Tags de despesa (Fase 1): criar/renomear/excluir em Configurações → Tags, seletor no formulário (lançamento e item de fatura), tag automática por descrição idêntica, chip/filtro na lista de lançamentos
+- v1.6.141 — Fix Projeção: saldo positivo baixo (0–500) não aparece mais em vermelho (só negativo); rótulos Início/Fim do mês ou do período conforme a aba
+- v1.6.140 — Projeção: card "Saldo hoje (= Saldo Global)" no mês corrente; "Saldo inicial/final" renomeados para "Início/Fim do mês"
 - v1.6.139 — Sobra segura sem colchão de R$500 (menor saldo em 45 dias, arredondado para reais inteiros); fix NaN na tela Investir
 - v1.6.138 — N25 (categoria acima da média dos últimos 3 meses, Telegram); toggles para N22–N25 no app e no bot
 - v1.6.137 — Telegram `/gastos` com mês e `top`; novo `/meses` (total por mês, mês mais alto/baixo, média)
@@ -140,10 +143,13 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 - v1.6.119 — Fix Projeção: removido historical:true do saldo inicial — restaura consistência com saldo da Home (mantém wInitials)
 
 **Arquitetura relevante desta sessão**:
+- **Tags** (plano em 3 fases: 1 = núcleo no app ✅ v1.6.142; 2 = tela de classificação em lote do histórico, em Configurações → Tags, visível só quando houver lançamentos sem tag; 3 = Painel + bot `/gastos <tag>` e `/tags`)
+- `config.tags` = `[{ id, label, cor }]` (id é slug estável; renomear só muda o `label`). `tag` (id) fica no lançamento e em `itens[].tag` da fatura de cartão; uma tag por lançamento; só para `saida`/`diario`/`cartao`. Tag excluída deixa o id órfão nos lançamentos, tratado como "sem tag" (recriar uma tag com o mesmo nome religa os órfãos)
+- `src/utils/tags.js` (`addTagToList`, `countTagUsage`, `normalizeText`), `shared/TagPicker.jsx`, `settings/TagSettings.jsx`. Guardar `tags` sempre como **array** no `saveConfig` (merge de mapa não remove chaves; array é substituído por inteiro)
 - `InvestimentosScreen.jsx` — tela de alocação: perfil de trabalho, meses de reserva, despesas fixas (auto-sugeridas), vínculo com caixinha (goal), distribuição 60/40 da sobra
 - `config.investimentos` — `{ perfil, mesesMeta, despesasMens, reservaGoalId }` persistido no Firestore
 - `calcularSobraSegura` (projectionCalc.js) — usa o **mínimo** do saldo projetado em 45 dias, arredonda para baixo em reais inteiros (sem colchão; era R$500 até a v1.6.138); retorna também `dataMinimoSaldo` e `minimoSaldo`
-- `saldoColor()` em ProjectionScreen.jsx — gradiente verde/amarelo/vermelho baseado no saldo (>500 verde, 500 amarelo, <0 vermelho)
+- `saldoColor()` em ProjectionScreen.jsx — vermelho só para saldo negativo; de 0 a 500 gradiente amarelo → verde; verde a partir de 500
 - Cloud Function N22 — espelha `calcularSobraSegura` do frontend, envia aviso diário no Telegram quando há sobra
 - Cloud Function N23 — dias 15/30: lê `config.investimentos`, calcula reserva atual via transações vinculadas ao `goalId`, envia relatório ou mensagem motivacional
 - `config.investidor10Url` — URL da carteira no Investidor 10; card "Total Investido" na Home abre link (com modal de cadastro se ainda não configurado)

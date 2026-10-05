@@ -3,6 +3,8 @@ import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normaliz
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 import { expandOccurrences, calcFaturaCard } from '../../utils/projectionCalc';
+import { addTagToList, tagIdSet, tagsById, normalizeText as normTag } from '../../utils/tags';
+import TagPicker from '../shared/TagPicker';
 
 const TIPOS = Object.entries(TYPE_CONFIG).map(([id, cfg]) => ({ id, ...cfg }));
 const FREQS = Object.entries(FREQ_LABELS).map(([id, label]) => ({ id, label }));
@@ -66,6 +68,7 @@ const EMPTY = {
   metaId: '',
   categoria: '',
   classeInvestimento: '',
+  tag: '',
 };
 
 const CLASSES_INVESTIMENTO = [
@@ -77,9 +80,9 @@ const CLASSES_INVESTIMENTO = [
   { id: 'outro',           label: 'Outro' },
 ];
 
-const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '', conferido: false };
+const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', tag: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '', conferido: false };
 
-export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [], config }) {
+export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [], config, onSaveConfig }) {
   const [form, setForm] = useState(initial ? {
     ...EMPTY, ...initial,
     // diário: stored value is valor/30, so reconstitute the monthly amount for editing
@@ -88,6 +91,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       : numberToBRLInput(initial.valor),
     totalParcelas: initial.totalParcelas ? String(initial.totalParcelas) : '',
     parcelaAtual: initial.parcelaAtual ? String(initial.parcelaAtual) : '',
+    tag: initial.tag || '',
     // dataFim already comes from ...initial spread above
   } : { ...EMPTY });
 
@@ -186,6 +190,34 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
     }),
     [transactions]
   );
+
+  // ── Tags ───────────────────────────────────────────────────────────────────
+  const tagsList = useMemo(() => config?.tags || [], [config?.tags]);
+  const tagIds = useMemo(() => tagIdSet(tagsList), [tagsList]);
+
+  const tagMap = useMemo(() => tagsById(tagsList), [tagsList]);
+
+  const createTag = (label) => {
+    const { tags: next, tag } = addTagToList(tagsList, label);
+    if (tag && next !== tagsList) Promise.resolve(onSaveConfig?.({ tags: next })).catch(() => {});
+    return tag;
+  };
+
+  // descrição normalizada → tag usada por último (só tags que ainda existem)
+  const tagByDesc = useMemo(() => {
+    const map = new Map();
+    const learn = (desc, tag) => {
+      if (!desc || !tag || !tagIds.has(tag)) return;
+      const key = normTag(desc);
+      if (!map.has(key)) map.set(key, tag);
+    };
+    for (const tx of sortedHistory) {
+      learn(tx.descricao, tx.tag);
+      if (Array.isArray(tx.itens)) tx.itens.forEach(it => learn(it.descricao, it.tag));
+    }
+    return map;
+  }, [sortedHistory, tagIds]);
+  // ── fim Tags ───────────────────────────────────────────────────────────────
 
   const pastDescriptions = useMemo(() => {
     const seen = new Set();
@@ -308,6 +340,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
           descricao: item.descricao.trim() || 'Item',
           valor: parseBRLInput(item.valor),
           categoria: item.categoria || null,
+          tag: tagIds.has(item.tag) ? item.tag : null,
           dataCompra: item.dataCompra,
           conferido: item.conferido || false,
           ...(isParc ? {
@@ -349,6 +382,8 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       dataInicio: form.dataInicio,
       frequencia: finalFreq,
       categoria: itensToSave ? null : (autocatVal || form.categoria || null),
+      // null explícito para que editar e remover a tag limpe o campo no Firestore
+      tag: (form.tipo !== 'cartao' && needsCat && tagIds.has(form.tag)) ? form.tag : null,
     };
 
     if (itensToSave) data.itens = itensToSave;
@@ -526,6 +561,12 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
               if (match) {
                 setForm(f => ({ ...f, categoria: match.categoria }));
               }
+            }
+
+            // Tag automática: descrição idêntica a uma já classificada
+            if (!form.tag && val.trim().length >= 3) {
+              const tagMatch = tagByDesc.get(normTag(val));
+              if (tagMatch) setForm(f => ({ ...f, tag: tagMatch }));
             }
           }}
           maxLength={60} autoComplete="off"
@@ -1053,9 +1094,14 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
                     {item.descricao || 'Sem descrição'}
                     {(item.isParcelado || (item.parcelaAtual && item.totalParcelas)) && <span style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 4 }}>· {item.parcelaAtual}/{item.totalParcelas}x</span>}
                   </p>
-                  {cat && (
-                    <p style={{ margin: 0, fontSize: 11, color: cat.color }}>
-                      {cat.icon} {cat.label}
+                  {(cat || tagMap[item.tag]) && (
+                    <p style={{ margin: 0, fontSize: 11, color: cat?.color }}>
+                      {cat && <>{cat.icon} {cat.label}</>}
+                      {tagMap[item.tag] && (
+                        <span style={{ color: tagMap[item.tag].cor, fontWeight: 600, marginLeft: cat ? 6 : 0 }}>
+                          # {tagMap[item.tag].label}
+                        </span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -1112,6 +1158,10 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
                         }
                       }
                     }
+                    if (!next.tag && val.trim().length >= 3) {
+                      const tagMatch = tagByDesc.get(normTag(val));
+                      if (tagMatch) next.tag = tagMatch;
+                    }
                     return next;
                   });
                 }}
@@ -1163,6 +1213,19 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
                   <option key={cat.id} value={cat.id}>{cat.icon} {cat.label}</option>
                 ))}
               </select>
+            </div>
+
+            <div style={{ marginBottom: 8 }}>
+              <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)' }}>
+                Tag <span style={{ opacity: 0.7 }}>(opcional)</span>
+              </p>
+              <TagPicker
+                compact
+                tags={tagsList}
+                value={tagIds.has(novoItem.tag) ? novoItem.tag : ''}
+                onChange={id => setNovoItem(i => ({ ...i, tag: id }))}
+                onCreate={createTag}
+              />
             </div>
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
@@ -1272,6 +1335,21 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
           )}
         </div>
       ))}
+
+      {/* Tag — para despesas sem itens (cartão usa a tag de cada item) */}
+      {form.tipo !== 'cartao' && needsCat && (
+        <div>
+          <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
+            Tag <span style={{ color: 'var(--text-muted)' }}>(opcional)</span>
+          </label>
+          <TagPicker
+            tags={tagsList}
+            value={tagIds.has(form.tag) ? form.tag : ''}
+            onChange={id => set('tag', id)}
+            onCreate={createTag}
+          />
+        </div>
+      )}
 
       {budgetWarnings.map(warn => (
         <div key={warn.catId} style={{

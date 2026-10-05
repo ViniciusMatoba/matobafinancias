@@ -412,7 +412,7 @@ export function AppProvider({ user, children }) {
         const exclusoes = [...(tx.exclusoes || [])];
         if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
         await update(tx.id, { exclusoes });
-        await add({ tipo: tx.tipo, frequencia: 'unico', descricao: tx.descricao, valor, dataInicio: paymentDate, categoria: tx.categoria || null, dataFim: null, conferido: true });
+        await add({ tipo: tx.tipo, frequencia: 'unico', descricao: tx.descricao, valor, dataInicio: paymentDate, categoria: tx.categoria || null, tag: tx.tag || null, dataFim: null, conferido: true });
         showToast('✅ Pagamento registrado (só esta ocorrência)!');
       } else if (scope === 'future') {
         const d = new Date(`${occDate}T12:00:00`);

@@ -35,7 +35,7 @@ function formatDayNum(dateStr) {
   return dateStr.split('-')[2];
 }
 
-export default function ProjectionScreen({ transactions, wallets, cards = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
+export default function ProjectionScreen({ transactions, wallets, cards = [], tags = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [viewTab, setViewTab] = useState('mensal'); // 'mensal' | 'resumo' | 'anual'
   const [monthOffset, setMonthOffset] = useState(0);
@@ -348,6 +348,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], on
         <TransactionsScreen
           transactions={transactions}
           wallets={wallets}
+          tags={tags}
           onEdit={onEdit}
           onClone={onClone}
           onDelete={onDelete}

@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.141';
-export const APP_VERSION_DATE = '02/10/2026';
+export const APP_VERSION = '1.6.142';
+export const APP_VERSION_DATE = '05/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.142',
+    date: '05/10/2026',
+    changes: [
+      'Tags de despesa: crie suas próprias tags (Mercado, Streaming, Transporte…) em Configurações → Tags ou direto ao lançar; cada lançamento (e cada item de fatura de cartão) tem no máximo uma tag',
+      'Lançamento novo com descrição idêntica a um já classificado recebe a mesma tag automaticamente',
+      'Lista de lançamentos mostra a tag, filtra por tag (ou "Sem tag") e a busca encontra pelo nome da tag',
+    ],
+  },
   {
     version: '1.6.141',
     date: '02/10/2026',

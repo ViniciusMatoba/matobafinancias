@@ -4,6 +4,7 @@ import HelpModal from '../shared/HelpModal';
 import { formatBRL, formatDateShort, TYPE_CONFIG, todayStr } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
+import { tagsById } from '../../utils/tags';
 
 const TIPO_ICONS = {
   entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
@@ -16,8 +17,10 @@ function monthStr(offset) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function TransactionsScreen({ transactions, wallets = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
+export default function TransactionsScreen({ transactions, wallets = [], tags = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
   const [helpOpen, setHelpOpen] = useState(false);
+  const tagMap = useMemo(() => tagsById(tags), [tags]);
+  const [filterTag, setFilterTag] = useState(''); // '' | id da tag | '__sem_tag'
   const [viewMode, setViewMode] = useState('mensal'); // 'mensal' | 'completo'
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -102,7 +105,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
     Promise.resolve().then(() => {
       setVisibleCount(50);
     });
-  }, [viewMode, debouncedSearch, filterTipo, filterCategory, filterWallet, filterConciliacao, filterFromDate, filterToDate]);
+  }, [viewMode, debouncedSearch, filterTipo, filterCategory, filterTag, filterWallet, filterConciliacao, filterFromDate, filterToDate]);
 
   const allOccs = useMemo(() => {
     return transactions
@@ -123,10 +126,27 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
             const itemCatLabel = item.categoria ? (PERCENTUAL_CATEGORIES[item.categoria]?.label || '') : '';
             return item.descricao?.toLowerCase().includes(s) ||
               item.categoria?.toLowerCase().includes(s) ||
-              itemCatLabel.toLowerCase().includes(s);
+              itemCatLabel.toLowerCase().includes(s) ||
+              (tagMap[item.tag]?.label || '').toLowerCase().includes(s);
           });
-          
-          if (!matchDesc && !matchCat && !matchItems) return false;
+          const matchTag = (tagMap[o.tx.tag]?.label || '').toLowerCase().includes(s);
+
+          if (!matchDesc && !matchCat && !matchItems && !matchTag) return false;
+        }
+
+        // 2b. Tag (lançamento ou algum item da fatura)
+        if (filterTag) {
+          const hasTag = (t) => !!t && !!tagMap[t];
+          if (filterTag === '__sem_tag') {
+            if (!['saida', 'diario', 'cartao'].includes(o.tx.tipo)) return false;
+            const mainSem = !hasTag(o.tx.tag);
+            const itemSem = o.tx.itens?.some(item => !hasTag(item.tag));
+            if (o.tx.tipo === 'cartao' && o.tx.itens?.length > 0 ? !itemSem : !mainSem) return false;
+          } else {
+            const matchMain = o.tx.tag === filterTag;
+            const matchItem = o.tx.itens?.some(item => item.tag === filterTag);
+            if (!matchMain && !matchItem) return false;
+          }
         }
 
         // 3. Categoria da Divisão Percentual (suporta também filtro por 'outros' via badge)
@@ -163,7 +183,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
           return b.date.localeCompare(a.date);
         }
       });
-  }, [transactions, from, to, filterTipo, debouncedSearch, filterCategory, filterWallet, filterConciliacao, viewMode]);
+  }, [transactions, from, to, filterTipo, debouncedSearch, filterCategory, filterTag, tagMap, filterWallet, filterConciliacao, viewMode]);
 
   // Totalizador de pendências (apenas anteriores a hoje, independente do filtro de visualização)
   const pendingCount = useMemo(() => {
@@ -272,6 +292,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
     setSearch('');
     setFilterTipo('');
     setFilterCategory('');
+    setFilterTag('');
     setFilterWallet('');
     setFilterConciliacao('todos');
     setFilterFromDate('');
@@ -467,6 +488,24 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
                 </select>
               </div>
 
+              {/* Filtro de Tag */}
+              {tags.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>Tag</span>
+                  <select
+                    value={filterTag}
+                    onChange={e => setFilterTag(e.target.value)}
+                    style={{ fontSize: 12, height: 34, padding: '0 8px', borderRadius: 8, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+                  >
+                    <option value="">Todas</option>
+                    <option value="__sem_tag">Sem tag</option>
+                    {tags.map(t => (
+                      <option key={t.id} value={t.id}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Filtro de Carteira */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)' }}>Carteira / Conta</span>
@@ -626,7 +665,7 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: 60, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 32 }}>🔍</span>
             <p style={{ margin: 0 }}>Nenhum lançamento encontrado</p>
-            {(search || filterTipo || filterCategory || filterWallet || filterConciliacao !== 'todos' || filterFromDate || filterToDate) && (
+            {(search || filterTipo || filterCategory || filterTag || filterWallet || filterConciliacao !== 'todos' || filterFromDate || filterToDate) && (
               <button
                 onClick={clearFilters}
                 style={{
@@ -701,6 +740,9 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
                           <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
                             {cfg.label}{occ.parcela ? ` · ${occ.parcela}/${occ.totalParcelas}x` : ''}
                             {hasItens ? ` · ${occ.tx.itens.length} iten${occ.tx.itens.length !== 1 ? 's' : ''}` : ''}
+                            {tagMap[occ.tx.tag] && (
+                              <span style={{ color: tagMap[occ.tx.tag].cor, fontWeight: 600 }}> · # {tagMap[occ.tx.tag].label}</span>
+                            )}
                           </p>
                         </div>
 
@@ -758,8 +800,15 @@ export default function TransactionsScreen({ transactions, wallets = [], onEdit,
                                     {item.descricao || 'Item'}
                                     {item.isParcelado && <span style={{ color: 'var(--text-muted)', fontSize: 10, marginLeft: 4 }}>· {item.parcelaAtual}/{item.totalParcelas}x</span>}
                                   </span>
-                                  {itemCat && (
-                                    <span style={{ fontSize: 10, color: itemCat.color }}>{itemCat.icon} {itemCat.label}</span>
+                                  {(itemCat || tagMap[item.tag]) && (
+                                    <span style={{ fontSize: 10, color: itemCat?.color }}>
+                                      {itemCat && <>{itemCat.icon} {itemCat.label}</>}
+                                      {tagMap[item.tag] && (
+                                        <span style={{ color: tagMap[item.tag].cor, fontWeight: 600, marginLeft: itemCat ? 6 : 0 }}>
+                                          # {tagMap[item.tag].label}
+                                        </span>
+                                      )}
+                                    </span>
                                   )}
                                 </div>
                                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--cartao)', flexShrink: 0 }}>
