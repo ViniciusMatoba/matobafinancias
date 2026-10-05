@@ -172,25 +172,20 @@ describe('buildTagUpdates', () => {
 
 // ── Painel: despesas por tag ─────────────────────────────────────────────────
 describe('computeTagStats', () => {
-  const occ = (tx, valor = tx.valor) => ({ tx, valor })
-  const occs = [
-    occ({ tipo: 'saida', descricao: 'Mercado Extra', tag: 'mercado', categoria: 'custos_fixos', valor: 300 }),
-    occ({ tipo: 'saida', descricao: 'Padaria', categoria: 'custos_fixos', valor: 40 }),
-    occ({ tipo: 'saida', descricao: 'Netflix', tag: 'streaming', categoria: 'conforto', valor: 55.9 }),
-    occ({ tipo: 'saida', descricao: 'Loja', tag: 'apagada', categoria: 'prazeres', valor: 10 }),
-    occ({ tipo: 'investimento', descricao: 'CDB', valor: 500 }),
-    occ({ tipo: 'entrada', descricao: 'Salário', valor: 5000 }),
-    occ({
-      tipo: 'cartao', valor: 150,
-      itens: [
-        { descricao: 'Supermercado', valor: 100, categoria: 'custos_fixos', tag: 'mercado' },
-        { descricao: 'Uber', valor: 50, categoria: 'conforto' },
-      ],
-    }),
+  // eventos de despesa (já na data em que aconteceram): { tipo, tag, categoria, valor }
+  const ev = (tipo, valor, categoria, tag) => ({ tipo, valor, categoria, tag })
+  const eventos = [
+    ev('saida', 300, 'custos_fixos', 'mercado'),
+    ev('saida', 40, 'custos_fixos'),
+    ev('saida', 55.9, 'conforto', 'streaming'),
+    ev('saida', 10, 'prazeres', 'apagada'),
+    ev('investimento', 500, 'liberdade'),
+    ev('cartao', 100, 'custos_fixos', 'mercado'),
+    ev('cartao', 50, 'conforto'),
   ]
-  const stats = computeTagStats(occs, TAGS)
+  const stats = computeTagStats(eventos, TAGS)
 
-  it('soma só despesas (sem investimento nem entrada) e conta cada item de fatura', () => {
+  it('soma só despesas (sem investimento) e conta cada evento', () => {
     expect(stats.total).toBeCloseTo(555.9, 2)
     const mercado = stats.list.find(t => t.id === 'mercado')
     expect(mercado).toMatchObject({ value: 400, count: 2 })
@@ -218,7 +213,7 @@ describe('computeTagStats', () => {
 
   it('lida com período vazio e sem tags criadas', () => {
     expect(computeTagStats([], TAGS)).toEqual({ total: 0, list: [], catTags: {} })
-    const semTags = computeTagStats(occs, [])
+    const semTags = computeTagStats(eventos, [])
     expect(semTags.list).toHaveLength(1)
     expect(semTags.list[0]).toMatchObject({ id: SEM_TAG, value: 555.9 })
   })

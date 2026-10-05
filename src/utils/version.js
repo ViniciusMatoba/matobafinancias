@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.144';
+export const APP_VERSION = '1.6.145';
 export const APP_VERSION_DATE = '05/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.145',
+    date: '05/10/2026',
+    changes: [
+      'Despesas por competência: o gasto passa a contar quando aconteceu — compra à vista no cartão na data da compra e parcelas mês a mês a partir dela — e não quando a fatura vence ou é paga. Vale para as categorias da Home, o Painel (categorias, tags, maiores gastos, evolução e CSV), o aviso de orçamento do formulário, o fechamento do mês e o bot (/categoria, /meta, /gastos, /tags, /meses, /resumo, /mes e alertas de orçamento)',
+      'Painel e bot: "Despesas" virou "Gastos" (quando aconteceu) e mostram "Saiu do caixa" ao lado (quando a fatura/conta foi debitada)',
+      'Saldo, Projeção, faturas e vencimentos não mudaram: continuam pelo caixa, protegidos por testes novos',
+      'Fix: compra de fim de mês cuja fatura vence no mês seguinte sumia das categorias; pagar a fatura em outro mês movia os gastos de mês; o Painel repetia compras à vista nos meses futuros; a parcela sumia da Home depois de editar/pagar uma fatura projetada; parcela contada em dobro quando a fatura do mês seguinte era lançada como nova',
+    ],
+  },
   {
     version: '1.6.144',
     date: '05/10/2026',

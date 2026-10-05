@@ -8,6 +8,7 @@ import { useVersionCheck, triggerUpdate } from '../hooks/useVersionCheck';
 import { useToast } from '../components/shared/Toast';
 import { addMonths, todayStr } from '../utils/formatters';
 import { expandOccurrences } from '../utils/projectionCalc';
+import { expandDespesas } from '../utils/despesas';
 import { PERCENTUAL_CATEGORIES } from '../utils/categories';
 
 const AppContext = createContext(null);
@@ -117,17 +118,20 @@ export function AppProvider({ user, children }) {
     const lastDay = new Date(prevY, prevM, 0).getDate();
     const to   = `${prevMonthStr}-${String(lastDay).padStart(2,'0')}`;
 
-    let entradas = 0, saidas = 0;
-    const catTotals = {};
+    // Receitas pela data em que entram; despesas pela data em que aconteceram (compra/parcela),
+    // não pela data em que a fatura do cartão foi paga
+    let entradas = 0;
     transactions.forEach(tx => {
       expandOccurrences(tx, from, to).forEach(occ => {
         if (occ.sinal > 0) entradas += occ.valor;
-        else {
-          saidas += occ.valor;
-          const cat = tx.categoria || 'outros';
-          catTotals[cat] = (catTotals[cat] || 0) + occ.valor;
-        }
       });
+    });
+    let saidas = 0;
+    const catTotals = {};
+    expandDespesas(transactions, from, to).forEach(ev => {
+      saidas += ev.valor;
+      const cat = ev.categoria || 'outros';
+      catTotals[cat] = (catTotals[cat] || 0) + ev.valor;
     });
 
     const rendaMensal = config?.rendaMensal || 0;

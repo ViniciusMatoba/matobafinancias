@@ -204,12 +204,12 @@ export function buildTagUpdates(transactions, key, tagId, tags) {
 export const SEM_TAG = '__sem_tag';
 
 /**
- * Despesas do período por tag, a partir de ocorrências [{ tx, valor }] (expandOccurrences + tx).
- * Investimento e entrada ficam de fora; cartão com itens conta cada item. Tag apagada vira "Sem tag".
+ * Despesas do período por tag, a partir dos eventos de despesa (expandDespesas): cada evento já está na
+ * data em que aconteceu. Investimento fica de fora (não recebe tag); tag apagada vira "Sem tag".
  * Retorna { total, list, catTags }: `list` ordenada por valor (Sem tag por último) e `catTags`
  * = { categoria: { tagId: valor } } só com tags reais.
  */
-export function computeTagStats(occs, tags) {
+export function computeTagStats(eventos, tags) {
   const map = tagsById(tags);
   const byTag = {};
   const catTags = {};
@@ -232,14 +232,9 @@ export function computeTagStats(occs, tags) {
     }
   };
 
-  for (const o of occs || []) {
-    const tx = o.tx;
-    if (!tx || tx.tipo === 'entrada' || tx.tipo === 'investimento') continue;
-    if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-      tx.itens.forEach(item => add(item.tag, item.categoria || 'outros', Number(item.valor) || 0));
-    } else {
-      add(tx.tag, tx.categoria || 'outros', Number(o.valor) || 0);
-    }
+  for (const e of eventos || []) {
+    if (e.tipo === 'investimento') continue;
+    add(e.tag, e.categoria || 'outros', Number(e.valor) || 0);
   }
 
   const list = Object.values(byTag)

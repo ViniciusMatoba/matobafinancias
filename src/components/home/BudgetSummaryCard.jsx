@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { ChevronDown, ChevronUp, ChevronRight, Settings, X } from 'lucide-react';
 import { formatBRL, todayStr } from '../../utils/formatters';
-import { expandOccurrences } from '../../utils/projectionCalc';
+import { expandDespesas } from '../../utils/despesas';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -39,79 +39,28 @@ export default function BudgetSummaryCard({
     return m;
   }, [cards]);
 
-  // Calcula totais E coleta os itens detalhados por categoria
+  // Calcula totais E coleta os itens detalhados por categoria.
+  // Despesas por competência: compra à vista na data da compra, parcela mês a mês a partir dela —
+  // não depende de quando a fatura vence nem de quando é paga.
   const { totals, details } = useMemo(() => {
     const totals  = Object.fromEntries(CATEGORY_ORDER.map(id => [id, 0]));
     const details = Object.fromEntries(CATEGORY_ORDER.map(id => [id, []]));
 
-    // Cartões com fatura real no período — projeções virtuais desses cartões são ignoradas
-    const cartaoComFaturaReal = new Set(
-      transactions
-        .filter(t => t.tipo === 'cartao' && t.dataInicio >= from && t.dataInicio <= to)
-        .map(t => t.cartaoId)
-    );
-
-    // Expande todas as transações no período
-    const occurrences = transactions.flatMap(tx =>
-      expandOccurrences(tx, from, to).map(o => ({ ...o, tx }))
-    );
-
-    occurrences.forEach(occ => {
-      const tx = occ.tx;
-      if (tx.tipo === 'entrada') return;
-
-      // ── Cartão com itens (inclui faturas projetadas virtuais) ───────────────
-      if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-        // Projeção virtual de cartão que já tem fatura real no período: ignora
-        if (tx.id?.includes('-proj-') && cartaoComFaturaReal.has(tx.cartaoId)) return;
-        const cartaoNome = cardsMap[tx.cartaoId] || tx.descricao || 'Cartão';
-
-        tx.itens.forEach(item => {
-          const cat = item.categoria;
-          if (!cat || !(cat in totals)) return;
-          const valor = Number(item.valor) || 0;
-
-          if (item.isParcelado) {
-            // Em faturas virtuais (-proj-), o expandOccurrences filtra e atualiza a parcela automaticamente.
-            totals[cat] += valor;
-            details[cat].push({
-              descricao:  item.descricao || tx.descricao || 'Item parcelado',
-              date:       occ.date,
-              valor,
-              source:     'cartao',
-              cartaoNome,
-              parcela:    `${item.parcelaAtual || 1}/${item.totalParcelas}`,
-              isFuture:   occ.date > today,
-            });
-          } else {
-            // Itens avulsos não parcelados contam apenas no mês da compra (dataCompra)
-            if (!item.dataCompra?.startsWith(currentMonth)) return;
-            totals[cat] += valor;
-            details[cat].push({
-              descricao:  item.descricao || tx.descricao || 'Item',
-              date:       item.dataCompra,
-              valor,
-              source:     'cartao',
-              cartaoNome,
-              isFuture:   item.dataCompra > today,
-            });
-          }
-        });
-        return;
-      }
-
-      // ── Demais tipos (saida, diario, investimento) ─────────────────────────
-      const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
+    expandDespesas(transactions, from, to).forEach(ev => {
+      const cat = ev.categoria;
       if (!cat || !(cat in totals)) return;
+      totals[cat] += ev.valor;
 
-      totals[cat] += occ.valor;
+      const doCartao = ev.tipo === 'cartao';
       details[cat].push({
-        descricao:   tx.descricao || SOURCE_LABELS[tx.tipo] || tx.tipo,
-        date:        occ.date,
-        valor:       occ.valor,
-        source:      tx.tipo,
-        frequencia:  tx.frequencia,
-        isFuture:    occ.date > today,
+        descricao:  doCartao ? ev.descricao : (ev.tx.descricao || SOURCE_LABELS[ev.tipo] || ev.tipo),
+        date:       ev.date,
+        valor:      ev.valor,
+        source:     ev.tipo,
+        cartaoNome: doCartao ? (cardsMap[ev.tx.cartaoId] || ev.tx.descricao || 'Cartão') : undefined,
+        parcela:    ev.parcela || undefined,
+        frequencia: doCartao ? undefined : ev.tx.frequencia,
+        isFuture:   ev.date > today,
       });
     });
 
@@ -121,7 +70,7 @@ export default function BudgetSummaryCard({
     });
 
     return { totals, details };
-  }, [transactions, from, to, currentMonth, today, cardsMap]);
+  }, [transactions, from, to, today, cardsMap]);
 
   const totalBudget = rendaMensal;
   const totalGasto  = Object.values(totals).reduce((s, v) => s + v, 0);

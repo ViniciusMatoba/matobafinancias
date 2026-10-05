@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
+import { expandDespesas } from '../../utils/despesas';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer, HelpCircle } from 'lucide-react';
 import HelpModal from '../shared/HelpModal';
@@ -89,25 +90,35 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
     );
   }, [transactions, fromDate, toDate]);
 
-  // Resumo Geral (Entradas vs Saídas)
+  // Despesas por competência: o gasto conta quando aconteceu (compra à vista, ou cada parcela mês a mês),
+  // não quando a fatura do cartão é paga. O caixa (periodOccs) continua pela data da fatura/pagamento.
+  const periodDespesas = useMemo(() => {
+    if (!fromDate || !toDate) return [];
+    return expandDespesas(transactions, fromDate, toDate);
+  }, [transactions, fromDate, toDate]);
+
+  // Resumo Geral: receitas, gastos (quando aconteceram) e o que efetivamente saiu do caixa
   const statsGerais = useMemo(() => {
     let entradas = 0;
-    let saidas = 0;
+    let saiuCaixa = 0;
 
     periodOccs.forEach(o => {
       if (o.tx.tipo === 'entrada') {
         entradas += o.valor;
       } else {
-        saidas += o.valor;
+        saiuCaixa += o.valor;
       }
     });
 
+    const gastos = periodDespesas.reduce((s, e) => s + e.valor, 0);
+
     return {
       entradas,
-      saidas,
-      liquido: entradas - saidas
+      gastos,
+      saiuCaixa,
+      liquido: entradas - gastos,
     };
-  }, [periodOccs]);
+  }, [periodOccs, periodDespesas]);
 
   // Distribuição de Despesas por Categoria (Divisão Percentual)
   const categoryStats = useMemo(() => {
@@ -117,20 +128,10 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
     });
     stats['outros'] = { id: 'outros', label: 'Outros', value: 0, budget: 0, color: '#94a3b8', icon: '❓' };
 
-    periodOccs.forEach(o => {
-      if (o.tx.tipo === 'entrada') return;
-
-      if (o.tx.tipo === 'cartao' && o.tx.itens && o.tx.itens.length > 0) {
-        o.tx.itens.forEach(item => {
-          const cat = item.categoria || 'outros';
-          if (!stats[cat]) stats[cat] = { id: cat, label: 'Outros', value: 0, budget: 0, color: '#94a3b8', icon: '❓' };
-          stats[cat].value += Number(item.valor) || 0;
-        });
-      } else {
-        const cat = o.tx.categoria || 'outros';
-        if (!stats[cat]) stats[cat] = { id: cat, label: 'Outros', value: 0, budget: 0, color: '#94a3b8', icon: '❓' };
-        stats[cat].value += o.valor;
-      }
+    periodDespesas.forEach(e => {
+      const cat = e.categoria || 'outros';
+      if (!stats[cat]) stats[cat] = { id: cat, label: 'Outros', value: 0, budget: 0, color: '#94a3b8', icon: '❓' };
+      stats[cat].value += e.valor;
     });
 
     // Quantidade de meses no filtro para ratear o orçamento
@@ -149,68 +150,41 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
     });
 
     return Object.values(stats).filter(s => s.value > 0 || s.budget > 0);
-  }, [periodOccs, config, fromDate, toDate]);
+  }, [periodDespesas, config, fromDate, toDate]);
 
   // Despesas por tag (investimento não recebe tag e fica de fora)
   const tagMap = useMemo(() => tagsById(config?.tags), [config?.tags]);
-  const tagStats = useMemo(() => computeTagStats(periodOccs, config?.tags), [periodOccs, config?.tags]);
+  const tagStats = useMemo(() => computeTagStats(periodDespesas, config?.tags), [periodDespesas, config?.tags]);
 
-  // Lista dos Top 10 maiores gastos individuais
+  // Lista dos Top 10 maiores gastos individuais (na data em que aconteceram)
   const topExpenses = useMemo(() => {
-    const list = [];
-    periodOccs.forEach(o => {
-      if (o.tx.tipo === 'entrada') return;
+    return [...periodDespesas]
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 10)
+      .map(e => ({ descricao: e.descricao || 'Despesa', date: e.date, valor: e.valor, categoria: e.categoria || 'outros' }));
+  }, [periodDespesas]);
 
-      if (o.tx.tipo === 'cartao' && o.tx.itens && o.tx.itens.length > 0) {
-        o.tx.itens.forEach(item => {
-          list.push({
-            descricao: item.descricao || 'Item de Cartão',
-            date: item.dataCompra || o.date,
-            valor: Number(item.valor) || 0,
-            categoria: item.categoria || 'outros'
-          });
-        });
-      } else {
-        list.push({
-          descricao: o.tx.descricao || 'Despesa',
-          date: o.date,
-          valor: o.valor,
-          categoria: o.tx.categoria || 'outros'
-        });
-      }
-    });
-
-    list.sort((a, b) => b.valor - a.valor);
-    return list.slice(0, 10);
-  }, [periodOccs]);
-
-  // Exportar dados do período em CSV formatado (aprimorado com ocorrências reais expandidas)
+  // Exportar o período em CSV: despesas na data em que aconteceram (compra/parcela) e entradas na data de recebimento
   const handleExportCSV = () => {
-    let csv = '\ufeff'; // BOM para Excel abrir caracteres especiais sem corromper
-    // CSV aprimorado: itens de cartão por linha, carteira, conferido, parcela
+    let csv = '﻿'; // BOM para Excel abrir caracteres especiais sem corromper
     const walletsMap = Object.fromEntries(wallets.map(w => [w.id, w.nome]));
     const q = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
     csv += 'Data,Tipo,Categoria,Descricao,Valor,Carteira,Conferido,Parcela,Tag\n';
     const tagNome = (id) => tagMap[id]?.label || '';
+    const catNome = (cat) => (cat ? (PERCENTUAL_CATEGORIES[cat]?.label || 'Outros') : 'Sem Categoria');
+    const conferidoDe = (tx, date) => (tx.conferido || tx.conferidos?.includes(date) ? 'Sim' : 'Não');
 
+    const linhas = [];
     periodOccs.forEach(o => {
+      if (o.tx.tipo !== 'entrada') return;
       const tx = o.tx;
-      const typeLabel = tx.tipo === 'entrada' ? 'Entrada' : 'Saída';
-      const walletName = walletsMap[tx.carteiraId] || '';
-      const conferido = tx.conferido ? 'Sim' : (tx.conferidos?.includes(o.date) ? 'Sim' : 'Não');
-
-      if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-        tx.itens.forEach(item => {
-          const catLabel = item.categoria ? (PERCENTUAL_CATEGORIES[item.categoria]?.label || 'Outros') : 'Sem Categoria';
-          const parcela = item.isParcelado ? `${item.parcelaAtual || 1}/${item.totalParcelas}` : '';
-          csv += `${o.date},Cartão,${catLabel},${q(item.descricao || tx.descricao)},${(Number(item.valor) || 0).toFixed(2)},${q(walletName)},${conferido},${parcela},${q(tagNome(item.tag))}\n`;
-        });
-      } else {
-        const catLabel = tx.categoria ? (PERCENTUAL_CATEGORIES[tx.categoria]?.label || 'Outros') : 'Sem Categoria';
-        const parcela = tx.frequencia === 'parcelado' ? `${tx.parcelaAtual || 1}/${tx.totalParcelas}` : '';
-        csv += `${o.date},${typeLabel},${catLabel},${q(tx.descricao)},${o.valor.toFixed(2)},${q(walletName)},${conferido},${parcela},${q(tagNome(tx.tag))}\n`;
-      }
+      linhas.push({ date: o.date, csv: `${o.date},Entrada,${catNome(tx.categoria)},${q(tx.descricao)},${o.valor.toFixed(2)},${q(walletsMap[tx.carteiraId])},${conferidoDe(tx, o.date)},,${q(tagNome(tx.tag))}` });
     });
+    periodDespesas.forEach(e => {
+      linhas.push({ date: e.date, csv: `${e.date},${e.tipo === 'cartao' ? 'Cartão' : 'Saída'},${catNome(e.categoria)},${q(e.descricao)},${e.valor.toFixed(2)},${q(walletsMap[e.tx.carteiraId])},${conferidoDe(e.tx, e.date)},${e.parcela || ''},${q(tagNome(e.tag))}` });
+    });
+    linhas.sort((a, b) => a.date.localeCompare(b.date));
+    csv += linhas.map(l => l.csv).join('\n') + (linhas.length ? '\n' : '');
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -232,39 +206,18 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
       }));
   }, [categoryStats]);
 
-  // Evolução mensal: últimos 3 meses por categoria
+  // Evolução mensal: últimos 3 meses por categoria (despesas por competência)
   const evolutionData = useMemo(() => {
     const months = [-2, -1, 0].map(getMonthRange);
+    const porMes = months.map(({ from, to }) => expandDespesas(transactions, from, to));
     return {
       months,
       rows: CATEGORY_ORDER.map(catId => {
         const cat = PERCENTUAL_CATEGORIES[catId];
-        const values = months.map(({ from, to }) => {
-          let total = 0;
-          transactions.forEach(tx => {
-            if (tx.tipo === 'entrada') return;
-            expandOccurrences(tx, from, to).forEach(() => {
-              if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-                tx.itens.forEach(item => {
-                  if (item.categoria === catId) total += Number(item.valor) || 0;
-                });
-              } else if (tx.categoria === catId) {
-                total += Number(tx.valor) || 0;
-              }
-            });
-          });
-          return total;
-        });
+        const values = porMes.map(eventos => eventos.reduce((s, e) => (e.categoria === catId ? s + e.valor : s), 0));
         return { catId, label: cat.label, icon: cat.icon, color: cat.color, values };
       }),
-      totals: months.map((_, mi) => {
-        let t = 0;
-        transactions.forEach(tx => {
-          if (tx.tipo === 'entrada') return;
-          expandOccurrences(tx, months[mi].from, months[mi].to).forEach(o => { t += o.valor; });
-        });
-        return t;
-      }),
+      totals: porMes.map(eventos => eventos.reduce((s, e) => s + e.valor, 0)),
     };
   }, [transactions]);
 
@@ -474,10 +427,13 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
                   <div style={{ width: 24, height: 24, borderRadius: 6, background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <TrendingDown size={14} color="#ef4444" />
                   </div>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Despesas</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Gastos</span>
                 </div>
                 <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--saida)' }}>
-                  {formatBRL(statsGerais.saidas)}
+                  {formatBRL(statsGerais.gastos)}
+                </p>
+                <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>
+                  Saiu do caixa: {formatBRL(statsGerais.saiuCaixa)}
                 </p>
               </div>
             </div>
@@ -493,7 +449,7 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
                 </div>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Resultado do Período</p>
-                  <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>Saldo líquido final</p>
+                  <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>Receitas − gastos do período</p>
                 </div>
               </div>
               <span style={{ fontSize: 18, fontWeight: 700, color: statsGerais.liquido >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
@@ -960,8 +916,9 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
               <strong className="print-summary-val" style={{ color: '#2f855a' }}>{formatBRL(statsGerais.entradas)}</strong>
             </div>
             <div className="print-summary-card">
-              <span className="print-summary-label">Total Despesas</span>
-              <strong className="print-summary-val" style={{ color: '#c53030' }}>{formatBRL(statsGerais.saidas)}</strong>
+              <span className="print-summary-label">Total Gastos</span>
+              <strong className="print-summary-val" style={{ color: '#c53030' }}>{formatBRL(statsGerais.gastos)}</strong>
+              <span className="print-summary-label" style={{ fontSize: 10 }}>Saiu do caixa: {formatBRL(statsGerais.saiuCaixa)}</span>
             </div>
             <div className="print-summary-card">
               <span className="print-summary-label">Balanço Líquido</span>

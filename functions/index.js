@@ -372,48 +372,131 @@ function cartaoComFaturaRealNoMes(transactions, from, to) {
   );
 }
 
+// ─── Despesas por competência (espelha src/utils/despesas.js do app) ─────────
+// O gasto conta quando aconteceu: compra à vista na data da compra; parcela k na data da compra + (k-1) meses.
+// Só leitura para categorias e relatórios — o caixa segue em expandRange/calcSaldoSimples, que não são alterados.
+function addMonthsStr(dateStr, n) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const ty = y + Math.floor((m - 1 + n) / 12);
+  const tm = ((m - 1 + n) % 12 + 12) % 12; // 0-indexed
+  const last = new Date(ty, tm + 1, 0).getDate();
+  return `${ty}-${String(tm + 1).padStart(2, '0')}-${String(Math.min(d, last)).padStart(2, '0')}`;
+}
+
+function isParcelaItemBot(item) {
+  return !!item?.isParcelado || (Number(item?.totalParcelas) > 1 && Number(item?.parcelaAtual) >= 1);
+}
+
+/**
+ * Eventos de despesa com data em [from, to], ordenados por data.
+ * Evento: { date, valor, categoria, tag, descricao, tipo, tx, parcela, projetada, itemIndex? }
+ */
+function expandDespesasBot(transactions, from, to, { historical = false } = {}) {
+  const eventos = [];
+  const planos = new Map(); // parcela de um plano -> evento (real vence projetado; conta uma vez só)
+  const normDesc = (s) => String(s || '').toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ');
+
+  const guardaPlano = (key, ev, real) => {
+    const atual = planos.get(key);
+    if (!atual || (real && !atual.real)) planos.set(key, { ev, real });
+  };
+
+  const faturaUnica = (tx) => {
+    const venc = tx.dataInicio;
+    const exclusoes = Array.isArray(tx.exclusoes) ? tx.exclusoes : [];
+    const faturaExcluida = exclusoes.includes(venc);
+
+    tx.itens.forEach((item, itemIndex) => {
+      const valor = Number(item.valor) || 0;
+      if (!valor) return;
+      const comum = {
+        valor,
+        categoria: item.categoria || null,
+        tag: item.tag || null,
+        descricao: item.descricao || tx.descricao || 'Item de cartão',
+        tipo: 'cartao',
+        tx,
+        itemIndex,
+      };
+
+      if (!isParcelaItemBot(item)) {
+        if (faturaExcluida) return;
+        const date = item.dataCompra || venc;
+        if (date >= from && date <= to) eventos.push({ ...comum, date, parcela: null, projetada: false });
+        return;
+      }
+
+      const total = Number(item.totalParcelas) || 1;
+      const k = Math.max(1, Number(item.parcelaAtual) || 1);
+      const origem = item.dataCompra || addMonthsStr(venc, -(k - 1));
+      // Só itens marcados como parcelados projetam as seguintes (igual ao caixa); os convertidos contam só a do mês.
+      const ultima = item.isParcelado ? total : k;
+
+      for (let j = k; j <= ultima; j++) {
+        const date = addMonthsStr(origem, j - 1);
+        if (date > to) break;
+        const excluida = j === k ? faturaExcluida : exclusoes.includes(addMonthsStr(venc, j - k));
+        if (excluida) continue;
+        const chave = `${tx.cartaoId || ''}|${normDesc(item.descricao)}|${origem}|${total}|${j}`;
+        guardaPlano(chave, { ...comum, date, parcela: `${j}/${total}`, projetada: j !== k }, j === k);
+      }
+    });
+  };
+
+  for (const tx of transactions || []) {
+    if (!tx || tx.tipo === 'entrada') continue;
+
+    const itens = tx.tipo === 'cartao' && Array.isArray(tx.itens) && tx.itens.length > 0 ? tx.itens : null;
+    if (itens && tx.frequencia === 'unico') {
+      faturaUnica(tx);
+      continue;
+    }
+
+    // Demais despesas e faturas recorrentes: cada ocorrência vale na própria data
+    for (const o of expandRange([tx], from, to, { historical })) {
+      if (itens) {
+        itens.forEach((item, itemIndex) => {
+          const valor = Number(item.valor) || 0;
+          if (!valor) return;
+          eventos.push({
+            date: o.date, valor, categoria: item.categoria || null, tag: item.tag || null,
+            descricao: item.descricao || tx.descricao || 'Item de cartão',
+            tipo: 'cartao', tx, parcela: null, projetada: false, itemIndex,
+          });
+        });
+      } else {
+        eventos.push({
+          date: o.date,
+          valor: o.valor,
+          categoria: tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null),
+          tag: tx.tag || null,
+          descricao: tx.descricao || tx.tipo,
+          tipo: tx.tipo,
+          tx,
+          parcela: null,
+          projetada: false,
+        });
+      }
+    }
+  }
+
+  for (const { ev } of planos.values()) {
+    if (ev.date >= from && ev.date <= to) eventos.push(ev);
+  }
+
+  return eventos.sort((a, b) => a.date.localeCompare(b.date) || b.valor - a.valor);
+}
+
 function computeSpentByCategory(transactions, currentMonth) {
   const totals = Object.fromEntries(CATEGORY_ORDER.map(id => [id, 0]));
   const [year, mon] = currentMonth.split('-').map(Number);
   const from = `${currentMonth}-01`;
   const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
 
-  // Cartões com fatura real no mês — projeções virtuais desses cartões são ignoradas
-  const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
-
-  // Sem historical: comportamento igual ao BudgetSummaryCard do app — diário passado ignorado
-  const occs = expandRange(transactions, from, to);
-
-  for (const o of occs) {
-    const tx = o.tx;
-    if (!tx || tx.tipo === 'entrada') continue;
-
-    // ── Cartão com itens ────────────────────────────────────────────────────
-    if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-      // Projeção virtual (id = "txId-proj-N") de cartão que já tem fatura real: ignora
-      if (tx.id?.includes('-proj-') && comFaturaReal.has(tx.cartaoId)) continue;
-
-      for (const item of tx.itens) {
-        const cat = item.categoria;
-        if (!cat || !(cat in totals)) continue;
-        const valor = Number(item.valor) || 0;
-
-        if (item.isParcelado) {
-          totals[cat] += valor;
-        } else {
-          // Itens avulsos não parcelados contam apenas no mês da compra (dataCompra)
-          if (item.dataCompra?.startsWith(currentMonth)) {
-            totals[cat] += valor;
-          }
-        }
-      }
-      continue;
-    }
-
-    // ── Demais tipos (saida, diario, investimento) ─────────────────────────
-    const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
-    if (!cat || !(cat in totals)) continue;
-    totals[cat] += o.valor;
+  // Por competência: igual à Home do app (à vista na data da compra, parcela mês a mês)
+  for (const e of expandDespesasBot(transactions, from, to)) {
+    if (e.categoria && e.categoria in totals) totals[e.categoria] += e.valor;
   }
   return totals;
 }
@@ -424,38 +507,11 @@ function getTopExpensesForCategory(transactions, category, currentMonth) {
   const from = `${currentMonth}-01`;
   const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2,'0')}`;
 
-  // Mesma regra: projeções virtuais de cartões com fatura real são ignoradas
-  const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
-
-  const occs = expandRange(transactions, from, to);
-
   const groups = {};
-  for (const o of occs) {
-    const tx = o.tx;
-    if (!tx || tx.tipo === 'entrada') continue;
-
-    // Tratamento para cartão com itens
-    if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-      if (tx.id?.includes('-proj-') && comFaturaReal.has(tx.cartaoId)) continue;
-
-      for (const item of tx.itens) {
-        if (item.categoria === category) {
-          const valor = Number(item.valor) || 0;
-          if (item.isParcelado || item.dataCompra?.startsWith(currentMonth)) {
-            const desc = item.descricao?.trim() || tx.descricao?.trim() || 'Despesa Cartão';
-            groups[desc] = (groups[desc] || 0) + valor;
-          }
-        }
-      }
-      continue;
-    }
-
-    // Tratamento para demais lançamentos
-    const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
-    if (cat === category) {
-      const desc = tx.descricao?.trim() || tx.tipo;
-      groups[desc] = (groups[desc] || 0) + o.valor;
-    }
+  for (const e of expandDespesasBot(transactions, from, to)) {
+    if (e.categoria !== category) continue;
+    const desc = String(e.descricao || '').trim() || e.tipo;
+    groups[desc] = (groups[desc] || 0) + e.valor;
   }
 
   // Ordena por valor decrescente e pega os 2 principais
@@ -1341,12 +1397,17 @@ async function handleResumo(chatId, uid) {
     else                      saidas   += o.valor;
   }
 
+  // Gastos = quando aconteceram (compra/parcela); Saiu do caixa = quando a fatura/conta foi debitada
+  const gastos = collectMonthExpenses(transactions, month).reduce((s, e) => s + e.valor, 0);
+
   const nomeMes = now.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
   return sendMessage(chatId,
     `📊 *Resumo de ${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}*\n\n` +
     `✅ Entradas: *${formatBRL(entradas)}*\n` +
-    `❌ Saídas:   *${formatBRL(saidas)}*\n` +
-    `💰 Balanço:  *${formatBRL(entradas - saidas)}*`
+    `❌ Gastos:   *${formatBRL(gastos)}*\n` +
+    `💰 Resultado: *${formatBRL(entradas - gastos)}*\n\n` +
+    `🏦 Saiu do caixa: ${formatBRL(saidas)}\n` +
+    `_Gastos = quando a compra aconteceu (parcelas mês a mês). Saiu do caixa = quando a conta/fatura foi paga._`
   );
 }
 
@@ -1520,13 +1581,17 @@ async function handleMes(chatId, uid, args) {
     else                      saidas   += o.valor;
   }
 
+  // Gastos = quando aconteceram (compra/parcela); Saiu do caixa = quando a fatura/conta foi debitada
+  const gastos = collectMonthExpenses(transactions, mesStr).reduce((s, e) => s + e.valor, 0);
+
   const nomeMes = MESES_LONGO[month];
-  const saldo   = entradas - saidas;
+  const saldo   = entradas - gastos;
 
   let text = `📊 *${nomeMes} ${year}*\n\n`;
   text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
-  text += `❌ Saídas:   *${formatBRL(saidas)}*\n`;
-  text += `💰 Saldo:    *${formatBRL(saldo)}*\n\n`;
+  text += `❌ Gastos:   *${formatBRL(gastos)}*\n`;
+  text += `💰 Resultado: *${formatBRL(saldo)}*\n\n`;
+  text += `🏦 Saiu do caixa: ${formatBRL(saidas)}\n`;
   text += `_Use /categoria para ver a divisão por categoria._`;
 
   return sendMessage(chatId, text.trim());
@@ -1790,48 +1855,25 @@ function normTxt(s) {
   return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
 }
 
-// Espelha computeSpentByCategory, mas devolve cada lançamento individual
+// Cada lançamento individual do mês, por competência (compra à vista na data da compra, parcela mês a mês)
 function collectMonthExpenses(transactions, currentMonth, { historical = false } = {}) {
   const [year, mon] = currentMonth.split('-').map(Number);
   const from = `${currentMonth}-01`;
   const to   = `${currentMonth}-${String(new Date(year, mon, 0).getDate()).padStart(2, '0')}`;
-  const comFaturaReal = cartaoComFaturaRealNoMes(transactions, from, to);
-  const entries = [];
 
-  for (const o of expandRange(transactions, from, to, { historical })) {
-    const tx = o.tx;
-    if (!tx || tx.tipo === 'entrada') continue;
-
-    if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-      if (tx.id?.includes('-proj-') && comFaturaReal.has(tx.cartaoId)) continue;
-      for (const item of tx.itens) {
-        const valor = Number(item.valor) || 0;
-        if (!valor) continue;
-        if (!item.isParcelado && !item.dataCompra?.startsWith(currentMonth)) continue;
-        const parc = item.isParcelado && item.totalParcelas ? ` (${item.parcelaAtual || 1}/${item.totalParcelas})` : '';
-        entries.push({
-          date: item.dataCompra?.startsWith(currentMonth) ? item.dataCompra : o.date,
-          desc: `${item.descricao?.trim() || tx.descricao?.trim() || 'Compra no cartão'}${parc} 💳`,
-          valor,
-          cat: item.categoria in GASTOS_CATS ? item.categoria : 'sem_categoria',
-          tag: item.tag || null,
-          tipo: 'cartao',
-        });
-      }
-      continue;
-    }
-
-    const catRaw = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
-    entries.push({
-      date: o.date,
-      desc: tx.descricao?.trim() || tx.tipo,
-      valor: o.valor,
-      cat: catRaw in GASTOS_CATS ? catRaw : 'sem_categoria',
-      tag: tx.tag || null,
-      tipo: tx.tipo,
-    });
-  }
-  return entries;
+  return expandDespesasBot(transactions, from, to, { historical }).map(e => {
+    const desc = String(e.descricao || '').trim();
+    return {
+      date: e.date,
+      desc: e.tipo === 'cartao'
+        ? `${desc || 'Compra no cartão'}${e.parcela ? ` (${e.parcela})` : ''} 💳`
+        : (desc || e.tipo),
+      valor: e.valor,
+      cat: e.categoria in GASTOS_CATS ? e.categoria : 'sem_categoria',
+      tag: e.tag || null,
+      tipo: e.tipo,
+    };
+  });
 }
 
 // Tags criadas pelo usuário no app: [{ id, label, cor }]

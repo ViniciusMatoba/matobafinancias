@@ -2,7 +2,8 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks, getProximoVencimento } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
-import { expandOccurrences, calcFaturaCard } from '../../utils/projectionCalc';
+import { calcFaturaCard } from '../../utils/projectionCalc';
+import { expandDespesas } from '../../utils/despesas';
 import { addTagToList, tagIdSet, tagsById, isSimilarDesc, normalizeText as normTag } from '../../utils/tags';
 import TagPicker from '../shared/TagPicker';
 
@@ -400,101 +401,101 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
     onSave(data);
   };
 
+  // Aviso de orçamento: considera o gasto no mês em que ele acontece (compra à vista na data da compra,
+  // parcela mês a mês), igual à Home — não o mês em que a fatura vence ou é paga.
   const budgetWarnings = useMemo(() => {
     if (!config || form.tipo === 'entrada') return [];
-    
+
     const income = Number(config.rendaMensal) || 0;
     if (income <= 0) return [];
 
-    let refMonth = form.dataInicio?.slice(0, 7);
-    if (!refMonth) {
-      refMonth = new Date().toISOString().slice(0, 7);
-    }
-
-    const [year, mon] = refMonth.split('-').map(Number);
-    const from = `${refMonth}-01`;
-    const lastDay = new Date(year, mon, 0).getDate();
-    const to = `${refMonth}-${String(lastDay).padStart(2, '0')}`;
+    const dataRef = form.dataInicio || todayStr();
+    const refMonth = dataRef.slice(0, 7);
+    const monthRange = (m) => {
+      const [y, mo] = m.split('-').map(Number);
+      return [`${m}-01`, `${m}-${String(new Date(y, mo, 0).getDate()).padStart(2, '0')}`];
+    };
+    const NOMES_MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const mesLabel = (m) => `${NOMES_MES[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`;
 
     const limits = {};
     Object.entries(config.budgetPcts || {}).forEach(([catId, pct]) => {
       limits[catId] = (income * (Number(pct) || 0)) / 100;
     });
 
-    const currentFormAdded = {};
+    // O que este lançamento adiciona, por mês e categoria
+    const adicionado = {};
+    const add = (mes, cat, v) => {
+      if (!adicionado[mes]) adicionado[mes] = {};
+      adicionado[mes][cat] = (adicionado[mes][cat] || 0) + v;
+    };
+
     if (form.tipo === 'cartao') {
-      itens.forEach(item => {
-        const cat = item.categoria;
-        if (!cat) return;
-        const v = parseBRLInput(item.valor) || 0;
-        if (item.isParcelado) {
-          currentFormAdded[cat] = (currentFormAdded[cat] || 0) + v;
-        } else if (item.dataCompra?.startsWith(refMonth)) {
-          currentFormAdded[cat] = (currentFormAdded[cat] || 0) + v;
-        }
-      });
+      const rascunho = {
+        id: '__rascunho__', tipo: 'cartao', frequencia: 'unico', cartaoId: form.cartaoId || '',
+        dataInicio: dataRef,
+        itens: itens.map(item => {
+          const pAtual = parseInt(item.parcelaAtual) || 0;
+          const pTotal = parseInt(item.totalParcelas) || 0;
+          const parcelado = !!item.isParcelado || (pAtual >= 1 && pTotal >= 2);
+          return {
+            descricao: item.descricao,
+            valor: parseBRLInput(item.valor) || 0,
+            categoria: item.categoria,
+            dataCompra: item.dataCompra,
+            ...(parcelado ? { isParcelado: true, parcelaAtual: pAtual || 1, totalParcelas: pTotal || 1 } : {}),
+          };
+        }),
+      };
+      const de  = monthRange(addMonths(`${refMonth}-01`, -3).slice(0, 7))[0];
+      const ate = monthRange(addMonths(`${refMonth}-01`, 3).slice(0, 7))[1];
+      expandDespesas([rascunho], de, ate)
+        .filter(e => !e.projetada && e.categoria)
+        .forEach(e => add(e.date.slice(0, 7), e.categoria, e.valor));
     } else {
       const cat = form.categoria || (form.tipo === 'investimento' ? 'liberdade' : null);
-      if (cat) {
-        currentFormAdded[cat] = (currentFormAdded[cat] || 0) + (parseBRLInput(form.valor) || 0);
-      }
+      if (cat) add(refMonth, cat, parseBRLInput(form.valor) || 0);
     }
 
-    if (Object.keys(currentFormAdded).length === 0) return [];
+    const meses = Object.keys(adicionado).sort();
+    if (meses.length === 0) return [];
 
-    const dbTotals = {};
-    transactions.forEach(tx => {
-      if (initial && tx.id === initial.id) return;
-      if (tx.tipo === 'entrada') return;
+    const outros = transactions.filter(tx => !(initial && tx.id === initial.id));
+    const warnings = [];
+    meses.forEach(mes => {
+      const [de, ate] = monthRange(mes);
+      const noBanco = {};
+      expandDespesas(outros, de, ate).forEach(e => {
+        if (e.categoria) noBanco[e.categoria] = (noBanco[e.categoria] || 0) + e.valor;
+      });
 
-      const occs = expandOccurrences(tx, from, to);
-      occs.forEach(occ => {
-        if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
-          tx.itens.forEach(item => {
-            const cat = item.categoria;
-            if (!cat) return;
-            const v = Number(item.valor) || 0;
-            if (item.isParcelado) {
-              dbTotals[cat] = (dbTotals[cat] || 0) + v;
-            } else if (item.dataCompra?.startsWith(refMonth)) {
-              dbTotals[cat] = (dbTotals[cat] || 0) + v;
-            }
+      Object.entries(adicionado[mes]).forEach(([catId, valToAdd]) => {
+        const limit = limits[catId] || 0;
+        if (limit <= 0) return;
+
+        const currentSpent = noBanco[catId] || 0;
+        const projected = currentSpent + valToAdd;
+
+        if (projected > limit) {
+          const catConfig = PERCENTUAL_CATEGORIES[catId];
+          warnings.push({
+            mes,
+            mesLabel: mesLabel(mes),
+            catId,
+            label: catConfig?.label || catId,
+            icon: catConfig?.icon || '⚠️',
+            color: catConfig?.color || 'var(--saida)',
+            limit,
+            currentSpent,
+            projected,
+            excess: projected - limit,
           });
-        } else {
-          const cat = tx.categoria || (tx.tipo === 'investimento' ? 'liberdade' : null);
-          if (cat) {
-            dbTotals[cat] = (dbTotals[cat] || 0) + occ.valor;
-          }
         }
       });
-    });
-
-    const warnings = [];
-    Object.entries(currentFormAdded).forEach(([catId, valToAdd]) => {
-      const limit = limits[catId] || 0;
-      if (limit <= 0) return;
-
-      const currentSpent = dbTotals[catId] || 0;
-      const projected = currentSpent + valToAdd;
-
-      if (projected > limit) {
-        const catConfig = PERCENTUAL_CATEGORIES[catId];
-        const excess = projected - limit;
-        warnings.push({
-          catId,
-          label: catConfig?.label || catId,
-          icon: catConfig?.icon || '⚠️',
-          color: catConfig?.color || 'var(--saida)',
-          limit,
-          currentSpent,
-          projected,
-          excess
-        });
-      }
     });
 
     return warnings;
-  }, [config, form.tipo, form.valor, form.dataInicio, form.categoria, itens, transactions, initial]);
+  }, [config, form.tipo, form.valor, form.dataInicio, form.categoria, form.cartaoId, itens, transactions, initial]);
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1332,7 +1333,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       )}
 
       {budgetWarnings.map(warn => (
-        <div key={warn.catId} style={{
+        <div key={`${warn.mes}-${warn.catId}`} style={{
           display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px',
           borderRadius: 10, background: 'rgba(245,158,11,0.08)',
           border: '1px solid rgba(245,158,11,0.25)', marginTop: 4
@@ -1343,7 +1344,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
               Limite de {warn.label} excedido!
             </p>
             <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-              Este lançamento fará a categoria somar <strong>{formatBRL(warn.projected)}</strong> no mês, ultrapassando o limite teto de <strong>{formatBRL(warn.limit)}</strong>.
+              Este lançamento fará a categoria somar <strong>{formatBRL(warn.projected)}</strong> em {warn.mesLabel}, ultrapassando o limite teto de <strong>{formatBRL(warn.limit)}</strong>.
             </p>
           </div>
         </div>
