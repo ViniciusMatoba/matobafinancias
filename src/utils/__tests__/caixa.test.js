@@ -61,6 +61,23 @@ describe('caixa — fatura de novembro criada a partir da projeção (pai exclui
   })
 })
 
+describe('caixa — "Esta e todas as futuras" numa fatura projetada (pai ganha dataFim; novo continua parcelado)', () => {
+  const pai = { ...f1, dataFim: '2026-11-09' }
+  const novo = fatura('f2', '2026-11-10', [mercado(100, '2026-10-25'), tv(2)])
+
+  it('o pai para de projetar na dataFim e nada é contado em dobro', () => {
+    // pai: só out 300; novo: nov 300 + dez 200 (parcela 3/3 projetada)
+    expect(calcSaldo([pai, novo], '2026-01-01', '2026-10-31')).toBe(-300)
+    expect(calcSaldo([pai, novo], '2026-01-01', '2026-11-30')).toBe(-600)
+    expect(calcSaldo([pai, novo], '2026-01-01', '2026-12-31')).toBe(-800)
+  })
+
+  it('a dataFim só corta as projeções, nunca a fatura do próprio mês', () => {
+    const cortado = { ...f1, dataFim: '2026-09-01' }
+    expect(calcSaldo([cortado], '2026-01-01', '2026-12-31')).toBe(-300)
+  })
+})
+
 describe('caixa — comportamento atual preservado: nova fatura lançada sem excluir a projeção do pai', () => {
   const nov = fatura('f2', '2026-11-10', [mercado(100, '2026-10-25'), tv(2)])
 

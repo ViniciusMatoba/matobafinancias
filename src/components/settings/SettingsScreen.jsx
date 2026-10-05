@@ -14,6 +14,7 @@ import NotificationSettings from './NotificationSettings';
 import TelegramSettings from './TelegramSettings';
 import WebhookSettings from './WebhookSettings';
 import TagSettings from './TagSettings';
+import FaturasDuplicadasSettings from './FaturasDuplicadasSettings';
 import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { APP_VERSION, CHANGELOG } from '../../utils/version';
 
@@ -24,6 +25,7 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
   const [cardsOpen, setCardsOpen] = useState(false);
   const [walletsOpen, setWalletsOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [duplicidadesOpen, setDuplicidadesOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [webhookOpen, setWebhookOpen] = useState(false);
@@ -445,6 +447,39 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
                   tags={config?.tags || []}
                   transactions={transactions || []}
                   onSaveConfig={onSaveConfig}
+                  onUpdateMany={onUpdateManyTransactions}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Verificar duplicidades de fatura — card */}
+        <div style={{
+          background: 'var(--bg-card)', border: '1px solid var(--border)',
+          borderRadius: 14, marginBottom: 16, overflow: 'hidden',
+        }}>
+          <button
+            type="button"
+            onClick={() => setDuplicidadesOpen(o => !o)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '14px 16px', background: 'none',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 18 }}>🔎</span>
+              <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
+                Verificar duplicidades de fatura
+              </span>
+            </div>
+            {duplicidadesOpen ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
+          </button>
+          {duplicidadesOpen && (
+            <div style={{ padding: '0 16px 16px', borderTop: '1px solid var(--border)' }}>
+              <div style={{ paddingTop: 14 }}>
+                <FaturasDuplicadasSettings
+                  transactions={transactions || []}
                   onUpdateMany={onUpdateManyTransactions}
                 />
               </div>

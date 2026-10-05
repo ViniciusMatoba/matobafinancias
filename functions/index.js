@@ -276,6 +276,8 @@ function expandRange(transactions, from, to, { historical = false } = {}) {
 
             if (futureDate > to) continue;
             if (excl.includes(futureDate)) continue;
+            // "Esta e todas as futuras" grava dataFim no lançamento de origem para ele parar de projetar
+            if (tx.dataFim && futureDate > tx.dataFim) continue;
 
             const futureItens = parcelados
               .filter(i => (i.parcelaAtual || 1) + m <= i.totalParcelas)
@@ -436,7 +438,8 @@ function expandDespesasBot(transactions, from, to, { historical = false } = {}) 
       for (let j = k; j <= ultima; j++) {
         const date = addMonthsStr(origem, j - 1);
         if (date > to) break;
-        const excluida = j === k ? faturaExcluida : exclusoes.includes(addMonthsStr(venc, j - k));
+        const dataCaixa = addMonthsStr(venc, j - k); // data em que o caixa projeta esta parcela
+        const excluida = j === k ? faturaExcluida : (exclusoes.includes(dataCaixa) || !!(tx.dataFim && dataCaixa > tx.dataFim));
         if (excluida) continue;
         const chave = `${tx.cartaoId || ''}|${normDesc(item.descricao)}|${origem}|${total}|${j}`;
         guardaPlano(chave, { ...comum, date, parcela: `${j}/${total}`, projetada: j !== k }, j === k);
@@ -2369,6 +2372,19 @@ async function handleConfigurar(chatId, uid) {
 
 // ─── Helpers para Ações Rápidas do Bot e Webhook de Automação ─────────────────
 
+// Itens de uma fatura projetada que vira lançamento real: sem projeção própria
+// (o lançamento de origem segue projetando as parcelas seguintes — espelha itensDoLancamentoReal do app)
+function itensDoLancamentoRealBot(itens) {
+  return (itens || []).map(i => ({ ...i, isParcelado: false }));
+}
+
+// Valor e itens da ocorrência projetada de `occDate`: o documento de origem guarda a fatura original inteira,
+// não o que cai naquele mês
+function ocorrenciaProjetada(tx, occDate) {
+  const occ = expandRange([tx], occDate, occDate).find(o => o.date === occDate);
+  return { valor: occ ? occ.valor : tx.valor, itens: (occ && occ.tx && occ.tx.itens) || tx.itens || [] };
+}
+
 async function handlePayCallback(chatId, uid, txId, occDate) {
   const isVirtual = txId.includes('-proj-');
   const parentId = isVirtual ? txId.split('-proj-')[0] : txId;
@@ -2384,21 +2400,22 @@ async function handlePayCallback(chatId, uid, txId, occDate) {
   const today = todayStrBrasilia();
   
   if (isVirtual) {
+    const ocorrencia = ocorrenciaProjetada(tx, occDate); // antes de excluir a data
     const exclusoes = [...(tx.exclusoes || [])];
     if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
     await txRef.update({ exclusoes });
-    
+
     await db.collection('transactions').doc(uid).collection('entries').add({
       tipo: tx.tipo,
       frequencia: 'unico',
-      descricao: tx.tipo === 'cartao' 
+      descricao: tx.tipo === 'cartao'
         ? (tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura')
         : tx.descricao,
-      valor: tx.valor,
+      valor: ocorrencia.valor,
       dataInicio: today,
       categoria: tx.categoria || null,
       dataFim: null,
-      itens: tx.itens || [],
+      itens: itensDoLancamentoRealBot(ocorrencia.itens),
       cartaoId: tx.cartaoId || null,
       conferido: true
     });
@@ -2475,7 +2492,7 @@ async function handlePayCardCallback(chatId, uid, cardId, occDate) {
     dataInicio: today,
     categoria: null,
     dataFim: null,
-    itens: newItens,
+    itens: itensDoLancamentoRealBot(newItens),
     cartaoId: cardId,
     conferido: true
   });
@@ -2496,21 +2513,22 @@ async function handlePostponeCallback(chatId, uid, txId, occDate, days) {
   const postponedDate = addDaysFn(occDate, parseInt(days));
   
   if (isVirtual) {
+    const ocorrencia = ocorrenciaProjetada(tx, occDate); // antes de excluir a data
     const exclusoes = [...(tx.exclusoes || [])];
     if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
     await txRef.update({ exclusoes });
-    
+
     await db.collection('transactions').doc(uid).collection('entries').add({
       tipo: tx.tipo,
       frequencia: 'unico',
-      descricao: tx.tipo === 'cartao' 
+      descricao: tx.tipo === 'cartao'
         ? (tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura')
         : tx.descricao,
-      valor: tx.valor,
+      valor: ocorrencia.valor,
       dataInicio: postponedDate,
       categoria: tx.categoria || null,
       dataFim: null,
-      itens: tx.itens || [],
+      itens: itensDoLancamentoRealBot(ocorrencia.itens),
       cartaoId: tx.cartaoId || null,
       conferido: false
     });

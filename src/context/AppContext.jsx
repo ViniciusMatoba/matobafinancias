@@ -9,6 +9,7 @@ import { useToast } from '../components/shared/Toast';
 import { addMonths, todayStr } from '../utils/formatters';
 import { expandOccurrences } from '../utils/projectionCalc';
 import { expandDespesas } from '../utils/despesas';
+import { docPagamentoFaturaProjetada } from '../utils/faturaProjetada';
 import { PERCENTUAL_CATEGORIES } from '../utils/categories';
 
 const AppContext = createContext(null);
@@ -398,7 +399,7 @@ export function AppProvider({ user, children }) {
         const exclusoes = [...(parentTx.exclusoes || [])];
         if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
         await update(parentId, { exclusoes });
-        await add({ tipo: 'cartao', frequencia: 'unico', descricao: tx.descricao ? `Pagamento Fatura – ${tx.descricao}` : 'Pagamento de Fatura', valor, dataInicio: paymentDate, categoria: null, dataFim: null, itens: tx.itens || [], cartaoId: tx.cartaoId || null, conferido: true });
+        await add(docPagamentoFaturaProjetada(tx, { paymentDate, valor }));
         showToast('✅ Pagamento de fatura antecipado!');
         return;
       }

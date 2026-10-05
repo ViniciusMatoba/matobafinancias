@@ -71,7 +71,8 @@ export function expandDespesas(transactions, from, to, { historical = false } = 
       for (let j = k; j <= ultima; j++) {
         const date = addMonths(origem, j - 1);
         if (date > to) break;
-        const excluida = j === k ? faturaExcluida : !!tx.exclusoes?.includes(addMonths(venc, j - k));
+        const dataCaixa = addMonths(venc, j - k); // data em que o caixa projeta esta parcela
+        const excluida = j === k ? faturaExcluida : (!!tx.exclusoes?.includes(dataCaixa) || !!(tx.dataFim && dataCaixa > tx.dataFim));
         if (excluida) continue;
         const chave = `${tx.cartaoId || ''}|${normDesc(item.descricao)}|${origem}|${total}|${j}`;
         guardaPlano(chave, { ...comum, date, parcela: `${j}/${total}`, projetada: j !== k }, j === k);

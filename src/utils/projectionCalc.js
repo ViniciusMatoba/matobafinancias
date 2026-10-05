@@ -49,6 +49,8 @@ export function expandOccurrences(tx, from, to, { historical = false } = {}) {
           const futureDate = addMonths(tx.dataInicio, m);
           if (futureDate > to) continue;
           if (tx.exclusoes?.includes(futureDate)) continue;
+          // "Esta e todas as futuras" grava dataFim no lançamento de origem para ele parar de projetar
+          if (tx.dataFim && futureDate > tx.dataFim) continue;
 
           const futureItens = parcelados
             .filter(i => (i.parcelaAtual || 1) + m <= i.totalParcelas)
