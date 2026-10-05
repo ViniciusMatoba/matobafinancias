@@ -1,9 +1,9 @@
 {
-  "version": "1.6.142",
+  "version": "1.6.144",
   "date": "05/10/2026",
   "notes": [
-    "Tags de despesa: crie suas próprias tags (Mercado, Streaming, Transporte…) em Configurações → Tags ou direto ao lançar; cada lançamento (e cada item de fatura de cartão) tem no máximo uma tag",
-    "Lançamento novo com descrição idêntica a um já classificado recebe a mesma tag automaticamente",
-    "Lista de lançamentos mostra a tag, filtra por tag (ou \"Sem tag\") e a busca encontra pelo nome da tag"
+    "Painel: nova aba Tags — ranking das despesas do período por tag (com %), \"Sem tag\" por último e, ao tocar numa tag, a divisão por categoria; na aba Categorias, cada categoria mostra suas principais tags",
+    "Exportação CSV do Painel ganhou a coluna Tag (no fim, sem mudar as colunas existentes)",
+    "Telegram: /gastos mercado filtra pelo nome de uma tag (também por parte do nome) e as linhas mostram a tag; novo comando /tags com o total por tag no mês (ex: /tags agosto)"
   ]
 }
