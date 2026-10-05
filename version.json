@@ -1,9 +1,9 @@
 {
-  "version": "1.6.144",
+  "version": "1.6.143",
   "date": "05/10/2026",
   "notes": [
-    "Painel: nova aba Tags — ranking das despesas do período por tag (com %), \"Sem tag\" por último e, ao tocar numa tag, a divisão por categoria; na aba Categorias, cada categoria mostra suas principais tags",
-    "Exportação CSV do Painel ganhou a coluna Tag (no fim, sem mudar as colunas existentes)",
-    "Telegram: /gastos mercado filtra pelo nome de uma tag (também por parte do nome) e as linhas mostram a tag; novo comando /tags com o total por tag no mês (ex: /tags agosto)"
+    "Tags: classificação em lote do histórico em Configurações → Tags (aparece só enquanto houver lançamentos sem tag) — as descrições que mais pesaram vêm primeiro; uma tag aplica a todos os lançamentos de mesma descrição, inclusive itens de fatura de cartão",
+    "Sugestão automática no lote: mesma descrição já classificada, ou uma parecida (você confirma); botão Desfazer, pular e barra de progresso",
+    "Só os campos de tag são gravados — valores, datas, saldo e projeção não mudam"
   ]
 }
