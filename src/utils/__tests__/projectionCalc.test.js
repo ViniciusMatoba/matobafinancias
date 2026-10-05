@@ -294,10 +294,17 @@ describe('calcFaturaCard', () => {
     expect(faturaAtual).toBe(500)
   })
 
-  // hoje=21/jun → passou fechamento dia 20 → proximoVenc=25/jul, prevVenc=25/jun
-  // lançamento em jun/25 (ciclo anterior não pago) deve aparecer como fatura atual (overdue)
-  it('fatura do ciclo anterior não paga aparece como fatura atual (overdue)', () => {
+  // hoje=21/jun → passou o fechamento (dia 20), mas o vencimento (25/jun) ainda não chegou:
+  // a fatura fechada não é "em atraso" (regra da v1.6.116); a fatura atual é a do próximo ciclo (25/jul)
+  it('fatura fechada que ainda não venceu não é tratada como atrasada', () => {
     const { faturaAtual, proximoVenc } = calcFaturaCard(card, [makeTx('2026-06-25', 150)], '2026-06-21')
+    expect(faturaAtual).toBe(0)
+    expect(proximoVenc).toBe('2026-07-25')
+  })
+
+  // hoje=26/jun → o vencimento de 25/jun passou sem pagamento: aparece como fatura atual (overdue)
+  it('fatura do ciclo anterior não paga, depois do vencimento, aparece como atrasada', () => {
+    const { faturaAtual, proximoVenc } = calcFaturaCard(card, [makeTx('2026-06-25', 150)], '2026-06-26')
     expect(faturaAtual).toBe(150)
     expect(proximoVenc).toBe('2026-06-25')
   })

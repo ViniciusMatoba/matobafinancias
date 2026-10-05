@@ -39,7 +39,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
     tourActive,
     showMonthRecap, setShowMonthRecap,
     monthRecapData,
-    showToast, ToastNode,
+    setView, ToastNode,
     handleNavigate, handleEdit, handleClone,
     handleSave, handleDelete, handleAdjustBalance,
     openPayModal, confirmPayment,

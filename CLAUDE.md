@@ -74,7 +74,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.145
+- **Versão atual**: v1.6.146
 
 ### Regra de bump
 
@@ -114,9 +114,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.145 — 05/10/2026
+**Versão**: v1.6.146 — 05/10/2026
 
 **Últimas features**:
+- v1.6.146 — Fix onboarding (`setView` indefinido no App); teste de fatura em atraso atualizado para a regra da v1.6.116 (suíte 117/117)
 - v1.6.145 — Despesas por competência (compra à vista na data da compra; parcela mês a mês a partir dela) em categorias/tags/Painel/aviso do formulário/fechamento do mês/bot; "Gastos" × "Saiu do caixa"; caixa e Projeção intocados e travados por testes
 - v1.6.144 — Tags (Fase 3): aba Tags no Painel (`computeTagStats`), tags nos cartões de Categorias, coluna Tag no CSV; bot `/gastos <tag>` e `/tags`
 - v1.6.143 — Tags (Fase 2): classificação em lote do histórico em Configurações → Tags (só com lançamentos sem tag), por descrição, com sugestão (igual/parecida), pular e desfazer; `updateMany` (writeBatch) em useTransactions

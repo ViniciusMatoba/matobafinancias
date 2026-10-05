@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.145';
+export const APP_VERSION = '1.6.146';
 export const APP_VERSION_DATE = '05/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.146',
+    date: '05/10/2026',
+    changes: [
+      'Fix onboarding: o botão de cadastrar cartão no fim da configuração inicial dava erro e não levava às Configurações',
+      'Testes: o teste de fatura em atraso estava desatualizado desde a v1.6.116 e passou a refletir a regra atual (atraso só depois do vencimento); toda a suíte passa',
+    ],
+  },
   {
     version: '1.6.145',
     date: '05/10/2026',
