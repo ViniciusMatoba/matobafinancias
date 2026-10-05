@@ -1,8 +1,10 @@
 {
-  "version": "1.6.146",
+  "version": "1.6.148",
   "date": "05/10/2026",
   "notes": [
-    "Fix onboarding: o botão de cadastrar cartão no fim da configuração inicial dava erro e não levava às Configurações",
-    "Testes: o teste de fatura em atraso estava desatualizado desde a v1.6.116 e passou a refletir a regra atual (atraso só depois do vencimento); toda a suíte passa"
+    "Fix parcelas em dobro na Projeção: pagar uma fatura projetada criava um lançamento que projetava as parcelas seguintes de novo, e \"Esta e todas as futuras\" não parava a projeção do lançamento original. Corrigido no app e no Telegram (botões Pago e Adiar), que ainda gravavam o pagamento com o valor da fatura inteira",
+    "O cálculo da Projeção agora respeita a data de fim gravada em \"Esta e todas as futuras\" — isso já corrige sozinho as duplicidades antigas desse tipo",
+    "Novo em Configurações: \"Verificar duplicidades de fatura\" — mostra parcelas contadas em dobro e faturas repetidas e corrige automaticamente (com confirmação) os pagamentos que projetavam parcelas de novo",
+    "Testes novos reproduzem os fluxos de pagar e editar fatura projetada para impedir que isso volte"
   ]
 }
