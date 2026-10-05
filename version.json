@@ -1,9 +1,10 @@
 {
-  "version": "1.6.144",
+  "version": "1.6.145",
   "date": "05/10/2026",
   "notes": [
-    "Painel: nova aba Tags — ranking das despesas do período por tag (com %), \"Sem tag\" por último e, ao tocar numa tag, a divisão por categoria; na aba Categorias, cada categoria mostra suas principais tags",
-    "Exportação CSV do Painel ganhou a coluna Tag (no fim, sem mudar as colunas existentes)",
-    "Telegram: /gastos mercado filtra pelo nome de uma tag (também por parte do nome) e as linhas mostram a tag; novo comando /tags com o total por tag no mês (ex: /tags agosto)"
+    "Despesas por competência: o gasto passa a contar quando aconteceu — compra à vista no cartão na data da compra e parcelas mês a mês a partir dela — e não quando a fatura vence ou é paga. Vale para as categorias da Home, o Painel (categorias, tags, maiores gastos, evolução e CSV), o aviso de orçamento do formulário, o fechamento do mês e o bot (/categoria, /meta, /gastos, /tags, /meses, /resumo, /mes e alertas de orçamento)",
+    "Painel e bot: \"Despesas\" virou \"Gastos\" (quando aconteceu) e mostram \"Saiu do caixa\" ao lado (quando a fatura/conta foi debitada)",
+    "Saldo, Projeção, faturas e vencimentos não mudaram: continuam pelo caixa, protegidos por testes novos",
+    "Fix: compra de fim de mês cuja fatura vence no mês seguinte sumia das categorias; pagar a fatura em outro mês movia os gastos de mês; o Painel repetia compras à vista nos meses futuros; a parcela sumia da Home depois de editar/pagar uma fatura projetada; parcela contada em dobro quando a fatura do mês seguinte era lançada como nova"
   ]
 }
