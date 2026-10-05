@@ -18,9 +18,13 @@ Lido automaticamente pelo Claude Code no início de cada sessão.
 Em seguida, executar o release:
 
 ```bash
-npm run release              # commit + push + build + deploy
+npm run release              # remoto em dia? → testes → build → commit → push → GitHub Pages → Cloud Functions
 npm run release -- "Título"  # idem, com descrição no commit
+npm run release -- "Título" --dry-run     # só verifica (remoto, testes, build); não commita nem publica
+npm run release -- "Título" --skip-tests  # pula os testes (só em emergência)
 ```
+
+> O script **para** se o `origin/main` estiver à frente (releases feitos de outra máquina), roda os testes antes de publicar, faz o build antes do push e repete o deploy do GitHub Pages uma vez se for rejeitado. As functions usam o `firebase` global com `FUNCTIONS_DISCOVERY_TIMEOUT=60`; se mesmo assim falhar, rode `firebase deploy --only functions` à mão.
 
 > O build gera novo hash no SW → todos os usuários recebem a atualização automática em até 60 s.
 
