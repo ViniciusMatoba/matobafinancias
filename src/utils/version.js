@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.143';
+export const APP_VERSION = '1.6.144';
 export const APP_VERSION_DATE = '05/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.144',
+    date: '05/10/2026',
+    changes: [
+      'Painel: nova aba Tags — ranking das despesas do período por tag (com %), "Sem tag" por último e, ao tocar numa tag, a divisão por categoria; na aba Categorias, cada categoria mostra suas principais tags',
+      'Exportação CSV do Painel ganhou a coluna Tag (no fim, sem mudar as colunas existentes)',
+      'Telegram: /gastos mercado filtra pelo nome de uma tag (também por parte do nome) e as linhas mostram a tag; novo comando /tags com o total por tag no mês (ex: /tags agosto)',
+    ],
+  },
   {
     version: '1.6.143',
     date: '05/10/2026',

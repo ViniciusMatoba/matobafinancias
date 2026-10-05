@@ -5,10 +5,12 @@ import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer, HelpCircle } from 'lucide-react';
 import HelpModal from '../shared/HelpModal';
+import { tagsById, computeTagStats, SEM_TAG } from '../../utils/tags';
 
 const TABS = {
   RESUMO: 'resumo',
   CATEGORIAS: 'categorias',
+  TAGS: 'tags',
   TOP_GASTOS: 'top_gastos',
   EVOLUCAO: 'evolucao',
 };
@@ -16,9 +18,11 @@ const TABS = {
 const TAB_LABELS = {
   resumo: 'Resumo',
   categorias: 'Categorias',
+  tags: 'Tags',
   top_gastos: 'Top Gastos',
   evolucao: 'Evolução',
 };
+
 
 const MONTH_NAMES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
@@ -37,7 +41,8 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
   const [helpOpen, setHelpOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(TABS.RESUMO);
   const [period, setPeriod] = useState('current_month');
-  
+  const [expandedTag, setExpandedTag] = useState(null);
+
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
@@ -146,6 +151,10 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
     return Object.values(stats).filter(s => s.value > 0 || s.budget > 0);
   }, [periodOccs, config, fromDate, toDate]);
 
+  // Despesas por tag (investimento não recebe tag e fica de fora)
+  const tagMap = useMemo(() => tagsById(config?.tags), [config?.tags]);
+  const tagStats = useMemo(() => computeTagStats(periodOccs, config?.tags), [periodOccs, config?.tags]);
+
   // Lista dos Top 10 maiores gastos individuais
   const topExpenses = useMemo(() => {
     const list = [];
@@ -181,7 +190,8 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
     // CSV aprimorado: itens de cartão por linha, carteira, conferido, parcela
     const walletsMap = Object.fromEntries(wallets.map(w => [w.id, w.nome]));
     const q = (s) => `"${String(s || '').replace(/"/g, '""')}"`;
-    csv += 'Data,Tipo,Categoria,Descricao,Valor,Carteira,Conferido,Parcela\n';
+    csv += 'Data,Tipo,Categoria,Descricao,Valor,Carteira,Conferido,Parcela,Tag\n';
+    const tagNome = (id) => tagMap[id]?.label || '';
 
     periodOccs.forEach(o => {
       const tx = o.tx;
@@ -193,12 +203,12 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
         tx.itens.forEach(item => {
           const catLabel = item.categoria ? (PERCENTUAL_CATEGORIES[item.categoria]?.label || 'Outros') : 'Sem Categoria';
           const parcela = item.isParcelado ? `${item.parcelaAtual || 1}/${item.totalParcelas}` : '';
-          csv += `${o.date},Cartão,${catLabel},${q(item.descricao || tx.descricao)},${(Number(item.valor) || 0).toFixed(2)},${q(walletName)},${conferido},${parcela}\n`;
+          csv += `${o.date},Cartão,${catLabel},${q(item.descricao || tx.descricao)},${(Number(item.valor) || 0).toFixed(2)},${q(walletName)},${conferido},${parcela},${q(tagNome(item.tag))}\n`;
         });
       } else {
         const catLabel = tx.categoria ? (PERCENTUAL_CATEGORIES[tx.categoria]?.label || 'Outros') : 'Sem Categoria';
         const parcela = tx.frequencia === 'parcelado' ? `${tx.parcelaAtual || 1}/${tx.totalParcelas}` : '';
-        csv += `${o.date},${typeLabel},${catLabel},${q(tx.descricao)},${o.valor.toFixed(2)},${q(walletName)},${conferido},${parcela}\n`;
+        csv += `${o.date},${typeLabel},${catLabel},${q(tx.descricao)},${o.valor.toFixed(2)},${q(walletName)},${conferido},${parcela},${q(tagNome(tx.tag))}\n`;
       }
     });
 
@@ -582,9 +592,111 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
                       <span>Teto: <strong>{formatBRL(cat.budget)}</strong></span>
                     )}
                   </div>
+
+                  {/* Principais tags dentro da categoria */}
+                  {tagStats.catTags[cat.id] && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                      {Object.entries(tagStats.catTags[cat.id])
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3)
+                        .map(([tagId, value]) => (
+                          <span key={tagId} style={{
+                            fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 12,
+                            background: `${tagMap[tagId].cor}22`, color: tagMap[tagId].cor,
+                          }}>
+                            🏷 {tagMap[tagId].label} · {formatBRL(value)}
+                          </span>
+                        ))}
+                    </div>
+                  )}
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Conteúdo da Tab: TAGS */}
+        {activeTab === TABS.TAGS && (
+          <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {!(config?.tags?.length > 0) ? (
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 18px', textAlign: 'center' }}>
+                <p style={{ margin: '0 0 6px', fontSize: 28 }}>🏷️</p>
+                <p style={{ margin: '0 0 6px', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>Você ainda não criou tags</p>
+                <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                  Com tags (Mercado, Streaming, Transporte…) você vê aqui para onde o dinheiro vai, além das categorias do orçamento.
+                </p>
+                {onNavigate && (
+                  <button onClick={() => onNavigate('settings')} style={{
+                    padding: '9px 16px', borderRadius: 10, fontSize: 12, fontWeight: 600,
+                    background: 'var(--primary)', color: '#fff', border: 'none', cursor: 'pointer',
+                  }}>
+                    Criar tags em Configurações
+                  </button>
+                )}
+              </div>
+            ) : tagStats.list.length === 0 ? (
+              <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
+                Nenhuma despesa registrada neste período.
+              </div>
+            ) : (
+              <>
+                <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Despesas do período por tag — <strong>{formatBRL(tagStats.total)}</strong> no total. Toque numa tag para ver em quais categorias ela se divide. Investimentos não entram aqui.
+                </p>
+
+                {tagStats.list.map(t => {
+                  const open = expandedTag === t.id;
+                  return (
+                    <div key={t.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden' }}>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedTag(open ? null : t.id)}
+                        style={{ width: '100%', padding: '12px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            <span style={{ width: 10, height: 10, borderRadius: 3, background: t.cor, flexShrink: 0 }} />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {t.label}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>{t.pct}%</span>
+                        </div>
+                        <div style={{ width: '100%', height: 7, borderRadius: 4, background: 'var(--bg-surface)', overflow: 'hidden', marginBottom: 8 }}>
+                          <div style={{ width: `${t.pct}%`, height: '100%', borderRadius: 4, background: t.cor, transition: 'width 0.4s ease-in-out' }} />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)' }}>
+                          <span>Gasto: <strong style={{ color: 'var(--text-primary)' }}>{formatBRL(t.value)}</strong></span>
+                          <span>{t.count} lançamento{t.count > 1 ? 's' : ''}</span>
+                        </div>
+                      </button>
+
+                      {open && (
+                        <div style={{ borderTop: '1px solid var(--border)', padding: '10px 14px', background: 'var(--bg-surface)' }}>
+                          {t.catList.map(({ cat, value }) => {
+                            const c = PERCENTUAL_CATEGORIES[cat];
+                            return (
+                              <div key={cat} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '3px 0', color: 'var(--text-secondary)' }}>
+                                <span>{c ? `${c.icon} ${c.label}` : '❓ Outros'}</span>
+                                <strong style={{ color: 'var(--text-primary)' }}>{formatBRL(value)}</strong>
+                              </div>
+                            );
+                          })}
+                          {t.id === SEM_TAG && onNavigate && (
+                            <button onClick={() => onNavigate('settings')} style={{
+                              marginTop: 8, padding: '7px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
+                              background: 'var(--primary)', color: '#fff', border: 'none', cursor: 'pointer',
+                            }}>
+                              Classificar em Configurações → Tags
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         )}
 

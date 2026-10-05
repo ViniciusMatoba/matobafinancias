@@ -201,6 +201,58 @@ export function buildTagUpdates(transactions, key, tagId, tags) {
   return { updates, undo };
 }
 
+export const SEM_TAG = '__sem_tag';
+
+/**
+ * Despesas do período por tag, a partir de ocorrências [{ tx, valor }] (expandOccurrences + tx).
+ * Investimento e entrada ficam de fora; cartão com itens conta cada item. Tag apagada vira "Sem tag".
+ * Retorna { total, list, catTags }: `list` ordenada por valor (Sem tag por último) e `catTags`
+ * = { categoria: { tagId: valor } } só com tags reais.
+ */
+export function computeTagStats(occs, tags) {
+  const map = tagsById(tags);
+  const byTag = {};
+  const catTags = {};
+  let total = 0;
+
+  const add = (tagId, cat, valor) => {
+    if (!valor) return;
+    const key = map[tagId] ? tagId : SEM_TAG;
+    const meta = key === SEM_TAG
+      ? { label: 'Sem tag', cor: '#94a3b8' }
+      : { label: map[key].label, cor: map[key].cor };
+    const g = byTag[key] || (byTag[key] = { id: key, ...meta, value: 0, count: 0, cats: {} });
+    g.value += valor;
+    g.count += 1;
+    g.cats[cat] = (g.cats[cat] || 0) + valor;
+    total += valor;
+    if (key !== SEM_TAG) {
+      const ct = catTags[cat] || (catTags[cat] = {});
+      ct[key] = (ct[key] || 0) + valor;
+    }
+  };
+
+  for (const o of occs || []) {
+    const tx = o.tx;
+    if (!tx || tx.tipo === 'entrada' || tx.tipo === 'investimento') continue;
+    if (tx.tipo === 'cartao' && tx.itens?.length > 0) {
+      tx.itens.forEach(item => add(item.tag, item.categoria || 'outros', Number(item.valor) || 0));
+    } else {
+      add(tx.tag, tx.categoria || 'outros', Number(o.valor) || 0);
+    }
+  }
+
+  const list = Object.values(byTag)
+    .map(g => ({
+      ...g,
+      pct: total > 0 ? Math.round((g.value / total) * 100) : 0,
+      catList: Object.entries(g.cats).map(([cat, value]) => ({ cat, value })).sort((a, b) => b.value - a.value),
+    }))
+    .sort((a, b) => (a.id === SEM_TAG) - (b.id === SEM_TAG) || b.value - a.value);
+
+  return { total, list, catTags };
+}
+
 /** Quantos lançamentos e itens de fatura usam cada tag: { [tagId]: n } */
 export function countTagUsage(transactions) {
   const counts = {};

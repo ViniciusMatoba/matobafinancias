@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   addTagToList, countTagUsage, normalizeText, tagIdSet, tagsById,
   isSimilarDesc, countUntagged, buildUntaggedGroups, buildTaggedIndex, suggestTag, buildTagUpdates,
+  computeTagStats, SEM_TAG,
 } from '../tags'
 
 describe('normalizeText', () => {
@@ -166,5 +167,59 @@ describe('buildTagUpdates', () => {
 
   it('não mexe em nada quando o grupo não existe', () => {
     expect(buildTagUpdates(txs, 'inexistente', 'mercado', TAGS).updates).toEqual([])
+  })
+})
+
+// ── Painel: despesas por tag ─────────────────────────────────────────────────
+describe('computeTagStats', () => {
+  const occ = (tx, valor = tx.valor) => ({ tx, valor })
+  const occs = [
+    occ({ tipo: 'saida', descricao: 'Mercado Extra', tag: 'mercado', categoria: 'custos_fixos', valor: 300 }),
+    occ({ tipo: 'saida', descricao: 'Padaria', categoria: 'custos_fixos', valor: 40 }),
+    occ({ tipo: 'saida', descricao: 'Netflix', tag: 'streaming', categoria: 'conforto', valor: 55.9 }),
+    occ({ tipo: 'saida', descricao: 'Loja', tag: 'apagada', categoria: 'prazeres', valor: 10 }),
+    occ({ tipo: 'investimento', descricao: 'CDB', valor: 500 }),
+    occ({ tipo: 'entrada', descricao: 'Salário', valor: 5000 }),
+    occ({
+      tipo: 'cartao', valor: 150,
+      itens: [
+        { descricao: 'Supermercado', valor: 100, categoria: 'custos_fixos', tag: 'mercado' },
+        { descricao: 'Uber', valor: 50, categoria: 'conforto' },
+      ],
+    }),
+  ]
+  const stats = computeTagStats(occs, TAGS)
+
+  it('soma só despesas (sem investimento nem entrada) e conta cada item de fatura', () => {
+    expect(stats.total).toBeCloseTo(555.9, 2)
+    const mercado = stats.list.find(t => t.id === 'mercado')
+    expect(mercado).toMatchObject({ value: 400, count: 2 })
+  })
+
+  it('agrupa o que não tem tag, ou tem tag apagada, em "Sem tag", sempre por último', () => {
+    const sem = stats.list.find(t => t.id === SEM_TAG)
+    expect(sem).toMatchObject({ label: 'Sem tag', value: 100, count: 3 }) // 40 + 10 + 50
+    expect(stats.list.at(-1).id).toBe(SEM_TAG)
+    expect(stats.list.map(t => t.id)).toEqual(['mercado', 'streaming', SEM_TAG])
+  })
+
+  it('calcula a porcentagem e a divisão por categoria dentro de cada tag', () => {
+    const mercado = stats.list.find(t => t.id === 'mercado')
+    expect(mercado.pct).toBe(72) // 400 / 555,9
+    expect(mercado.catList).toEqual([{ cat: 'custos_fixos', value: 400 }])
+    expect(stats.list.reduce((s, t) => s + t.value, 0)).toBeCloseTo(stats.total, 2)
+  })
+
+  it('expõe as tags reais de cada categoria (sem "Sem tag")', () => {
+    expect(stats.catTags.custos_fixos).toEqual({ mercado: 400 })
+    expect(stats.catTags.conforto).toEqual({ streaming: 55.9 })
+    expect(stats.catTags.prazeres).toBeUndefined()
+  })
+
+  it('lida com período vazio e sem tags criadas', () => {
+    expect(computeTagStats([], TAGS)).toEqual({ total: 0, list: [], catTags: {} })
+    const semTags = computeTagStats(occs, [])
+    expect(semTags.list).toHaveLength(1)
+    expect(semTags.list[0]).toMatchObject({ id: SEM_TAG, value: 555.9 })
   })
 })

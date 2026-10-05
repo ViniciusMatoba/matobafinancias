@@ -74,7 +74,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.143
+- **Versão atual**: v1.6.144
 
 ### Regra de bump
 
@@ -114,9 +114,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.143 — 05/10/2026
+**Versão**: v1.6.144 — 05/10/2026
 
 **Últimas features**:
+- v1.6.144 — Tags (Fase 3): aba Tags no Painel (`computeTagStats`), tags nos cartões de Categorias, coluna Tag no CSV; bot `/gastos <tag>` e `/tags`
 - v1.6.143 — Tags (Fase 2): classificação em lote do histórico em Configurações → Tags (só com lançamentos sem tag), por descrição, com sugestão (igual/parecida), pular e desfazer; `updateMany` (writeBatch) em useTransactions
 - v1.6.142 — Tags de despesa (Fase 1): criar/renomear/excluir em Configurações → Tags, seletor no formulário (lançamento e item de fatura), tag automática por descrição idêntica, chip/filtro na lista de lançamentos
 - v1.6.141 — Fix Projeção: saldo positivo baixo (0–500) não aparece mais em vermelho (só negativo); rótulos Início/Fim do mês ou do período conforme a aba
@@ -144,7 +145,8 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 - v1.6.119 — Fix Projeção: removido historical:true do saldo inicial — restaura consistência com saldo da Home (mantém wInitials)
 
 **Arquitetura relevante desta sessão**:
-- **Tags** (plano em 3 fases: 1 = núcleo no app ✅ v1.6.142; 2 = classificação em lote do histórico ✅ v1.6.143 (`TagBatchClassifier.jsx`, em Configurações → Tags, visível só quando houver lançamentos sem tag; não grava nada além de `tag`/`itens`); 3 = Painel + bot `/gastos <tag>` e `/tags`)
+- **Tags** (plano em 3 fases: 1 = núcleo no app ✅ v1.6.142; 2 = classificação em lote do histórico ✅ v1.6.143 (`TagBatchClassifier.jsx`, em Configurações → Tags, visível só quando houver lançamentos sem tag; não grava nada além de `tag`/`itens`); 3 = Painel + bot ✅ v1.6.144 — plano das tags concluído)
+- Bot: `loadTags(uid)` lê `config.tags`; `collectMonthExpenses` devolve `tag`/`tipo` por lançamento; `/gastos <tag>` (nome exato vence a categoria; prefixo só se não for categoria) e `/tags [mês]`. Cuidado: não passar `linha` direto em `.map(linha)` (o índice viraria o 2º parâmetro `comTag`)
 - `config.tags` = `[{ id, label, cor }]` (id é slug estável; renomear só muda o `label`). `tag` (id) fica no lançamento e em `itens[].tag` da fatura de cartão; uma tag por lançamento; só para `saida`/`diario`/`cartao`. Tag excluída deixa o id órfão nos lançamentos, tratado como "sem tag" (recriar uma tag com o mesmo nome religa os órfãos)
 - `src/utils/tags.js` (`addTagToList`, `countTagUsage`, `normalizeText`), `shared/TagPicker.jsx`, `settings/TagSettings.jsx`. Guardar `tags` sempre como **array** no `saveConfig` (merge de mapa não remove chaves; array é substituído por inteiro)
 - `InvestimentosScreen.jsx` — tela de alocação: perfil de trabalho, meses de reserva, despesas fixas (auto-sugeridas), vínculo com caixinha (goal), distribuição 60/40 da sobra

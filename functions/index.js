@@ -1814,6 +1814,8 @@ function collectMonthExpenses(transactions, currentMonth, { historical = false }
           desc: `${item.descricao?.trim() || tx.descricao?.trim() || 'Compra no cartão'}${parc} 💳`,
           valor,
           cat: item.categoria in GASTOS_CATS ? item.categoria : 'sem_categoria',
+          tag: item.tag || null,
+          tipo: 'cartao',
         });
       }
       continue;
@@ -1825,9 +1827,18 @@ function collectMonthExpenses(transactions, currentMonth, { historical = false }
       desc: tx.descricao?.trim() || tx.tipo,
       valor: o.valor,
       cat: catRaw in GASTOS_CATS ? catRaw : 'sem_categoria',
+      tag: tx.tag || null,
+      tipo: tx.tipo,
     });
   }
   return entries;
+}
+
+// Tags criadas pelo usuário no app: [{ id, label, cor }]
+async function loadTags(uid) {
+  const snap = await db.collection('config').doc(uid).get();
+  const tags = snap.exists ? snap.data().tags : [];
+  return Array.isArray(tags) ? tags.filter(t => t && t.id && t.label) : [];
 }
 
 // Envia blocos de texto respeitando o limite de 4096 caracteres do Telegram
@@ -1877,15 +1888,17 @@ async function handleGastos(chatId, uid, args) {
   const { month, year, top: topMode, termo } = parseGastosArgs(args, agora);
   const currentMonth = `${year}-${String(month).padStart(2, '0')}`;
   const nomeMes = `${MESES_LONGO[month]}${year !== agora.getFullYear() ? ` ${year}` : ''}`;
-  const { transactions } = await loadUserData(uid);
-  const entries = collectMonthExpenses(transactions, currentMonth);
+  const [{ transactions }, tags] = await Promise.all([loadUserData(uid), loadTags(uid)]);
+  const tagById = Object.fromEntries(tags.map(t => [t.id, t]));
+  const entries = collectMonthExpenses(transactions, currentMonth)
+    .map(e => ({ ...e, tagLabel: tagById[e.tag]?.label || null }));
 
   if (entries.length === 0) {
     return sendMessage(chatId, `📭 Nenhuma despesa lançada em ${nomeMes}.`);
   }
 
   const fmtDate = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
-  const linha = (e) => `• ${fmtDate(e.date)} — ${mdEscape(e.desc)}: *${formatBRL(e.valor)}*`;
+  const linha = (e, comTag = true) => `• ${fmtDate(e.date)} — ${mdEscape(e.desc)}: *${formatBRL(e.valor)}*${comTag && e.tagLabel ? ` _🏷 ${mdEscape(e.tagLabel)}_` : ''}`;
   const byDate = (a, b) => a.date.localeCompare(b.date);
   const ordenar = (list) => topMode
     ? [...list].sort((a, b) => b.valor - a.valor).slice(0, 10)
@@ -1916,11 +1929,25 @@ async function handleGastos(chatId, uid, args) {
       lines.push(`\n${GASTOS_CATS[cat].icon} *${GASTOS_CATS[cat].label}* — ${formatBRL(sub)} (${pct}%)`);
       list.forEach(e => lines.push(linha(e)));
     }
-    lines.push(`\n_Para ver só uma categoria: /gastos conforto — ou busque um termo: /gastos mercado_`);
+    lines.push(`\n_Para ver só uma categoria: /gastos conforto — ou uma tag: /gastos mercado — ou o total por tag: /tags_`);
     return sendChunked(chatId,
       `🧾 *Gastos de ${nomeMes}*\nTotal: *${formatBRL(total)}* em ${entries.length} lançamento${entries.length > 1 ? 's' : ''}\n`,
       lines);
   }
+
+  // ── Argumento é uma tag: nome exato vence; prefixo só se não for categoria ─
+  const exibirTag = (tag) => {
+    const all = entries.filter(e => e.tag === tag.id);
+    if (all.length === 0) {
+      return sendMessage(chatId, `🏷 Nenhuma despesa com a tag *${mdEscape(tag.label)}* em ${nomeMes}.`);
+    }
+    const sub = all.reduce((s, e) => s + e.valor, 0);
+    return sendChunked(chatId,
+      `🏷 *${mdEscape(tag.label)} — ${nomeMes}*${tituloTop ? ' (maiores)' : ''}\nTotal: *${formatBRL(sub)}* em ${all.length} lançamento${all.length > 1 ? 's' : ''}\n`,
+      ordenar(all).map(e => `${linha(e, false)} _(${GASTOS_CATS[e.cat].label})_`));
+  };
+  const tagExata = tags.find(t => normTxt(t.label) === termo);
+  if (tagExata) return exibirTag(tagExata);
 
   // ── Argumento é uma categoria: todos os lançamentos dela ──────────────────
   const catMatch = Object.keys(GASTOS_CATS).find(id => {
@@ -1928,6 +1955,11 @@ async function handleGastos(chatId, uid, args) {
     const idTxt = id.replace(/_/g, ' ');
     return termo.length >= 3 && (label === termo || idTxt === termo || label.startsWith(termo) || idTxt.startsWith(termo));
   });
+
+  if (!catMatch && termo.length >= 3) {
+    const tagPrefixo = tags.find(t => normTxt(t.label).startsWith(termo));
+    if (tagPrefixo) return exibirTag(tagPrefixo);
+  }
 
   if (catMatch) {
     const all = entries.filter(e => e.cat === catMatch);
@@ -1937,12 +1969,14 @@ async function handleGastos(chatId, uid, args) {
     const sub = all.reduce((s, e) => s + e.valor, 0);
     return sendChunked(chatId,
       `${GASTOS_CATS[catMatch].icon} *${GASTOS_CATS[catMatch].label} — ${nomeMes}*${tituloTop ? ' (maiores)' : ''}\nTotal: *${formatBRL(sub)}* em ${all.length} lançamento${all.length > 1 ? 's' : ''}\n`,
-      ordenar(all).map(linha));
+      ordenar(all).map(e => linha(e)));
   }
 
-  // ── Argumento é um termo livre: busca na descrição e no nome da categoria ─
+  // ── Argumento é um termo livre: busca na descrição, na categoria e na tag ─
   const found = entries
-    .filter(e => normTxt(e.desc).includes(termo) || normTxt(GASTOS_CATS[e.cat].label).includes(termo));
+    .filter(e => normTxt(e.desc).includes(termo)
+      || normTxt(GASTOS_CATS[e.cat].label).includes(termo)
+      || normTxt(e.tagLabel).includes(termo));
   if (found.length === 0) {
     return sendMessage(chatId, `🔎 Nada encontrado para "${mdEscape(termo)}" em ${nomeMes}.\n\nUse /gastos para ver todas as despesas do mês.`);
   }
@@ -1950,6 +1984,55 @@ async function handleGastos(chatId, uid, args) {
   return sendChunked(chatId,
     `🔎 *"${mdEscape(termo)}" — ${nomeMes}*${tituloTop ? ' (maiores)' : ''}\nTotal: *${formatBRL(sub)}* em ${found.length} lançamento${found.length > 1 ? 's' : ''}\n`,
     ordenar(found).map(e => `${linha(e)} _(${GASTOS_CATS[e.cat].label})_`));
+}
+
+// ─── /tags — Total gasto por tag no mês ───────────────────────────────────────
+async function handleTags(chatId, uid, args) {
+  const agora = getNowBrasilia();
+  const { month, year } = parseGastosArgs(args, agora);
+  const currentMonth = `${year}-${String(month).padStart(2, '0')}`;
+  const nomeMes = `${MESES_LONGO[month]}${year !== agora.getFullYear() ? ` ${year}` : ''}`;
+  const [{ transactions }, tags] = await Promise.all([loadUserData(uid), loadTags(uid)]);
+
+  if (tags.length === 0) {
+    return sendMessage(chatId,
+      `🏷 *Tags*\n\nVocê ainda não criou tags. Crie no app em *Configurações → Tags* ` +
+      `(ou direto ao lançar uma despesa) para ver aqui quanto vai em Mercado, Streaming, Transporte…\n\n👉 ${APP_URL}`);
+  }
+
+  // Investimento não recebe tag, então fica fora desta conta
+  const entries = collectMonthExpenses(transactions, currentMonth).filter(e => e.tipo !== 'investimento');
+  if (entries.length === 0) {
+    return sendMessage(chatId, `📭 Nenhuma despesa lançada em ${nomeMes}.`);
+  }
+
+  const tagById = Object.fromEntries(tags.map(t => [t.id, t]));
+  const grupos = new Map();
+  for (const e of entries) {
+    const key = tagById[e.tag] ? e.tag : '__sem';
+    const g = grupos.get(key) || { valor: 0, count: 0 };
+    g.valor += e.valor;
+    g.count += 1;
+    grupos.set(key, g);
+  }
+
+  const total = entries.reduce((s, e) => s + e.valor, 0);
+  const comTag = [...grupos.entries()].filter(([k]) => k !== '__sem').sort((a, b) => b[1].valor - a[1].valor);
+  const sem = grupos.get('__sem');
+  const fmtLinha = (nome, g) => {
+    const { bar, pct } = barra(g.valor, total, 10);
+    return `\`[${bar}]\` *${nome}* — ${formatBRL(g.valor)} (${pct}%) · ${g.count} lanç.`;
+  };
+
+  const lines = comTag.map(([id, g]) => fmtLinha(`🏷 ${mdEscape(tagById[id].label)}`, g));
+  if (sem) lines.push(fmtLinha('Sem tag', sem));
+  lines.push(`\n_Detalhe de uma tag: /gastos ${normTxt(tagById[comTag[0]?.[0]]?.label || 'mercado')} — outro mês: /tags agosto_`);
+  if (sem && sem.valor / total >= 0.2) {
+    lines.push(`_Dica: classifique o que falta no app em Configurações → Tags → Classificar lançamentos antigos._`);
+  }
+  return sendChunked(chatId,
+    `🏷 *Gastos por tag — ${nomeMes}*\nTotal: *${formatBRL(total)}* em ${entries.length} lançamento${entries.length > 1 ? 's' : ''}\n\n`,
+    lines);
 }
 
 // ─── /meses — Total gasto por mês (últimos N meses) e mês mais alto ──────────
@@ -3132,7 +3215,7 @@ async function handleAjuda(chatId) {
       [{ text: '💰 Saldo' },      { text: '💳 Cartões' },   { text: '🧾 Fatura' }],
       [{ text: '📊 Categorias' }, { text: '🎯 Metas' },     { text: '📈 Projeção' }],
       [{ text: '💡 Insight' },    { text: '📋 Parcelados' },{ text: '📅 Saldo Fim Mês' }],
-      [{ text: '🔐 Reserva' },   { text: '📈 Investimentos' }],
+      [{ text: '🔐 Reserva' },   { text: '📈 Investimentos' }, { text: '🏷️ Tags' }],
       [{ text: '⚙️ Configurar' }],
       [{ text: '❓ Ajuda' }],
     ],
@@ -3152,6 +3235,7 @@ async function handleAjuda(chatId) {
     `*🎯 Orçamento e metas*\n` +
     `/categoria — Orçamento por categoria com barras de progresso\n` +
     `/gastos — Todas as despesas do mês por categoria _(ex: /gastos conforto, /gastos mercado, /gastos agosto, /gastos top)_\n` +
+    `/tags — Total gasto por tag no mês _(ex: /tags agosto; veja uma tag com /gastos mercado)_\n` +
     `/meses — Total gasto por mês e qual foi o mês mais alto _(ex: /meses 6)_\n` +
     `/meta — Status de cada meta da Divisão Percentual\n` +
     `/insight — Dicas e análises dinâmicas de gastos 💡\n\n` +
@@ -3592,6 +3676,7 @@ async function processUpdate(update) {
     else if (t.includes('categor')) cmd = '/categoria';
     else if (t.includes('configur') || t.includes('alerta') || t.includes('⚙️')) cmd = '/configurar';
     else if (t.includes('meta')) cmd = '/meta';
+    else if (/\btags?\b/.test(t)) cmd = '/tags';
     else if (t.includes('meses')) cmd = '/meses';
     else if (t.includes('gasto')) cmd = '/gastos';
     else if (t.includes('reserva')) cmd = '/reserva';
@@ -3647,6 +3732,7 @@ async function processUpdate(update) {
     case '/meta':      return handleMeta(chatId, uid);
     case '/gastos':         return handleGastos(chatId, uid, args);
     case '/meses':          return handleMeses(chatId, uid, args);
+    case '/tags':           return handleTags(chatId, uid, args);
     case '/reserva':        return handleReserva(chatId, uid);
     case '/investimentos':  return handleInvestimentos(chatId, uid);
     case '/cartoes':   return handleCartoes(chatId, uid);
@@ -4009,6 +4095,7 @@ const BOT_COMMANDS = [
   { command: 'meta',       description: 'Status das metas da Divisao Percentual' },
   { command: 'gastos',     description: 'Despesas do mes por categoria (ex: /gastos agosto, /gastos top)' },
   { command: 'meses',      description: 'Total gasto por mes e mes mais alto' },
+  { command: 'tags',       description: 'Total gasto por tag no mes (ex: /tags agosto)' },
   { command: 'reserva',    description: 'Status da reserva de emergencia' },
   { command: 'investimentos', description: 'Total investido e sobra disponivel' },
   { command: 'insight',    description: 'Dicas e analises inteligentes de gastos' },
