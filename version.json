@@ -1,9 +1,9 @@
 {
-  "version": "1.6.142",
+  "version": "1.6.143",
   "date": "05/10/2026",
   "notes": [
-    "Tags de despesa: crie suas próprias tags (Mercado, Streaming, Transporte…) em Configurações → Tags ou direto ao lançar; cada lançamento (e cada item de fatura de cartão) tem no máximo uma tag",
-    "Lançamento novo com descrição idêntica a um já classificado recebe a mesma tag automaticamente",
-    "Lista de lançamentos mostra a tag, filtra por tag (ou \"Sem tag\") e a busca encontra pelo nome da tag"
+    "Tags: classificação em lote do histórico em Configurações → Tags (aparece só enquanto houver lançamentos sem tag) — as descrições que mais pesaram vêm primeiro; uma tag aplica a todos os lançamentos de mesma descrição, inclusive itens de fatura de cartão",
+    "Sugestão automática no lote: mesma descrição já classificada, ou uma parecida (você confirma); botão Desfazer, pular e barra de progresso",
+    "Só os campos de tag são gravados — valores, datas, saldo e projeção não mudam"
   ]
 }
