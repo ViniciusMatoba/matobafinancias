@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  collection, query, limit, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
+  collection, query, limit, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -79,7 +79,19 @@ export function useTransactions(uid) {
 
   const remove = async (id) => deleteDoc(doc(db, `transactions/${uid}/entries`, id));
 
-  return { transactions, loading, add, update, remove };
+  // updates: [{ id, data }]. O Firestore limita um lote a 500 operações.
+  const updateMany = async (updates) => {
+    const CHUNK = 450;
+    for (let i = 0; i < updates.length; i += CHUNK) {
+      const batch = writeBatch(db);
+      updates.slice(i, i + CHUNK).forEach(({ id, data }) => {
+        batch.update(doc(db, `transactions/${uid}/entries`, id), removeUndef(data));
+      });
+      await batch.commit();
+    }
+  };
+
+  return { transactions, loading, add, update, updateMany, remove };
 }
 
 function removeUndef(obj) {

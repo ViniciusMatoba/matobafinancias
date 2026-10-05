@@ -22,7 +22,7 @@ export function AppProvider({ user, children }) {
   const uid = user?.uid;
 
   // ── Dados do Firestore ────────────────────────────────────────────────────────
-  const { transactions, loading: transactionsLoading, add, update, remove } = useTransactions(uid);
+  const { transactions, loading: transactionsLoading, add, update, updateMany, remove } = useTransactions(uid);
   const { cards, loading: cardsLoading, add: addCard, update: updateCard, remove: removeCard } = useCards(uid);
   const { wallets, loading: walletsLoading, add: addWallet, update: updateWallet, remove: removeWallet } = useWallets(uid);
   const { goals, loading: goalsLoading, add: addGoal, update: updateGoal, remove: removeGoal } = useGoals(uid);
@@ -477,7 +477,7 @@ export function AppProvider({ user, children }) {
   const value = {
     // dados
     transactions, cards, wallets, goals, config, saveConfig, dataLoading,
-    add, update, remove,
+    add, update, updateMany, remove,
     addCard, updateCard, removeCard,
     addWallet, updateWallet, removeWallet,
     addGoal, updateGoal, removeGoal,

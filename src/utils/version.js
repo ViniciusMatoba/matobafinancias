@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.142';
+export const APP_VERSION = '1.6.143';
 export const APP_VERSION_DATE = '05/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.143',
+    date: '05/10/2026',
+    changes: [
+      'Tags: classificação em lote do histórico em Configurações → Tags (aparece só enquanto houver lançamentos sem tag) — as descrições que mais pesaram vêm primeiro; uma tag aplica a todos os lançamentos de mesma descrição, inclusive itens de fatura de cartão',
+      'Sugestão automática no lote: mesma descrição já classificada, ou uma parecida (você confirma); botão Desfazer, pular e barra de progresso',
+      'Só os campos de tag são gravados — valores, datas, saldo e projeção não mudam',
+    ],
+  },
   {
     version: '1.6.142',
     date: '05/10/2026',

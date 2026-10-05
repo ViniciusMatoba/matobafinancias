@@ -3,31 +3,11 @@ import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normaliz
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 import { expandOccurrences, calcFaturaCard } from '../../utils/projectionCalc';
-import { addTagToList, tagIdSet, tagsById, normalizeText as normTag } from '../../utils/tags';
+import { addTagToList, tagIdSet, tagsById, isSimilarDesc, normalizeText as normTag } from '../../utils/tags';
 import TagPicker from '../shared/TagPicker';
 
 const TIPOS = Object.entries(TYPE_CONFIG).map(([id, cfg]) => ({ id, ...cfg }));
 const FREQS = Object.entries(FREQ_LABELS).map(([id, label]) => ({ id, label }));
-
-// ── Similaridade de descrição ──────────────────────────────────────────────
-function normalizeStr(s) {
-  return (s || '').toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ');
-}
-function isSimilarDesc(a, b) {
-  const na = normalizeStr(a);
-  const nb = normalizeStr(b);
-  if (!na || !nb || na.length < 2 || nb.length < 2) return false;
-  if (na === nb) return true;
-  if (na.includes(nb) || nb.includes(na)) return true;
-  const wa = na.split(' ').filter(w => w.length > 2);
-  const wb = nb.split(' ').filter(w => w.length > 2);
-  if (!wa.length || !wb.length) return false;
-  const setA = new Set(wa);
-  const overlap = wb.filter(w => setA.has(w)).length;
-  return overlap / Math.max(wa.length, wb.length) >= 0.6;
-}
 
 function sameMoney(a, b) {
   return Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.01;

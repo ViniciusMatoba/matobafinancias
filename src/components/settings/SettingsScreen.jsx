@@ -18,7 +18,7 @@ import { useInstallPrompt } from '../../hooks/useInstallPrompt';
 import { APP_VERSION, CHANGELOG } from '../../utils/version';
 
 
-export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour, onUpdateApp, onUpdateTransaction }) {
+export default function SettingsScreen({ user, cards, wallets, goals, transactions, config, onSaveConfig, onAddCard, onUpdateCard, onRemoveCard, onAddWallet, onUpdateWallet, onRemoveWallet, onLogout, onResetTour, onUpdateApp, onUpdateTransaction, onUpdateManyTransactions }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const [cardsOpen, setCardsOpen] = useState(false);
@@ -445,6 +445,7 @@ export default function SettingsScreen({ user, cards, wallets, goals, transactio
                   tags={config?.tags || []}
                   transactions={transactions || []}
                   onSaveConfig={onSaveConfig}
+                  onUpdateMany={onUpdateManyTransactions}
                 />
               </div>
             </div>

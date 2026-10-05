@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
-import { addTagToList, countTagUsage, normalizeText, TAG_SUGGESTIONS, TAG_LABEL_MAX } from '../../utils/tags';
+import { Pencil, Trash2, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { addTagToList, countTagUsage, countUntagged, normalizeText, TAG_SUGGESTIONS, TAG_LABEL_MAX } from '../../utils/tags';
+import TagBatchClassifier from './TagBatchClassifier';
 
 const btnIcon = { background: 'none', border: 'none', padding: 4, display: 'flex', cursor: 'pointer', color: 'var(--text-muted)' };
 
-export default function TagSettings({ tags = [], transactions = [], onSaveConfig }) {
+export default function TagSettings({ tags = [], transactions = [], onSaveConfig, onUpdateMany }) {
+  const [batchOpen, setBatchOpen] = useState(false);
   const [novo, setNovo] = useState('');
   const [editId, setEditId] = useState(null);
   const [editText, setEditText] = useState('');
@@ -12,6 +14,7 @@ export default function TagSettings({ tags = [], transactions = [], onSaveConfig
   const [erro, setErro] = useState('');
 
   const usage = useMemo(() => countTagUsage(transactions), [transactions]);
+  const pending = useMemo(() => countUntagged(transactions, tags), [transactions, tags]);
   const existing = new Set(tags.map(t => normalizeText(t.label)));
   const suggestions = TAG_SUGGESTIONS.filter(s => !existing.has(normalizeText(s)));
 
@@ -43,6 +46,13 @@ export default function TagSettings({ tags = [], transactions = [], onSaveConfig
   const remove = (id) => {
     save(tags.filter(t => t.id !== id));
     setConfirmId(null);
+  };
+
+  // Usado pelo seletor do lote: devolve a tag na hora para já poder aplicá-la
+  const createTag = (label) => {
+    const { tags: next, tag } = addTagToList(tags, label);
+    if (tag && next !== tags) save(next);
+    return tag;
   };
 
   return (
@@ -140,6 +150,43 @@ export default function TagSettings({ tags = [], transactions = [], onSaveConfig
       )}
 
       {erro && <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--saida)' }}>{erro}</p>}
+
+      {/* Classificação em lote — só aparece enquanto houver lançamentos sem tag (ou durante a sessão aberta) */}
+      {onUpdateMany && (pending.untagged > 0 || batchOpen) && (
+        <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+          <button
+            type="button"
+            onClick={() => setBatchOpen(o => !o)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+              background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)',
+            }}
+          >
+            <span style={{ textAlign: 'left' }}>
+              <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>
+                🗂️ Classificar lançamentos antigos
+              </span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--text-secondary)' }}>
+                {pending.untagged > 0
+                  ? `${pending.untagged} sem tag — classifique por descrição, de uma vez`
+                  : 'Tudo classificado'}
+              </span>
+            </span>
+            {batchOpen ? <ChevronUp size={16} color="var(--text-muted)" /> : <ChevronDown size={16} color="var(--text-muted)" />}
+          </button>
+          {batchOpen && (
+            <div style={{ paddingTop: 12 }}>
+              <TagBatchClassifier
+                tags={tags}
+                transactions={transactions}
+                onApply={onUpdateMany}
+                onCreateTag={createTag}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

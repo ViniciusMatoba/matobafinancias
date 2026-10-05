@@ -1,3 +1,11 @@
+import { expandOccurrences } from './projectionCalc';
+
+// Tipos que recebem tag no próprio lançamento; fatura de cartão usa a tag de cada item
+export const TAGGABLE_TYPES = ['saida', 'diario'];
+
+// Lançamentos gerados pelo app, sem sentido de classificar
+const EXCLUDED_DESC_PREFIXES = ['ajuste de saldo'];
+
 export const TAG_SUGGESTIONS = [
   'Mercado', 'Alimentação', 'Transporte', 'Streaming', 'Saúde', 'Moradia', 'Lazer', 'Educação',
 ];
@@ -48,6 +56,149 @@ export function tagIdSet(tags) {
 
 export function tagsById(tags) {
   return Object.fromEntries((Array.isArray(tags) ? tags : []).map(t => [t.id, t]));
+}
+
+/** Descrições iguais ou parecidas (uma contém a outra, ou 60%+ das palavras em comum). */
+export function isSimilarDesc(a, b) {
+  const na = normalizeText(a);
+  const nb = normalizeText(b);
+  if (!na || !nb || na.length < 2 || nb.length < 2) return false;
+  if (na === nb) return true;
+  if (na.includes(nb) || nb.includes(na)) return true;
+  const wa = na.split(' ').filter(w => w.length > 2);
+  const wb = nb.split(' ').filter(w => w.length > 2);
+  if (!wa.length || !wb.length) return false;
+  const setA = new Set(wa);
+  const overlap = wb.filter(w => setA.has(w)).length;
+  return overlap / Math.max(wa.length, wb.length) >= 0.6;
+}
+
+const isExcludedDesc = (norm) => EXCLUDED_DESC_PREFIXES.some(p => norm.startsWith(p));
+const RECORRENTES = ['mensal', 'semanal', 'diario'];
+
+/** Percorre tudo que pode receber tag: { kind: 'tx' | 'item', tx, item?, norm, desc } */
+function* taggableEntries(transactions) {
+  for (const tx of transactions || []) {
+    if (TAGGABLE_TYPES.includes(tx.tipo)) {
+      const norm = normalizeText(tx.descricao);
+      if (!isExcludedDesc(norm)) yield { kind: 'tx', tx, norm, desc: tx.descricao || '' };
+    } else if (tx.tipo === 'cartao' && Array.isArray(tx.itens)) {
+      for (const item of tx.itens) {
+        yield { kind: 'item', tx, item, norm: normalizeText(item.descricao), desc: item.descricao || '' };
+      }
+    }
+  }
+}
+
+/** Quantos itens classificáveis existem e quantos ainda estão sem tag válida. */
+export function countUntagged(transactions, tags) {
+  const ids = tagIdSet(tags);
+  let total = 0;
+  let untagged = 0;
+  for (const e of taggableEntries(transactions)) {
+    total++;
+    if (!ids.has(e.kind === 'tx' ? e.tx.tag : e.item.tag)) untagged++;
+  }
+  return { total, untagged };
+}
+
+/**
+ * Agrupa por descrição normalizada o que está sem tag, do que mais pesou no bolso para o menos.
+ * Retorna [{ key, label, count, total, recorrente }].
+ */
+export function buildUntaggedGroups(transactions, tags, today) {
+  const ids = tagIdSet(tags);
+  const map = new Map();
+
+  for (const e of taggableEntries(transactions)) {
+    if (ids.has(e.kind === 'tx' ? e.tx.tag : e.item.tag)) continue;
+
+    let valor;
+    let recorrente = false;
+    if (e.kind === 'tx') {
+      valor = expandOccurrences(e.tx, '2020-01-01', today, { historical: true })
+        .reduce((s, o) => s + (Number(o.valor) || 0), 0);
+      recorrente = RECORRENTES.includes(e.tx.frequencia);
+    } else {
+      valor = Number(e.item.valor) || 0;
+    }
+
+    let g = map.get(e.norm);
+    if (!g) {
+      g = { key: e.norm, labels: new Map(), count: 0, total: 0, recorrente: false };
+      map.set(e.norm, g);
+    }
+    g.count += 1;
+    g.total += valor;
+    g.recorrente = g.recorrente || recorrente;
+    const lbl = e.desc.trim();
+    if (lbl) g.labels.set(lbl, (g.labels.get(lbl) || 0) + 1);
+  }
+
+  return [...map.values()]
+    .map(g => {
+      const best = [...g.labels.entries()].sort((a, b) => b[1] - a[1])[0];
+      return { key: g.key, label: best ? best[0] : 'Sem descrição', count: g.count, total: g.total, recorrente: g.recorrente };
+    })
+    .sort((a, b) => (b.total - a.total) || (b.count - a.count));
+}
+
+/** descrição normalizada → { tag, label } do que já foi classificado (o mais recente vence). */
+export function buildTaggedIndex(transactions, tags) {
+  const ids = tagIdSet(tags);
+  const index = new Map();
+  for (const e of taggableEntries(transactions)) {
+    const tag = e.kind === 'tx' ? e.tx.tag : e.item.tag;
+    if (!e.norm || !ids.has(tag) || index.has(e.norm)) continue;
+    index.set(e.norm, { tag, label: e.desc.trim() });
+  }
+  return index;
+}
+
+/** Sugere tag para um grupo: mesma descrição já classificada, senão uma parecida. */
+export function suggestTag(group, taggedIndex) {
+  if (!group || !taggedIndex) return null;
+  const exact = taggedIndex.get(group.key);
+  if (exact) return { ...exact, exata: true };
+  if (group.key.length < 3) return null;
+  for (const [norm, v] of taggedIndex) {
+    if (isSimilarDesc(norm, group.key)) return { ...v, exata: false };
+  }
+  return null;
+}
+
+/**
+ * Monta as gravações para aplicar `tagId` a todo item sem tag válida do grupo `key`.
+ * `undo` traz o estado anterior para desfazer. Só toca em `tag` e em `itens`.
+ */
+export function buildTagUpdates(transactions, key, tagId, tags) {
+  const ids = tagIdSet(tags);
+  const updates = [];
+  const undo = [];
+
+  for (const tx of transactions || []) {
+    if (TAGGABLE_TYPES.includes(tx.tipo)) {
+      const norm = normalizeText(tx.descricao);
+      if (norm === key && !isExcludedDesc(norm) && !ids.has(tx.tag)) {
+        updates.push({ id: tx.id, data: { tag: tagId } });
+        undo.push({ id: tx.id, data: { tag: tx.tag ?? null } });
+      }
+    } else if (tx.tipo === 'cartao' && Array.isArray(tx.itens)) {
+      let changed = false;
+      const itens = tx.itens.map(item => {
+        if (normalizeText(item.descricao) === key && !ids.has(item.tag)) {
+          changed = true;
+          return { ...item, tag: tagId };
+        }
+        return item;
+      });
+      if (changed) {
+        updates.push({ id: tx.id, data: { itens } });
+        undo.push({ id: tx.id, data: { itens: tx.itens } });
+      }
+    }
+  }
+  return { updates, undo };
 }
 
 /** Quantos lançamentos e itens de fatura usam cada tag: { [tagId]: n } */

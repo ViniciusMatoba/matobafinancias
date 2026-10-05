@@ -46,7 +46,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
     confirmCartaoEditScope, confirmRecurrenceAction,
     handleCompleteTour,
     getParceladoEndDate,
-    update,
+    update, updateMany,
   } = useAppState();
 
   const renderScreen = () => {
@@ -202,6 +202,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             onResetTour={async () => { await saveConfig({ tourDone: false, toursVistas: [] }); }}
             onUpdateApp={handleUpdate}
             onUpdateTransaction={update}
+            onUpdateManyTransactions={updateMany}
           />
         )}
 
