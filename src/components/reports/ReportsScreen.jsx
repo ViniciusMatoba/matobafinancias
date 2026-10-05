@@ -22,7 +22,7 @@ const TAB_LABELS = {
   top_gastos: 'Top Gastos',
   evolucao: 'Evolução',
 };
-
+
 
 const MONTH_NAMES_SHORT = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
 
