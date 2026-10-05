@@ -1,8 +1,9 @@
 {
-  "version": "1.6.141",
-  "date": "02/10/2026",
+  "version": "1.6.142",
+  "date": "05/10/2026",
   "notes": [
-    "Fix Projeção: saldo positivo baixo (entre R$ 0 e R$ 500) aparecia em vermelho como se fosse negativo — agora só saldo negativo é vermelho; de 0 a 500 o gradiente vai de amarelo a verde",
-    "Projeção: rótulos do resumo acompanham a aba (Início/Fim do mês na aba Mensal, Início/Fim do período na aba Período)"
+    "Tags de despesa: crie suas próprias tags (Mercado, Streaming, Transporte…) em Configurações → Tags ou direto ao lançar; cada lançamento (e cada item de fatura de cartão) tem no máximo uma tag",
+    "Lançamento novo com descrição idêntica a um já classificado recebe a mesma tag automaticamente",
+    "Lista de lançamentos mostra a tag, filtra por tag (ou \"Sem tag\") e a busca encontra pelo nome da tag"
   ]
 }
