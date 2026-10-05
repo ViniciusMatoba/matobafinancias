@@ -74,7 +74,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.146
+- **Versão atual**: v1.6.147
 
 ### Regra de bump
 
@@ -114,9 +114,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.146 — 05/10/2026
+**Versão**: v1.6.147 — 05/10/2026
 
 **Últimas features**:
+- v1.6.147 — Bot: N19/N12/N9 por competência (fim dos falsos "dia atípico" em dia de fatura/aporte); N7 com rótulos de caixa
 - v1.6.146 — Fix onboarding (`setView` indefinido no App); teste de fatura em atraso atualizado para a regra da v1.6.116 (suíte 117/117)
 - v1.6.145 — Despesas por competência (compra à vista na data da compra; parcela mês a mês a partir dela) em categorias/tags/Painel/aviso do formulário/fechamento do mês/bot; "Gastos" × "Saiu do caixa"; caixa e Projeção intocados e travados por testes
 - v1.6.144 — Tags (Fase 3): aba Tags no Painel (`computeTagStats`), tags nos cartões de Categorias, coluna Tag no CSV; bot `/gastos <tag>` e `/tags`
@@ -150,7 +151,7 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 - **Dois olhares sobre o dinheiro — não misturar.** *Caixa* (quando sai da conta): `expandOccurrences`/`calcSaldo`/`buildDailyProjection`/`calcFaturaCard` no app e `expandRange`/`calcSaldoSimples`/`calcFaturaCardBot` no bot — data e valor da fatura; **não alterar**, travado por `src/utils/__tests__/caixa.test.js` (inclui comportamentos discutíveis de propósito). *Competência* (quando o gasto aconteceu): `src/utils/despesas.js` (`expandDespesas`) e, espelhado, `expandDespesasBot` em `functions/index.js` — à vista na `dataCompra`; parcela k em `dataCompra + (k-1)` meses (o usuário sempre preenche a data **original** da compra); parcela repetida em mais de uma fatura conta uma vez (chave cartão+descrição+compra+total+k, real vence projetada); fatura recorrente conta cada ocorrência na própria data. Só leitura: o pagar da fatura continua movendo `dataInicio` (caixa) e isso não afeta as despesas.
 - Consomem competência: Home (`BudgetSummaryCard`), Painel (categorias, tags, top gastos, evolução, CSV, card "Gastos"; "Saiu do caixa" vem das ocorrências), aviso de orçamento do `TransactionForm`, fechamento do mês (`AppContext`), `computeTagStats`, e no bot `computeSpentByCategory`/`getTopExpensesForCategory`/`collectMonthExpenses` (→ `/categoria`, `/meta`, `/gastos`, `/tags`, `/meses`, N4/N5/N17/N25) e `/resumo`/`/mes` (Gastos + Saiu do caixa). Se mudar a regra, mudar app e bot juntos (a paridade foi checada rodando os mesmos cenários nos dois motores).
 - **Não mexer** na lista de lançamentos (`TransactionsScreen`): o `occ.tx` das linhas projetadas decide se editar/pagar cria fatura do mês ou altera a original (caixa). **Não reverter** `isParcelado:false` dos itens convertidos ao editar/pagar fatura projetada: é isso que impede o caixa de projetar a parcela de novo (a competência reconhece a parcela por `parcelaAtual`/`totalParcelas`).
-- Ainda por data da fatura (caixa) no bot: N7, N9, N12, N18, N19, `/semana`, `/hoje`. Possível duplicidade no caixa se a fatura do mês seguinte é lançada como nova sem excluir a projeção do pai (documentado em `caixa.test.js`, não corrigido de propósito).
+- Por caixa de propósito no bot: N7 (rotulado "Saiu do caixa"), N8, N6, N15, N18, N22, N23, `/semana`, `/hoje`, `/saldo`, `/projecao`, `/previsao`. N9, N12 e N19 migraram para competência na v1.6.147 (N19 não conta fatura que vence hoje nem investimento como gasto do dia). Possível duplicidade no caixa se a fatura do mês seguinte é lançada como nova sem excluir a projeção do pai (documentado em `caixa.test.js`, não corrigido de propósito).
 - **Tags** (plano em 3 fases: 1 = núcleo no app ✅ v1.6.142; 2 = classificação em lote do histórico ✅ v1.6.143 (`TagBatchClassifier.jsx`, em Configurações → Tags, visível só quando houver lançamentos sem tag; não grava nada além de `tag`/`itens`); 3 = Painel + bot ✅ v1.6.144 — plano das tags concluído)
 - Bot: `loadTags(uid)` lê `config.tags`; `collectMonthExpenses` devolve `tag`/`tipo` por lançamento; `/gastos <tag>` (nome exato vence a categoria; prefixo só se não for categoria) e `/tags [mês]`. Cuidado: não passar `linha` direto em `.map(linha)` (o índice viraria o 2º parâmetro `comTag`)
 - `config.tags` = `[{ id, label, cor }]` (id é slug estável; renomear só muda o `label`). `tag` (id) fica no lançamento e em `itens[].tag` da fatura de cartão; uma tag por lançamento; só para `saida`/`diario`/`cartao`. Tag excluída deixa o id órfão nos lançamentos, tratado como "sem tag" (recriar uma tag com o mesmo nome religa os órfãos)

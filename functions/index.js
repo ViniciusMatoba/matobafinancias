@@ -648,8 +648,8 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const nomeMesN7 = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
     let msgN7 = `📊 *Resumo Semanal*\n\n`;
     msgN7 += `✅ Entradas: ${formatBRL(entradas)}\n`;
-    msgN7 += `❌ Saídas: ${formatBRL(saidas)}\n`;
-    msgN7 += `💰 Saldo da semana: *${formatBRL(entradas - saidas)}*\n\n`;
+    msgN7 += `❌ Saiu do caixa: ${formatBRL(saidas)}\n`;
+    msgN7 += `💰 Saldo do caixa na semana: *${formatBRL(entradas - saidas)}*\n\n`;
     msgN7 += `📅 *Projeção até fim de ${nomeMesN7.charAt(0).toUpperCase() + nomeMesN7.slice(1)}*\n`;
     msgN7 += `Saldo atual: ${formatBRL(saldoAtualN7)}\n`;
     msgN7 += `Saldo projetado (${endOfMonthStr.slice(8)}/${endOfMonthStr.slice(5,7)}): *${formatBRL(saldoFimMes)}*\n`;
@@ -727,20 +727,10 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       const lastDay9 = new Date(y9, m9, 0).getDate();
       const toStr = `${currentMonth}-${String(lastDay9).padStart(2, '0')}`;
 
-      // Despesas não-cartão via expandRange (sem risco de dupla contagem)
-      const nonCardOccs = expandRange(
-        transactions.filter(t => t.tipo !== 'cartao'), fromStr, toStr
-      );
-      let totalGasto = nonCardOccs
-        .filter(o => o.tipo !== 'entrada')
-        .reduce((sum, o) => sum + o.valor, 0);
-
-      // Cartão: usa calcFaturaCardBot para não dupla-contar parcelas virtuais de meses anteriores
-      // (expandRange geraria tanto a fatura real do mês quanto as parcelas virtuais do mês passado)
-      for (const card of cards) {
-        const { faturaAtual } = calcFaturaCardBot(card, transactions, todayStr);
-        totalGasto += faturaAtual;
-      }
+      // Gastos do mês por competência: compra à vista na data da compra, parcela mês a mês
+      // (não depende de quando a fatura vence nem de qual ciclo está aberto)
+      const totalGasto = expandDespesasBot(transactions, fromStr, toStr)
+        .reduce((sum, e) => sum + e.valor, 0);
 
       const pct = (totalGasto / rendaMensal) * 100;
       if (pct > 100) {
@@ -831,17 +821,8 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       const [y, m] = targetMonth.split('-').map(Number);
       const lastDay = new Date(y, m, 0).getDate();
       const toStr = `${targetMonth}-${String(lastDay).padStart(2, '0')}`;
-      // Cartões com fatura real no mês — projeções virtuais desses são ignoradas
-      const comFaturaReal = cartaoComFaturaRealNoMes(transactions, fromStr, toStr);
-      const occs = expandRange(transactions, fromStr, toStr);
-      return occs
-        .filter(o => {
-          if (o.tipo === 'entrada') return false;
-          // Descarta projeção virtual de cartão que já tem fatura real no mês
-          if (o.tx?.id?.includes('-proj-') && comFaturaReal.has(o.tx?.cartaoId)) return false;
-          return true;
-        })
-        .reduce((sum, o) => sum + o.valor, 0);
+      // Por competência: o gasto conta no mês em que aconteceu (compra à vista / parcela), não no da fatura
+      return expandDespesasBot(transactions, fromStr, toStr).reduce((sum, e) => sum + e.valor, 0);
     };
 
     const spentPassado = calcGastoMes(mesPassadoStr);
@@ -957,14 +938,11 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   if (tipos.n19 !== false) {
     const todayS2 = dateStrFromDate(hoje);
     const ago30   = (() => { const d = new Date(hoje); d.setDate(d.getDate() - 30); return dateStrFromDate(d); })();
-    const occsHoje30 = expandRange(transactions, ago30, todayS2);
-    // Cartões com fatura real hoje — evita contar projeções virtuais de meses anteriores
-    const comFaturaRealHoje = cartaoComFaturaRealNoMes(transactions, todayS2, todayS2);
-    const isVirtualCartao = (o) => o.tx?.id?.includes('-proj-') && comFaturaRealHoje.has(o.tx?.cartaoId);
-    const gastoHoje2 = occsHoje30.filter(o => o.date === todayS2 && o.tipo !== 'entrada' && !isVirtualCartao(o))
-      .reduce((s, o) => s + o.valor, 0);
-    const somaUltimos30 = occsHoje30.filter(o => o.tipo !== 'entrada' && !isVirtualCartao(o))
-      .reduce((s, o) => s + o.valor, 0);
+    // Gasto do dia = o que aconteceu hoje (compra, parcela do mês, conta). A fatura que vence hoje NÃO
+    // conta como gasto de hoje, e aporte de investimento não é gasto.
+    const eventos30 = expandDespesasBot(transactions, ago30, todayS2).filter(e => e.tipo !== 'investimento');
+    const gastoHoje2 = eventos30.filter(e => e.date === todayS2).reduce((s, e) => s + e.valor, 0);
+    const somaUltimos30 = eventos30.reduce((s, e) => s + e.valor, 0);
     const media = somaUltimos30 / 30;
     // media > 0 evita falso positivo quando não há gastos históricos (ex: primeiro gasto do mês)
     if (media > 0 && gastoHoje2 > media * 2 && gastoHoje2 > 50) {

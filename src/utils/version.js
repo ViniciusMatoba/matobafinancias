@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.146';
+export const APP_VERSION = '1.6.147';
 export const APP_VERSION_DATE = '05/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.147',
+    date: '05/10/2026',
+    changes: [
+      'Telegram N19 (dia atípico): a fatura que vence hoje não conta mais como gasto do dia (só o que foi comprado hoje), e aporte de investimento não é gasto — acabaram os alertas falsos em dia de fatura ou de aporte',
+      'Telegram N12 (relatório do mês anterior) e N9 (limite geral de gastos): passam a contar os gastos no mês em que aconteceram (compra à vista / parcela), igual ao restante',
+      'Telegram N7 (resumo semanal): os rótulos agora dizem "Saiu do caixa" e "Saldo do caixa na semana"',
+    ],
+  },
   {
     version: '1.6.146',
     date: '05/10/2026',

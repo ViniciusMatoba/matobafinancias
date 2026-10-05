@@ -1,10 +1,8 @@
 {
-  "version": "1.6.145",
+  "version": "1.6.146",
   "date": "05/10/2026",
   "notes": [
-    "Despesas por competência: o gasto passa a contar quando aconteceu — compra à vista no cartão na data da compra e parcelas mês a mês a partir dela — e não quando a fatura vence ou é paga. Vale para as categorias da Home, o Painel (categorias, tags, maiores gastos, evolução e CSV), o aviso de orçamento do formulário, o fechamento do mês e o bot (/categoria, /meta, /gastos, /tags, /meses, /resumo, /mes e alertas de orçamento)",
-    "Painel e bot: \"Despesas\" virou \"Gastos\" (quando aconteceu) e mostram \"Saiu do caixa\" ao lado (quando a fatura/conta foi debitada)",
-    "Saldo, Projeção, faturas e vencimentos não mudaram: continuam pelo caixa, protegidos por testes novos",
-    "Fix: compra de fim de mês cuja fatura vence no mês seguinte sumia das categorias; pagar a fatura em outro mês movia os gastos de mês; o Painel repetia compras à vista nos meses futuros; a parcela sumia da Home depois de editar/pagar uma fatura projetada; parcela contada em dobro quando a fatura do mês seguinte era lançada como nova"
+    "Fix onboarding: o botão de cadastrar cartão no fim da configuração inicial dava erro e não levava às Configurações",
+    "Testes: o teste de fatura em atraso estava desatualizado desde a v1.6.116 e passou a refletir a regra atual (atraso só depois do vencimento); toda a suíte passa"
   ]
 }
