@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.152';
+export const APP_VERSION = '1.6.153';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.153',
+    date: '14/10/2026',
+    changes: [
+      'Atualização do Firebase: app (firebase 12 → 13) e Cloud Functions (firebase-admin 12 → 14, firebase-functions 6 → 7) — zera as vulnerabilidades conhecidas das functions',
+      'Sem mudança de comportamento; os 243 testes e o build passam nas versões novas',
+    ],
+  },
   {
     version: '1.6.152',
     date: '14/10/2026',

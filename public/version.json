@@ -1,8 +1,8 @@
 {
-  "version": "1.6.152",
+  "version": "1.6.153",
   "date": "14/10/2026",
   "notes": [
-    "Testes do bot do Telegram de ponta a ponta (Firestore e Telegram simulados): vínculo, /saldo, /gastos, /tags, /meses, /investimentos, botões Pago e Adiar (inclusive fatura projetada sem duplicar o caixa) e os webhooks do Telegram e de notificação bancária",
-    "Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes; a pasta de testes não vai no deploy das functions"
+    "Atualização do Firebase: app (firebase 12 → 13) e Cloud Functions (firebase-admin 12 → 14, firebase-functions 6 → 7) — zera as vulnerabilidades conhecidas das functions",
+    "Sem mudança de comportamento; os 243 testes e o build passam nas versões novas"
   ]
 }

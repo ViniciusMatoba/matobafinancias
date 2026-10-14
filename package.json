@@ -1,7 +1,7 @@
 {
   "name": "matoba-financas",
   "private": true,
-  "version": "1.6.152",
+  "version": "1.6.153",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
-    "firebase": "^12.13.0",
+    "firebase": "^13.0.0",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
