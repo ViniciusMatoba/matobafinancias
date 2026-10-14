@@ -148,14 +148,18 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
   const bannerContent = useMemo(() => {
     if (!sobraSegura) return null;
-    const formatSobra = formatBRL(sobraSegura.sobra);
+    const formatSobra = formatBRL(sobraSegura.investivel);
     const dataFim = `${sobraSegura.dataVerificada.slice(8,10)}/${sobraSegura.dataVerificada.slice(5,7)}`;
     const dataMin = sobraSegura.dataMinimoSaldo;
     const dataMinFmt = dataMin ? `${dataMin.slice(8,10)}/${dataMin.slice(5,7)}` : null;
     const isTodayMin = dataMin === today;
-    const minLabel = isTodayMin
+    const prox = sobraSegura.proxima;
+    const proxLabel = prox
+      ? `\n📈 A partir de ${prox.data.slice(8,10)}/${prox.data.slice(5,7)} a sobra segura sobe para ${formatBRL(prox.valor)} (+${formatBRL(prox.aumento)})`
+      : '';
+    const minLabel = (isTodayMin
       ? `📌 Menor saldo projetado: ${formatBRL(sobraSegura.minimoSaldo)} (hoje — sem despesas fixas previstas no período)`
-      : `📌 Menor saldo projetado: ${formatBRL(sobraSegura.minimoSaldo)} em ${dataMinFmt}`;
+      : `📌 Menor saldo projetado: ${formatBRL(sobraSegura.minimoSaldo)} em ${dataMinFmt}`) + proxLabel;
 
     if (!reserveStats.completed) {
       if (!reserveStats.exists) {
@@ -437,7 +441,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
       </div>
 
       {/* Banner de Sobra Segura Inteligente com Reserva de Emergência */}
-      {sobraSegura && sobraSegura.sobra > 0 && bannerContent && !bannerDismissed && (
+      {sobraSegura && sobraSegura.investivel > 0 && bannerContent && !bannerDismissed && (
         <div style={{ padding: '16px 20px 0' }}>
           <div style={{
             background: bannerContent.bg,
@@ -473,7 +477,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
                 {bannerContent.desc}
               </p>
               {bannerContent.minLabel && (
-                <p style={{ margin: '0 0 10px', fontSize: 11, color: 'rgba(255,255,255,0.88)', background: 'rgba(0,0,0,0.15)', borderRadius: 8, padding: '6px 10px' }}>
+                <p style={{ margin: '0 0 10px', fontSize: 11, color: 'rgba(255,255,255,0.88)', background: 'rgba(0,0,0,0.15)', borderRadius: 8, padding: '6px 10px', whiteSpace: 'pre-line' }}>
                   {bannerContent.minLabel}
                 </p>
               )}

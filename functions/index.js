@@ -600,14 +600,39 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         if (budget <= 0) continue;
         const s   = spent[catId] || 0;
         const pct = (s / budget) * 100;
+        // Liberdade Financeira é meta de INVESTIR (passar de 100% é bom), não gasto a conter
+        const ehMeta = catId === 'liberdade';
+        // Só reavisa quando muda de faixa (10 em 10 pontos), não todo dia com o mesmo valor
+        const faixa  = Math.floor(pct / 10);
+        const chave  = `orc:${currentMonth}:${catId}`;
         if (tipos.n5 !== false && pct > 100) {
-          const top = getTopExpensesForCategory(transactions, catId, currentMonth);
-          const topStr = top ? `\nPrincipais gastos: _${top}_.` : '';
-          msgs.push(`🚨 *${LABELS[catId]} estourou!*\nGasto ${formatBRL(s)} de ${formatBRL(budget)} — excedeu em *${formatBRL(s - budget)}*.${topStr}`);
+          if (ehMeta) {
+            msgs.push({
+              text: `🎉 *Meta de ${LABELS[catId]} superada!*\nVocê investiu ${formatBRL(s)} este mês — ${formatBRL(s - budget)} acima da meta de ${formatBRL(budget)}.`,
+              estado: { chave, sig: 'meta-superada' },
+            });
+          } else {
+            const top = getTopExpensesForCategory(transactions, catId, currentMonth);
+            const topStr = top ? `\nPrincipais gastos: _${top}_.` : '';
+            msgs.push({
+              text: `🚨 *${LABELS[catId]} estourou!*\nGasto ${formatBRL(s)} de ${formatBRL(budget)} — excedeu em *${formatBRL(s - budget)}*.${topStr}`,
+              estado: { chave, sig: `5:${faixa}` },
+            });
+          }
         } else if (tipos.n4 !== false && pct >= 80 && pct <= 100) {
-          const top = getTopExpensesForCategory(transactions, catId, currentMonth);
-          const topStr = top ? `\nPrincipais gastos: _${top}_.` : '';
-          msgs.push(`⚠️ *${LABELS[catId]} em ${Math.round(pct)}%*\n${formatBRL(s)} de ${formatBRL(budget)} utilizados este mês.${topStr}`);
+          if (ehMeta) {
+            msgs.push({
+              text: `🎯 *Meta de ${LABELS[catId]} em ${Math.round(pct)}%*\n${formatBRL(s)} de ${formatBRL(budget)} investidos este mês.`,
+              estado: { chave, sig: 'meta-80' },
+            });
+          } else {
+            const top = getTopExpensesForCategory(transactions, catId, currentMonth);
+            const topStr = top ? `\nPrincipais gastos: _${top}_.` : '';
+            msgs.push({
+              text: `⚠️ *${LABELS[catId]} em ${Math.round(pct)}%*\n${formatBRL(s)} de ${formatBRL(budget)} utilizados este mês.${topStr}`,
+              estado: { chave, sig: `4:${faixa}` },
+            });
+          }
         }
       }
     }
@@ -619,10 +644,17 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const d7 = new Date(hoje); d7.setDate(d7.getDate() + 7);
     const in7 = dateStrFromDate(d7);
     const saldoProjetado = calcSaldoSimples(transactions, in7, walletInitials);
+    // Urgente: reavisa se a situação mudar, ou a cada 3 dias enquanto continuar
     if (saldoAtual < 0) {
-      msgs.push(`🚨 *Saldo atual negativo!*\nSeu saldo está em *${formatBRL(saldoAtual)}* agora. Revise seus lançamentos e evite novos gastos até regularizar.`);
+      msgs.push({
+        text: `🚨 *Saldo atual negativo!*\nSeu saldo está em *${formatBRL(saldoAtual)}* agora. Revise seus lançamentos e evite novos gastos até regularizar.`,
+        estado: { chave: 'saldo-negativo', sig: `atual:${Math.round(saldoAtual / 100)}`, repetirDias: 3 },
+      });
     } else if (saldoProjetado < 0) {
-      msgs.push(`📉 *Alerta: saldo pode ficar negativo!*\nSaldo atual ${formatBRL(saldoAtual)} · Projeção *${formatBRL(saldoProjetado)}* em 7 dias.`);
+      msgs.push({
+        text: `📉 *Alerta: saldo pode ficar negativo!*\nSaldo atual ${formatBRL(saldoAtual)} · Projeção *${formatBRL(saldoProjetado)}* em 7 dias.`,
+        estado: { chave: 'saldo-negativo', sig: `proj:${Math.round(saldoProjetado / 100)}`, repetirDias: 3 },
+      });
     }
   }
 
@@ -736,10 +768,17 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         .reduce((sum, e) => sum + e.valor, 0);
 
       const pct = (totalGasto / rendaMensal) * 100;
+      const faixa9 = Math.floor(pct / 10); // só reavisa quando muda de faixa
       if (pct > 100) {
-        msgs.push(`🚨 *Limite Geral Ultrapassado!*\nSeus gastos totais atingiram ${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)} (excedeu o orçamento geral em *${formatBRL(totalGasto - rendaMensal)}*).`);
+        msgs.push({
+          text: `🚨 *Limite Geral Ultrapassado!*\nSeus gastos totais atingiram ${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)} (excedeu o orçamento geral em *${formatBRL(totalGasto - rendaMensal)}*).`,
+          estado: { chave: `limite-geral:${currentMonth}`, sig: `estourou:${faixa9}` },
+        });
       } else if (pct >= 80) {
-        msgs.push(`⚠️ *Limite Geral em ${Math.round(pct)}%*\nVocê já utilizou ${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)} do seu orçamento geral deste mês.`);
+        msgs.push({
+          text: `⚠️ *Limite Geral em ${Math.round(pct)}%*\nVocê já utilizou ${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)} do seu orçamento geral deste mês.`,
+          estado: { chave: `limite-geral:${currentMonth}`, sig: `${faixa9}` },
+        });
       }
     }
   }
@@ -807,7 +846,10 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       const totalComprometido = faturaAtual + comprometidoFuturo;
       const pct = (totalComprometido / card.limite) * 100;
       if (pct >= 80) {
-        msgs.push(`💳 *Limite de Cartão próximo do fim!*\nA fatura do seu cartão *${card.nome}* atingiu *${Math.round(pct)}%* do limite total (${formatBRL(totalComprometido)} de ${formatBRL(card.limite)}).`);
+        msgs.push({
+          text: `💳 *Limite de Cartão próximo do fim!*\nA fatura do seu cartão *${card.nome}* atingiu *${Math.round(pct)}%* do limite total (${formatBRL(totalComprometido)} de ${formatBRL(card.limite)}).`,
+          estado: { chave: `cartao-limite:${card.id}`, sig: `${Math.floor(pct / 10)}` },
+        });
       }
     }
   }
@@ -885,9 +927,10 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     if (saldoMinimo > 0) {
       const saldoAtual = calcSaldoSimples(transactions, todayStr, walletInitials);
       if (saldoAtual < saldoMinimo) {
-        msgs.push(
-          `🚨 *Saldo baixo!*\nSeu saldo atual é *${formatBRL(saldoAtual)}* — abaixo do mínimo de *${formatBRL(saldoMinimo)}*. Atenção ao caixa!`
-        );
+        msgs.push({
+          text: `🚨 *Saldo baixo!*\nSeu saldo atual é *${formatBRL(saldoAtual)}* — abaixo do mínimo de *${formatBRL(saldoMinimo)}*. Atenção ao caixa!`,
+          estado: { chave: 'saldo-baixo', sig: `${Math.round(saldoAtual / 100)}`, repetirDias: 3 },
+        });
       }
     }
   }
@@ -978,44 +1021,29 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     }
   }
 
-  // ── N22 — Sobra projetada segura (aviso diário quando há sobra) ─────────────
+  // ── N22 — Sobra projetada segura (só avisa quando muda; abaixo de R$ 200 não é valor para investir) ───
   if (tipos.n22 !== false) {
-    const FAR_PAST = '2020-01-01';
-    const proj45to = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
-    const saldoBase = calcSaldoSimples(transactions, todayStr, walletInitials);
-    // Projeta dia a dia para os próximos 45 dias
-    let minSaldo = saldoBase;
-    let minDate = todayStr;
-    {
-      const allOccs45 = expandRange(transactions, todayStr, proj45to);
-      const byDate45 = {};
-      for (const o of allOccs45) {
-        if (!byDate45[o.date]) byDate45[o.date] = [];
-        byDate45[o.date].push(o);
-      }
-      let cur45 = todayStr;
-      let sal45 = saldoBase;
-      while (cur45 <= proj45to) {
-        const items = byDate45[cur45] || [];
-        const ent = items.filter(i => i.tipo === 'entrada').reduce((s, i) => s + i.valor, 0);
-        const sai = items.filter(i => i.tipo !== 'entrada').reduce((s, i) => s + i.valor, 0);
-        sal45 = sal45 + ent - sai;
-        if (sal45 < minSaldo) { minSaldo = sal45; minDate = cur45; }
-        const d = new Date(cur45 + 'T00:00:00'); d.setDate(d.getDate() + 1);
-        cur45 = dateStrFromDate(d);
-      }
+    const s = calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje);
+    const fmtDia = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+    const proxTxt = s.proxima
+      ? `📈 *A partir de ${fmtDia(s.proxima.data)}* a sobra segura sobe para *${formatBRL(s.proxima.valor)}* (+${formatBRL(s.proxima.aumento)}).`
+      : '';
+    const menorTxt = `_Menor saldo nos próximos 45 dias: ${formatBRL(s.minSaldo)}${s.minDate === todayStr ? ' (hoje)' : ` em ${fmtDia(s.minDate)}`}_`;
+
+    let text = null;
+    if (s.investivel > 0) {
+      text = `💡 *Sobra Projetada Segura*\n\nVocê pode guardar ou investir *${formatBRL(s.investivel)}* hoje sem faltar dinheiro nos próximos 45 dias — pode ir tudo para a reserva (resgate imediato), sobrando só os centavos na conta.\n\n${menorTxt}${proxTxt ? `\n${proxTxt}` : ''}`;
+    } else if (s.proxima) {
+      text = `💡 *Sobra Projetada Segura*\n\nHoje não há valor seguro para investir (menos de ${formatBRL(SOBRA_MINIMA_BOT)} livres).\n\n${menorTxt}\n${proxTxt}`;
     }
-    const sobra = Math.floor(minSaldo);
-    if (sobra > 0) {
-      const [, minMM, minDD] = minDate.split('-');
-      const isTodayMin = minDate === todayStr;
-      const minLabel = isTodayMin
-        ? `_Menor saldo no período: ${formatBRL(minSaldo)} (hoje — sem despesas fixas previstas)_`
-        : `_Menor saldo no período: ${formatBRL(minSaldo)} em ${minDD}/${minMM}_`;
-      let msg = `💡 *Sobra Projetada Segura*\n\n`;
-      msg += `Nos próximos 45 dias você tem *${formatBRL(sobra)}* disponíveis para guardar ou investir — pode ir tudo para a reserva (resgate imediato), sobrando só os centavos na conta.\n\n`;
-      msg += minLabel;
-      msgs.push(msg);
+    if (text) {
+      msgs.push({
+        text,
+        estado: {
+          chave: 'sobra-segura',
+          sig: `${Math.floor(s.investivel / 100)}|${s.proxima ? s.proxima.data : ''}|${s.proxima ? Math.floor(s.proxima.valor / 100) : ''}`,
+        },
+      });
     }
   }
 
@@ -1052,26 +1080,9 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       transactions.filter(t => t.tipo === 'investimento'), FAR_PAST, todayStr
     ).reduce((acc, o) => acc + o.valor, 0);
 
-    // Sobra segura
-    const saldoBaseN23 = calcSaldoSimples(transactions, todayStr, walletInitials);
-    const proj45N23 = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
-    let minSaldoN23 = saldoBaseN23;
-    {
-      const allOccs45 = expandRange(transactions, todayStr, proj45N23);
-      const byDate45 = {};
-      for (const o of allOccs45) { if (!byDate45[o.date]) byDate45[o.date] = []; byDate45[o.date].push(o); }
-      let cur = todayStr, sal = saldoBaseN23;
-      while (cur <= proj45N23) {
-        const items = byDate45[cur] || [];
-        const ent = items.filter(i => i.tipo === 'entrada').reduce((s, i) => s + i.valor, 0);
-        const sai = items.filter(i => i.tipo !== 'entrada').reduce((s, i) => s + i.valor, 0);
-        sal = sal + ent - sai;
-        if (sal < minSaldoN23) minSaldoN23 = sal;
-        const d = new Date(cur + 'T00:00:00'); d.setDate(d.getDate() + 1);
-        cur = dateStrFromDate(d);
-      }
-    }
-    const sobraN23 = Math.max(Math.floor(minSaldoN23), 0);
+    // Sobra segura (abaixo de R$ 200 não é tratada como valor para investir)
+    const sobraInfoN23 = calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje);
+    const sobraN23 = sobraInfoN23.investivel;
     const aporteReserva = (metaTotal > 0 && reservaAtual < metaTotal) ? sobraN23 * 0.6 : 0;
     const aporteInvest  = (metaTotal > 0 && reservaAtual < metaTotal) ? sobraN23 * 0.4 : sobraN23;
     const reservaCompleta = metaTotal > 0 && reservaAtual >= metaTotal;
@@ -1117,7 +1128,11 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         }
         msg += `\n_Sem colchão: só os centavos ficam na conta corrente._\n`;
       } else {
-        msg += `_Sobra projetada indisponível no momento. Mantenha o controle dos gastos!_\n`;
+        msg += `_Sem sobra segura para aportar hoje (menos de ${formatBRL(SOBRA_MINIMA_BOT)} livres nos próximos 45 dias)._\n`;
+      }
+      if (sobraInfoN23.proxima) {
+        const p = sobraInfoN23.proxima;
+        msg += `📈 *A partir de ${p.data.slice(8, 10)}/${p.data.slice(5, 7)}* a sobra segura sobe para *${formatBRL(p.valor)}*.\n`;
       }
 
       msg += `\n_Acesse o app → aba Investir para acompanhar!_`;
@@ -1161,7 +1176,8 @@ async function checkN24AportePerdido(uid, transactions, config, walletInitials, 
   const LIMIAR_DIAS = 5;
   const hoje = getNowBrasilia();
   const todayStr = dateStrFromDate(hoje);
-  const { sobra } = calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje);
+  // Só conta como sobra a partir do mínimo (R$ 200); um troco não gera cobrança de aporte
+  const sobra = calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje).investivel;
 
   const tracking = config?.reservaTracking || {};
   const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
@@ -1689,25 +1705,55 @@ async function handleMeta(chatId, uid) {
   return sendMessage(chatId, text.trim());
 }
 
-// ─── Cálculo de sobra segura (espelha calcularSobraSegura do frontend) ───────
+// ─── Sobra segura (espelha calcularSobraSegura / resumirSobra do app) ─────────
+const SOBRA_MINIMA_BOT = 200; // abaixo disto a sobra não é tratada como valor para investir
+
+// Para cada dia: quanto dá para investir NAQUELE dia sem faltar dinheiro depois (menor saldo dali em diante)
+function sobraPorDataBot(serie) {
+  const out = new Array(serie.length);
+  let min = Infinity;
+  for (let i = serie.length - 1; i >= 0; i--) {
+    min = Math.min(min, serie[i].saldo);
+    out[i] = { date: serie[i].date, sobra: Math.max(0, Math.floor(min)) };
+  }
+  return out;
+}
+
+// hoje < mínimo: próxima janela = 1ª data com sobra >= mínimo; hoje >= mínimo: 1ª data com sobra >= hoje + mínimo
+function resumirSobraBot(serie, minimo = SOBRA_MINIMA_BOT) {
+  const porData = sobraPorDataBot(serie);
+  const hoje = porData.length ? porData[0].sobra : 0;
+  const alvo = hoje >= minimo ? hoje + minimo : minimo;
+  const prox = porData.find((p, i) => i > 0 && p.sobra >= alvo);
+  return {
+    hoje,
+    investivel: hoje >= minimo ? hoje : 0,
+    proxima: prox ? { data: prox.date, valor: prox.sobra, aumento: prox.sobra - hoje } : null,
+  };
+}
+
 function calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje) {
   const proj45to = (() => { const d = new Date(hoje); d.setDate(d.getDate() + 45); return dateStrFromDate(d); })();
-  const saldoBase = calcSaldoSimples(transactions, todayStr, walletInitials);
+  // Saldo até ONTEM: o laço abaixo soma os lançamentos de hoje (antes somava duas vezes)
+  const saldoBase = calcSaldoSimples(transactions, addDaysFn(todayStr, -1), walletInitials);
   const allOccs45 = expandRange(transactions, todayStr, proj45to);
   const byDate45 = {};
   for (const o of allOccs45) { if (!byDate45[o.date]) byDate45[o.date] = []; byDate45[o.date].push(o); }
-  let minSaldo = saldoBase, minDate = todayStr;
+  const serie = [];
   let cur = todayStr, sal = saldoBase;
   while (cur <= proj45to) {
     const items = byDate45[cur] || [];
     const ent = items.filter(i => i.tipo === 'entrada').reduce((s, i) => s + i.valor, 0);
     const sai = items.filter(i => i.tipo !== 'entrada').reduce((s, i) => s + i.valor, 0);
     sal = sal + ent - sai;
-    if (sal < minSaldo) { minSaldo = sal; minDate = cur; }
+    serie.push({ date: cur, saldo: sal });
     const d = new Date(cur + 'T00:00:00'); d.setDate(d.getDate() + 1);
     cur = dateStrFromDate(d);
   }
-  return { sobra: Math.max(Math.floor(minSaldo), 0), minSaldo, minDate };
+  let minSaldo = serie[0].saldo, minDate = serie[0].date;
+  for (const p of serie) if (p.saldo < minSaldo) { minSaldo = p.saldo; minDate = p.date; }
+  const resumo = resumirSobraBot(serie);
+  return { sobra: Math.max(Math.floor(minSaldo), 0), investivel: resumo.investivel, proxima: resumo.proxima, minSaldo, minDate };
 }
 
 // ─── /reserva — Status da reserva de emergência ──────────────────────────────
@@ -1778,11 +1824,19 @@ async function handleInvestimentos(chatId, uid) {
     transactions.filter(t => t.tipo === 'investimento'), FAR_PAST, todayStr
   ).reduce((acc, o) => acc + o.valor, 0);
 
-  const { sobra } = calcSobraSeguraBot(transactions, walletInitials, todayStr, agora);
+  const sobraInfo = calcSobraSeguraBot(transactions, walletInitials, todayStr, agora);
+  const sobra = sobraInfo.investivel; // 0 quando está abaixo de R$ 200
 
   let msg = `📈 *Investimentos*\n\n`;
   msg += `💰 Total investido: *${formatBRL(totalInvestido)}*\n`;
-  msg += `💡 Sobra disponível para aportar: *${formatBRL(sobra)}*\n\n`;
+  msg += sobra > 0
+    ? `💡 Sobra disponível para aportar: *${formatBRL(sobra)}*\n`
+    : `💡 Sem sobra segura para aportar hoje (menos de ${formatBRL(SOBRA_MINIMA_BOT)} livres nos próximos 45 dias).\n`;
+  if (sobraInfo.proxima) {
+    const p = sobraInfo.proxima;
+    msg += `📈 A partir de ${p.data.slice(8, 10)}/${p.data.slice(5, 7)} a sobra segura sobe para *${formatBRL(p.valor)}*.\n`;
+  }
+  msg += `\n`;
 
   if (inv.perfil && inv.mesesMeta && inv.despesasMens) {
     const metaTotal = inv.despesasMens * inv.mesesMeta;
@@ -3845,11 +3899,58 @@ exports.telegramWebhook = onRequest(
   }
 );
 
+// ─── Memória de avisos: não repete o que não mudou ────────────────────────────
+// Cada aviso pode trazer estado: { chave, sig, repetirDias? }. Só é enviado se a assinatura
+// (sig) mudou desde o último envio, ou se passou repetirDias (avisos urgentes). Chaves que
+// deixaram de disparar saem do estado — se a condição voltar, avisa de novo.
+function filtrarAlertasRepetidos(msgs, estadoAnterior, hojeStr) {
+  const ant = estadoAnterior || {};
+  const enviar = [];
+  const estadoNovo = {};
+  for (const msg of msgs) {
+    const est = typeof msg === 'object' ? msg.estado : null;
+    if (!est || !est.chave) { enviar.push(msg); continue; }
+    const prev = ant[est.chave];
+    const dias = prev?.data ? diffDaysStr(prev.data, hojeStr) : Infinity;
+    const repete = est.repetirDias ? dias >= est.repetirDias : false;
+    if (prev && prev.sig === est.sig && !repete) {
+      estadoNovo[est.chave] = prev;
+    } else {
+      enviar.push(msg);
+      estadoNovo[est.chave] = { sig: est.sig, data: hojeStr };
+    }
+  }
+  return { enviar, estadoNovo };
+}
+
+function diffDaysStr(a, b) {
+  return Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 86400000);
+}
+
+async function lerEstadoAlertas(uid, canal) {
+  try {
+    const snap = await db.collection('alertasEstado').doc(uid).get();
+    return (snap.exists && snap.data()[canal]) || {};
+  } catch (e) {
+    logger.error(`[ALERTAS] leitura de estado uid=${uid}:`, e.message);
+    return {};
+  }
+}
+
+async function gravarEstadoAlertas(uid, canal, estado) {
+  try {
+    await db.collection('alertasEstado').doc(uid).set({ [canal]: estado }, { mergeFields: [canal] });
+  } catch (e) {
+    logger.error(`[ALERTAS] gravação de estado uid=${uid}:`, e.message);
+  }
+}
+
 // ─── EXPORT 2: Notificações — 07h, 12h e 19h Brasília (10h, 15h, 22h UTC) ─────
 exports.dailyNotifications = onSchedule(
   { schedule: '0 10,15,22 * * *', timeZone: 'UTC', region: REGION },
   async () => {
     const horaAtual = getNowBrasilia().getHours(); // 7, 12 ou 19
+    const hojeBr    = dateStrFromDate(getNowBrasilia());
     logger.info(`[NOTIF] Rodando para hora Brasília: ${horaAtual}h`);
 
     // Busca usuários com Telegram ou token FCM registrado.
@@ -3902,7 +4003,10 @@ exports.dailyNotifications = onSchedule(
           // Push
           if (pushEnabled) {
             const pushPrefs = { ...prefs, tipos: prefs.tipos || {} };
-            const pushMsgs  = checkNotifications(cards, transactions, config, pushPrefs, goals, walletInitials);
+            const pushBruto = checkNotifications(cards, transactions, config, pushPrefs, goals, walletInitials);
+            const pushEstadoAnt = await lerEstadoAlertas(uid, 'push');
+            const pushFiltro = filtrarAlertasRepetidos(pushBruto, pushEstadoAnt, hojeBr);
+            const pushMsgs  = pushFiltro.enviar;
             for (const msg of pushMsgs) {
               try {
                 const text = typeof msg === 'string' ? msg : msg.text;
@@ -3919,6 +4023,7 @@ exports.dailyNotifications = onSchedule(
                 }
               }
             }
+            await gravarEstadoAlertas(uid, 'push', pushFiltro.estadoNovo);
             if (pushMsgs.length > 0)
               logger.info(`[PUSH] uid=${uid}: ${pushMsgs.length} alerta(s) enviado(s)`);
           }
@@ -3927,7 +4032,10 @@ exports.dailyNotifications = onSchedule(
           if (telegramEnabled) {
             const tgTipos = prefs.telegramTipos !== undefined ? prefs.telegramTipos : (prefs.tipos || {});
             const tgPrefs = { ...prefs, tipos: tgTipos };
-            const tgMsgs  = checkNotifications(cards, transactions, config, tgPrefs, goals, walletInitials);
+            const tgBruto = checkNotifications(cards, transactions, config, tgPrefs, goals, walletInitials);
+            const tgEstadoAnt = await lerEstadoAlertas(uid, 'telegram');
+            const tgFiltro = filtrarAlertasRepetidos(tgBruto, tgEstadoAnt, hojeBr);
+            const tgMsgs  = tgFiltro.enviar;
             let tgBlocked = false;
             for (const msg of tgMsgs) {
               const msgObj = typeof msg === 'string' ? { text: msg } : msg;
@@ -3970,6 +4078,7 @@ exports.dailyNotifications = onSchedule(
               }
               await new Promise(r => setTimeout(r, 100));
             }
+            if (!tgBlocked) await gravarEstadoAlertas(uid, 'telegram', tgFiltro.estadoNovo);
             if (tgMsgs.length > 0 && !tgBlocked)
               logger.info(`[TELEGRAM] uid=${uid}: ${tgMsgs.length} alerta(s) enviado(s)`);
           }

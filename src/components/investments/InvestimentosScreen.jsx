@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { ShieldCheck, TrendingUp, Info, ChevronDown, ChevronUp, Check, AlertTriangle } from 'lucide-react';
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
-import { calcularSobraSegura } from '../../utils/projectionCalc';
+import { calcularSobraSegura, SOBRA_MINIMA } from '../../utils/projectionCalc';
 
 const FAR_PAST = '2020-01-01';
 
@@ -108,10 +108,12 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
   }, [reservaGoalId, goals, transactions, today]);
 
   // ── Sobra segura (valor disponível para poupar) ──────────────────────────────
-  const sobraSegura = useMemo(() => {
-    const r = calcularSobraSegura(transactions || [], wallets || [], 45);
-    return Math.max(r.sobra, 0);
-  }, [transactions, wallets]);
+  // `investivel` já é 0 quando a sobra está abaixo do mínimo (SOBRA_MINIMA); `proxima` é a próxima data em que ela cresce
+  const sobraInfo = useMemo(
+    () => calcularSobraSegura(transactions || [], wallets || [], 45),
+    [transactions, wallets]
+  );
+  const sobraSegura = sobraInfo.investivel;
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const perfilObj     = PERFIS.find(p => p.id === perfil);
@@ -357,6 +359,17 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
                     <div style={{ flex: 4, background: 'var(--primary)' }} />
                   </div>
                 </div>
+
+                {sobraSegura === 0 && (
+                  <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
+                    Sem sobra segura para investir hoje (menos de {formatBRL(SOBRA_MINIMA)} livres nos próximos 45 dias).
+                  </p>
+                )}
+                {sobraInfo.proxima && (
+                  <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-secondary)', textAlign: 'center' }}>
+                    📈 A partir de {sobraInfo.proxima.data.slice(8, 10)}/{sobraInfo.proxima.data.slice(5, 7)} a sobra segura sobe para {formatBRL(sobraInfo.proxima.valor)}
+                  </p>
+                )}
 
                 {/* Estimativa de conclusão */}
                 {aporteReserva > 0 && faltaReserva > 0 && (

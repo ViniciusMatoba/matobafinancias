@@ -1,7 +1,18 @@
-export const APP_VERSION = '1.6.148';
-export const APP_VERSION_DATE = '05/10/2026';
+export const APP_VERSION = '1.6.149';
+export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.149',
+    date: '14/10/2026',
+    changes: [
+      'Telegram e push: avisos que não mudaram não se repetem mais todo dia (orçamento por categoria e limite geral só reavisam ao mudar de faixa de 10%; saldo baixo/negativo reavisa se mudar ou a cada 3 dias)',
+      'Liberdade Financeira é meta de investir: passar de 100% agora é "meta superada", não "estourou"',
+      'Sobra segura só aparece como valor para investir a partir de R$ 200 (Home, Investir, Telegram N22/N23/N24 e /investimentos)',
+      'A sobra segura agora olha o futuro: quando hoje não dá, informa a próxima data em que a sobra sobe (ex.: após o salário)',
+      'Fix no bot: ocorrências de hoje eram contadas em dobro no cálculo da sobra segura',
+    ],
+  },
   {
     version: '1.6.148',
     date: '05/10/2026',

@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.148
+- **Versão atual**: v1.6.149
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.148 — 05/10/2026
+**Versão**: v1.6.149 — 14/10/2026
 
 **Últimas features**:
+- v1.6.149 — Telegram/push sem repetição (estado em `alertasEstado/{uid}`, `estado:{chave,sig,repetirDias}` nas msgs, `filtrarAlertasRepetidos`); Liberdade = meta; sobra segura ≥ R$ 200 (`SOBRA_MINIMA`) + próxima janela (`sobraPorData`/`resumirSobra` no app, `calcSobraSeguraBot` no bot); fix dupla contagem de hoje no bot
 - v1.6.148 — Fix parcelas em dobro na Projeção (pagar/editar fatura projetada, no app e no bot); Projeção respeita `dataFim`; Configurações → "Verificar duplicidades de fatura"
 - v1.6.147 — Bot: N19/N12/N9 por competência (fim dos falsos "dia atípico" em dia de fatura/aporte); N7 com rótulos de caixa
 - v1.6.146 — Fix onboarding (`setView` indefinido no App); teste de fatura em atraso atualizado para a regra da v1.6.116 (suíte 117/117)

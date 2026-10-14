@@ -165,9 +165,44 @@ export function calcSaldo(transactions, from, to, { historical = false } = {}) {
   return occs.reduce((acc, o) => acc + o.sinal * o.valor, 0);
 }
 
+/** Abaixo disto a sobra não é tratada como valor para investir. */
+export const SOBRA_MINIMA = 200;
+
+/**
+ * Para cada dia da projeção: quanto dá para guardar/investir NAQUELE dia sem faltar dinheiro depois
+ * (= menor saldo dali em diante). Nunca diminui com o tempo; sobe quando entra dinheiro (salário etc.).
+ */
+export function sobraPorData(dailyProj) {
+  const out = new Array(dailyProj.length);
+  let min = Infinity;
+  for (let i = dailyProj.length - 1; i >= 0; i--) {
+    min = Math.min(min, dailyProj[i].saldo);
+    out[i] = { date: dailyProj[i].date, sobra: Math.max(0, Math.floor(min)) };
+  }
+  return out;
+}
+
+/**
+ * Resume a sobra: o que dá para investir hoje e a próxima data em que ela cresce de forma relevante.
+ *  - hoje < mínimo: a próxima janela é a primeira data com sobra >= mínimo
+ *  - hoje >= mínimo: a próxima janela é a primeira data com sobra >= hoje + mínimo
+ */
+export function resumirSobra(dailyProj, minimo = SOBRA_MINIMA) {
+  const porData = sobraPorData(dailyProj);
+  const hoje = porData.length ? porData[0].sobra : 0;
+  const alvo = hoje >= minimo ? hoje + minimo : minimo;
+  const prox = porData.find((p, i) => i > 0 && p.sobra >= alvo);
+  return {
+    hoje,
+    investivel: hoje >= minimo ? hoje : 0,
+    proxima: prox ? { data: prox.date, valor: prox.sobra, aumento: prox.sobra - hoje } : null,
+  };
+}
+
 /**
  * Calcula a sobra segura (Leftover Balance) projetando o saldo futuro.
- * Retorna { sobra, dataVerificada }
+ * `sobra` = menor saldo do período (inteiro, >= 0); `investivel` = `sobra` só se >= SOBRA_MINIMA, senão 0;
+ * `proxima` = próxima data em que a sobra segura cresce de forma relevante (ou null).
  */
 export function calcularSobraSegura(transactions, wallets, days = 45) {
   const from = todayStr();
@@ -178,8 +213,9 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
 
   const dailyProj = buildDailyProjection(transactions, from, to, saldoAtual);
 
-  let minSaldo = saldoAtual;
-  let minDate = from;
+  // Menor saldo de hoje em diante (o saldo de ontem é passado e não limita o que se pode investir hoje)
+  let minSaldo = dailyProj.length ? dailyProj[0].saldo : saldoAtual;
+  let minDate = dailyProj.length ? dailyProj[0].date : from;
   for (const day of dailyProj) {
     if (day.saldo < minSaldo) {
       minSaldo = day.saldo;
@@ -188,9 +224,12 @@ export function calcularSobraSegura(transactions, wallets, days = 45) {
   }
   // Sem colchão: a reserva tem resgate imediato, então só os centavos ficam na conta
   const sobra = Math.floor(minSaldo);
+  const resumo = resumirSobra(dailyProj);
 
   return {
     sobra: sobra > 0 ? sobra : 0,
+    investivel: resumo.investivel,
+    proxima: resumo.proxima,
     dataVerificada: to,
     dataMinimoSaldo: minDate,
     minimoSaldo: minSaldo,
