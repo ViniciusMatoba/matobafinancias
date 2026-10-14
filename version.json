@@ -1,9 +1,10 @@
 {
-  "version": "1.6.167",
+  "version": "1.6.168",
   "date": "14/10/2026",
   "notes": [
-    "Onboarding do Telegram: durante o cadastro de alertas os comandos (/saldo, /ajuda etc.) agora funcionam normalmente e o bot lembra que o cadastro segue pendente; /pular continua valendo como resposta",
-    "Onboarding do Telegram: suas respostas sim/não agora valem para o canal Telegram (e partem do que você já tinha configurado), em vez de alterar os alertas do push — antes, responder \"não\" aqui desligava alertas do push e não valia para quem já configurou o Telegram no app",
-    "O app não foi alterado"
+    "Home, banner da reserva de emergência: agora usa a caixinha escolhida na tela Investir (antes só achava pelo nome \"Reserva de Emergência\" e podia dizer que você não tinha criado a reserva)",
+    "Home: o saldo da reserva é o mesmo da tela Metas — os aportes somam (antes apareciam negativos, o \"falta\" saía inflado e a reserva nunca era dada como concluída)",
+    "Home: a meta é a da própria caixinha (ou, sem ela, a do perfil da tela Investir); se não houver meta o banner pede para definir, em vez de mostrar \"Falta R$ 0,00\"",
+    "Só o texto e o botão do banner mudaram; nenhum dado foi alterado e as telas Metas e Investir continuam iguais"
   ]
 }
