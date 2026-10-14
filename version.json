@@ -1,11 +1,10 @@
 {
-  "version": "1.6.149",
+  "version": "1.6.150",
   "date": "14/10/2026",
   "notes": [
-    "Telegram e push: avisos que não mudaram não se repetem mais todo dia (orçamento por categoria e limite geral só reavisam ao mudar de faixa de 10%; saldo baixo/negativo reavisa se mudar ou a cada 3 dias)",
-    "Liberdade Financeira é meta de investir: passar de 100% agora é \"meta superada\", não \"estourou\"",
-    "Sobra segura só aparece como valor para investir a partir de R$ 200 (Home, Investir, Telegram N22/N23/N24 e /investimentos)",
-    "A sobra segura agora olha o futuro: quando hoje não dá, informa a próxima data em que a sobra sobe (ex.: após o salário)",
-    "Fix no bot: ocorrências de hoje eram contadas em dobro no cálculo da sobra segura"
+    "Telegram e push: se o envio de um aviso falhar, ele não fica mais marcado como \"já avisado\" e é tentado de novo no próximo horário",
+    "Segurança: o webhook do Telegram passa a recusar chamadas quando o segredo não estiver configurado; o perfil do usuário não aceita mais que o app altere o telegramChatId (só as Cloud Functions vinculam)",
+    "Dependências atualizadas (npm audit fix) — vulnerabilidade crítica do websocket-driver e as do vite/postcss removidas",
+    "Limpeza de código: erros de lint corrigidos (dica de tela, donut de alocação em Investir, imports e variáveis sem uso)"
   ]
 }
