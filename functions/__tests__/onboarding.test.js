@@ -71,8 +71,7 @@ describe('caminho completo', () => {
     await diz('💼 Dias úteis (Seg–Sex)')
 
     expect(estado()).toBeUndefined() // onboarding encerrado
-    // toMatchObject: a seleção temporária que sobra no final é um defeito registrado mais abaixo
-    expect(notificacoes()).toMatchObject({
+    expect(notificacoes()).toEqual({
       telegramEnabled: true,
       horaAlerta: 19,
       diasAntecedenciaVencimento: [3],
@@ -239,71 +238,70 @@ describe('seleção múltipla', () => {
 })
 
 describe('comportamentos atuais registrados (ver relatório da avaliação)', () => {
-  // setDoc(..., { merge: true }) do Firestore MESCLA mapas aninhados: o telegramOnboarding.data novo não apaga
-  // as chaves que já estavam lá. A seleção temporária (tempSelections) da etapa anterior, removida em memória
-  // ao confirmar, continua gravada e aparece como se já estivesse marcada na próxima etapa de seleção múltipla.
-  it('a seleção da etapa de cartão vaza para a etapa de dias da semana (aparece pré-marcada)', async () => {
+  // Antes, set(merge:true) mesclava o mapa telegramOnboarding.data e a seleção temporária da etapa anterior ficava
+  // gravada (aparecia pré-marcada na etapa seguinte). Agora o estado é substituído a cada passo.
+  it('a seleção da etapa de cartão NÃO vaza para a de dias da semana', async () => {
     await vincular()
     await diz('manhã'); await diz('sim')
     await diz('3 dias antes')
     await diz('☑️ Confirmar seleção')
+    expect(estado().data.tempSelections).toBeUndefined()
     for (const r of ['não', 'sim', 'sim']) await diz(r) // orçamento, saldo negativo, resumo semanal
     expect(estado().stepId).toBe('semanal_dia')
-    expect(estado().data.tempSelections).toEqual([3])        // sobra da etapa anterior
-    expect(ultimaMensagem()).toContain('Qua')                 // a quarta já aparece como selecionada
+    expect(estado().data.tempSelections).toBeUndefined()
+    expect(ultimaMensagem()).toContain('Nenhum selecionado')
+    expect(botoes().some(b => b.startsWith('✅ '))).toBe(false)
   })
 
-  it('confirmar o resumo semanal sem tocar em nada salva o dia que veio do vazamento (quarta)', async () => {
+  it('confirmar o resumo semanal sem tocar em nada pede para escolher (não salva dia nenhum)', async () => {
     await vincular()
     await diz('manhã'); await diz('sim')
     await diz('3 dias antes'); await diz('☑️ Confirmar seleção')
     for (const r of ['não', 'sim', 'sim']) await diz(r)
     await diz('☑️ Confirmar seleção')
-    expect(estado().data.diaSemanaResumo).toEqual([3])
+    expect(ultimaMensagem()).toContain('pelo menos uma opção')
+    expect(estado().stepId).toBe('semanal_dia')
+    expect(estado().data.diaSemanaResumo).toBeUndefined()
   })
 
-  it('o vazamento também chega ao final: tempSelections acaba gravado em notificacoes', async () => {
+  it('a seleção temporária nunca chega à configuração final', async () => {
     await vincular()
     await diz('manhã'); await diz('sim')
     await diz('3 dias antes'); await diz('☑️ Confirmar seleção')
-    for (const r of ['não', 'não', 'não', 'não']) await diz(r) // orçamento, saldo, semanal e diário: tudo não
+    for (const r of ['não', 'sim', 'sim']) await diz(r)
+    await diz('Segunda-feira'); await diz('☑️ Confirmar seleção')
+    await diz('não')
     expect(estado()).toBeUndefined()
-    expect(notificacoes().tempSelections).toEqual([3])
+    expect(notificacoes().tempSelections).toBeUndefined()
+    expect(notificacoes().diasAntecedenciaVencimento).toEqual([3])
+    expect(notificacoes().diaSemanaResumo).toEqual([1])
   })
 
-  // processUpdate entrega TODAS as mensagens ao onboarding enquanto ele está ativo
-  it('durante o onboarding os outros comandos não funcionam (são tratados como resposta inválida)', async () => {
+  it('quem estava no meio do fluxo com a sobra antiga gravada não leva a sobra para a configuração', async () => {
     await vincular()
-    fake.seed(`transactions/${UID}/entries/e1`, { tipo: 'entrada', frequencia: 'unico', dataInicio: '2026-10-01', valor: 500, descricao: 'x' })
-    await diz('/saldo')
-    expect(ultimaMensagem()).not.toContain('Saldo Global')
-    expect(ultimaMensagem()).toContain('escolha um dos horários')
-    expect(estado().stepId).toBe('horario')
+    fake.seed(`users/${UID}`, { telegramChatId: '4242', telegramOnboarding: { active: true, stepId: 'diario', data: { horaAlerta: 7, tempSelections: [3] } } })
+    await diz('não')
+    expect(notificacoes().tempSelections).toBeUndefined()
   })
 
-  it('/ajuda também é interceptada durante o onboarding', async () => {
-    await vincular()
-    await diz('/ajuda')
-    expect(ultimaMensagem()).toContain('escolha um dos horários')
-  })
-
-  // O onboarding grava os tipos em notificacoes.tipos; o agendador do Telegram usa telegramTipos quando ele existe
-  it('quem já tem telegramTipos (do app) continua com eles: as escolhas do onboarding não valem para o Telegram', async () => {
-    await vincular()
-    fake.seed(`config/${UID}`, { notificacoes: { telegramTipos: { n1: true, n4: true } } })
-    for (const r of ['manhã', 'não', 'não', 'não', 'não', 'não']) await diz(r)
-    const n = notificacoes()
-    expect(n.tipos.n1).toBe(false)           // o onboarding desligou
-    expect(n.telegramTipos).toEqual({ n1: true, n4: true }) // mas o que o Telegram realmente usa não mudou
-    const usadoPeloAgendador = n.telegramTipos !== undefined ? n.telegramTipos : n.tipos
-    expect(usadoPeloAgendador.n1).toBe(true)
-  })
-
-  // O reconhecimento do horário só procura "7", "7h", "12"... dentro do texto: "17h" vira 7h da manhã
-  it('horário "17h" é entendido como 7h (o reconhecimento procura o dígito, não o número inteiro)', async () => {
+  it('horário "17h" não é aceito (antes virava 7h)', async () => {
     await vincular()
     await diz('17h')
-    expect(estado().data.horaAlerta).toBe(7)
+    expect(estado().stepId).toBe('horario')
+    expect(estado().data.horaAlerta).toBeUndefined()
+    expect(ultimaMensagem()).toContain('escolha um dos horários')
+  })
+
+  it.each([['07h', 7], ['7h', 7], ['12h', 12], ['19h', 19], ['às 12', 12], ['🌙 19h — Noite', 19]])('horário "%s" continua sendo aceito', async (texto, hora) => {
+    await vincular()
+    await diz(texto)
+    expect(estado().data.horaAlerta).toBe(hora)
+  })
+
+  it.each(['17', '117', '1912', '70', '8h', '24h'])('horário "%s" não é aceito', async (texto) => {
+    await vincular()
+    await diz(texto)
+    expect(estado().stepId).toBe('horario')
   })
 
   it('horário sem nada reconhecível ("qualquer") não é aceito', async () => {

@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.165
+- **Versão atual**: v1.6.166
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.165 — 14/10/2026
+**Versão**: v1.6.166 — 14/10/2026
 
 **Últimas features**:
+- v1.6.166 — Onboarding: estado gravado com `mergeFields:['telegramOnboarding']` (substitui; `merge:true` mesclava `data` e vazava `tempSelections`), `completeOnboarding` descarta `tempSelections`, horário reconhecido por número inteiro. Defeitos 3 (comandos `/x` bloqueados no onboarding) e 4 (grava `notificacoes.tipos` em vez de `telegramTipos`, mexendo no push) seguem abertos
 - v1.6.165 — Testes do onboarding (`onboarding.test.js`); o Firestore fake agora mescla mapas aninhados em `set(..., {merge:true})` como o real. ACHADOS ABERTOS do onboarding (registrados em teste, não corrigidos): (1) `tempSelections` vaza entre etapas de seleção múltipla porque `set(merge:true)` mescla o mapa `telegramOnboarding.data` (a seleção de dias de antecedência aparece pré-marcada nos dias da semana, e confirmar sem tocar salva esse dia; tempSelections ainda cai em `notificacoes`) — correção provável: `mergeFields:['telegramOnboarding']` ao avançar; (2) horário "17h" vira 7h (regex procura o dígito); (3) durante o onboarding `/saldo`, `/ajuda` etc. são tratados como resposta inválida; (4) o onboarding grava `notificacoes.tipos`, mas o agendador usa `telegramTipos` quando existe
 - v1.6.164 — N24/N25 passam a devolver `{ text, confirmar }`: o estado (`reservaTracking.lastRemindData`, `alertasAcimaMedia`) só é gravado DEPOIS de o Telegram aceitar o envio (falha = tenta de novo no próximo ciclo das 19h); `n25.test.js` + casos de falha em `agendador.test.js`. Escolhido entre 3 planos (só testes / testes + confirmar-depois-do-envio / migrar para `alertasEstado`): a migração foi descartada por risco e porque a regra de 5 dias do N24 não cabe no modelo de assinatura
 - v1.6.163 — N24 corrigido (só bot): aporte reconhecido por OCORRÊNCIAS de sobraData até hoje, inclusive (recorrente e mesmo dia), sobra zerada encerra o rastreio, aviso usa min(valor guardado, sobra de hoje); `n24Diferencial.test.js` prova identidade com a versão antiga nos aportes únicos. Aporte agendado para o futuro não encerra a cobrança (a sobra já o desconta). Efeito conhecido: o aporte que reinicia o rastreio é visto mais uma vez no dia seguinte (atrasa a cobrança em 1 dia, uma vez)

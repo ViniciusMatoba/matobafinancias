@@ -3404,10 +3404,12 @@ const STEPS = {
       resize_keyboard: true, one_time_keyboard: true,
     },
     parse(text) {
-      if (/7h|manhã|7\b/i.test(text))   return 7;
-      if (/12h|tarde|12\b/i.test(text)) return 12;
-      if (/19h|noite|19\b/i.test(text)) return 19;
-      return INVALID;
+      // Palavra ou número INTEIRO (7, 07h, 12h, 19...): "17h" não vira 7h (o 7 de 17 não conta)
+      if (/manhã|manha/i.test(text)) return 7;
+      if (/tarde/i.test(text))        return 12;
+      if (/noite/i.test(text))        return 19;
+      const n = text.match(/(?<!\d)(07|7|12|19)(?!\d)/);
+      return n ? Number(n[1]) : INVALID;
     },
     apply(data, val) { data.horaAlerta = val; },
     next: () => 'cartoes',
@@ -3594,7 +3596,8 @@ async function sendOnboardingQuestion(chatId, stepId, data = {}) {
 }
 
 // Exibe resumo e salva ao concluir todas as etapas
-async function completeOnboarding(chatId, uid, data) {
+async function completeOnboarding(chatId, uid, dataBruta) {
+  const { tempSelections: _sobra, ...data } = dataBruta || {};
   await db.collection('users').doc(uid).update({
     telegramOnboarding: FieldValue.delete(),
   });
@@ -3634,9 +3637,10 @@ async function completeOnboarding(chatId, uid, data) {
 // Avança para o próximo passo (ou conclui)
 async function advanceOnboarding(chatId, uid, nextId, data) {
   if (nextId === null) return completeOnboarding(chatId, uid, data);
+  // mergeFields substitui o mapa inteiro; merge:true o mesclaria e deixaria sobras (ex.: tempSelections)
   await db.collection('users').doc(uid).set(
     { telegramOnboarding: { active: true, stepId: nextId, data } },
-    { merge: true }
+    { mergeFields: ['telegramOnboarding'] }
   );
   return sendOnboardingQuestion(chatId, nextId, data);
 }
@@ -3683,7 +3687,7 @@ async function handleMultiSelectStep(chatId, uid, stepId, step, data, text) {
 
   await db.collection('users').doc(uid).set(
     { telegramOnboarding: { active: true, stepId, data: { ...data, tempSelections: newSel } } },
-    { merge: true }
+    { mergeFields: ['telegramOnboarding'] }
   );
 
   return sendMessage(chatId, step.msg(newSel), { reply_markup: step.buildKb(newSel) });
@@ -3692,7 +3696,7 @@ async function handleMultiSelectStep(chatId, uid, stepId, step, data, text) {
 async function startOnboarding(chatId, uid, email, fromUser) {
   await db.collection('users').doc(uid).set(
     { telegramOnboarding: { active: true, stepId: 'horario', data: {} } },
-    { merge: true }
+    { mergeFields: ['telegramOnboarding'] }
   );
   await sendMessage(chatId,
     `✅ *Conta vinculada com sucesso!*\n\n` +

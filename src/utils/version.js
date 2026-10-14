@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.165';
+export const APP_VERSION = '1.6.166';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.166',
+    date: '14/10/2026',
+    changes: [
+      'Onboarding do Telegram: a seleção feita na etapa de cartão (dias de antecedência) não vaza mais para a etapa de dias da semana — antes o dia aparecia pré-marcado e confirmar sem tocar salvava um dia que você não escolheu',
+      'Onboarding do Telegram: "17h" não é mais entendido como 7h; o horário é reconhecido pelo número inteiro (7, 12 ou 19) ou pela palavra (manhã, tarde, noite)',
+      'Quem já fez o onboarding e usa o resumo semanal: vale conferir o dia em Configurações → Bot do Telegram. O app não foi alterado',
+    ],
+  },
   {
     version: '1.6.165',
     date: '14/10/2026',

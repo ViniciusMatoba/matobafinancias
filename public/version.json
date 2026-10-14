@@ -1,9 +1,9 @@
 {
-  "version": "1.6.165",
+  "version": "1.6.166",
   "date": "14/10/2026",
   "notes": [
-    "Testes automatizados do onboarding do Telegram (as 6 perguntas após /vincular): caminho completo, \"não\" em tudo, /pular, respostas inválidas e variações, seleção múltipla e o que é gravado na configuração",
-    "Os testes encontraram defeitos no onboarding, registrados e ainda não corrigidos: a seleção da etapa de cartão vaza para a etapa de dias da semana; \"17h\" é entendido como 7h; durante o onboarding os outros comandos ficam bloqueados; as escolhas não valem para quem já tem alertas do Telegram configurados no app",
-    "Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes"
+    "Onboarding do Telegram: a seleção feita na etapa de cartão (dias de antecedência) não vaza mais para a etapa de dias da semana — antes o dia aparecia pré-marcado e confirmar sem tocar salvava um dia que você não escolheu",
+    "Onboarding do Telegram: \"17h\" não é mais entendido como 7h; o horário é reconhecido pelo número inteiro (7, 12 ou 19) ou pela palavra (manhã, tarde, noite)",
+    "Quem já fez o onboarding e usa o resumo semanal: vale conferir o dia em Configurações → Bot do Telegram. O app não foi alterado"
   ]
 }
