@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.175';
+export const APP_VERSION = '1.6.176';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.176',
+    date: '14/10/2026',
+    changes: [
+      'Organização do código do bot, etapa 5 de 5: o index.js agora é só uma fachada (45 linhas); as 5 funções do Firebase vivem em functions/lib/entradas',
+      'Código movido sem nenhuma linha alterada; nenhuma mudança de comportamento no app ou no bot',
+    ],
+  },
   {
     version: '1.6.175',
     date: '14/10/2026',
