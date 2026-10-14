@@ -22,6 +22,20 @@ function aplicar(base, patch) {
   return out
 }
 
+// set(..., { merge: true }) do Firestore real mescla mapas aninhados recursivamente
+function mesclar(base, patch) {
+  const out = { ...base }
+  for (const [k, v] of Object.entries(patch)) {
+    const ehMapa = v && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)
+      && v.__inc === undefined && v.__union === undefined && v.__remove === undefined && typeof v.toDate !== 'function'
+    if (v === DELETE) delete out[k]
+    else if (ehMapa && out[k] && typeof out[k] === 'object' && !Array.isArray(out[k])) out[k] = mesclar(out[k], v)
+    else if (ehMapa) out[k] = mesclar({}, v)
+    else out[k] = aplicar({}, { [k]: v })[k]
+  }
+  return out
+}
+
 export function criarFakeFirestore() {
   const dados = new Map()
   let seq = 0
@@ -47,7 +61,7 @@ export function criarFakeFirestore() {
         for (const f of opts.mergeFields) novo[f] = data[f]
         dados.set(path, novo)
       } else if (opts.merge) {
-        dados.set(path, aplicar(dados.get(path) || {}, data))
+        dados.set(path, mesclar(dados.get(path) || {}, data))
       } else {
         dados.set(path, aplicar({}, data))
       }

@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.164';
+export const APP_VERSION = '1.6.165';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.165',
+    date: '14/10/2026',
+    changes: [
+      'Testes automatizados do onboarding do Telegram (as 6 perguntas após /vincular): caminho completo, "não" em tudo, /pular, respostas inválidas e variações, seleção múltipla e o que é gravado na configuração',
+      'Os testes encontraram defeitos no onboarding, registrados e ainda não corrigidos: a seleção da etapa de cartão vaza para a etapa de dias da semana; "17h" é entendido como 7h; durante o onboarding os outros comandos ficam bloqueados; as escolhas não valem para quem já tem alertas do Telegram configurados no app',
+      'Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes',
+    ],
+  },
   {
     version: '1.6.164',
     date: '14/10/2026',

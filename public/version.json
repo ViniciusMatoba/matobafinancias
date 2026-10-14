@@ -1,9 +1,9 @@
 {
-  "version": "1.6.164",
+  "version": "1.6.165",
   "date": "14/10/2026",
   "notes": [
-    "Telegram, alertas \"Gastos acima do seu padrão\" (N25) e \"Aporte pendente\" (N24): se o envio falhar (limite de mensagens do Telegram, erro de rede), o aviso não é mais dado como enviado — ele é tentado de novo no próximo ciclo. Antes a categoria (N25) ou o lembrete (N24) ficava marcado como avisado e o aviso se perdia",
-    "Testes automatizados do N25 (limites de 130% e R$ 50, histórico, categorias ignoradas, uma vez por categoria e mês) e das falhas de envio de N24/N25 pelo agendador",
-    "O app não foi alterado"
+    "Testes automatizados do onboarding do Telegram (as 6 perguntas após /vincular): caminho completo, \"não\" em tudo, /pular, respostas inválidas e variações, seleção múltipla e o que é gravado na configuração",
+    "Os testes encontraram defeitos no onboarding, registrados e ainda não corrigidos: a seleção da etapa de cartão vaza para a etapa de dias da semana; \"17h\" é entendido como 7h; durante o onboarding os outros comandos ficam bloqueados; as escolhas não valem para quem já tem alertas do Telegram configurados no app",
+    "Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes"
   ]
 }
