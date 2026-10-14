@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.174';
+export const APP_VERSION = '1.6.175';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.175',
+    date: '14/10/2026',
+    changes: [
+      'Organização do código do bot, etapa 4 de 5: ações dos botões (pagar, adiar), tratamento de callbacks, onboarding e vínculo movidos para functions/lib',
+      'Código movido sem nenhuma linha alterada; nenhuma mudança de comportamento no app ou no bot',
+    ],
+  },
   {
     version: '1.6.174',
     date: '14/10/2026',
