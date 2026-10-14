@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.163';
+export const APP_VERSION = '1.6.164';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.164',
+    date: '14/10/2026',
+    changes: [
+      'Telegram, alertas "Gastos acima do seu padrão" (N25) e "Aporte pendente" (N24): se o envio falhar (limite de mensagens do Telegram, erro de rede), o aviso não é mais dado como enviado — ele é tentado de novo no próximo ciclo. Antes a categoria (N25) ou o lembrete (N24) ficava marcado como avisado e o aviso se perdia',
+      'Testes automatizados do N25 (limites de 130% e R$ 50, histórico, categorias ignoradas, uma vez por categoria e mês) e das falhas de envio de N24/N25 pelo agendador',
+      'O app não foi alterado',
+    ],
+  },
   {
     version: '1.6.163',
     date: '14/10/2026',

@@ -19,7 +19,10 @@ const tracking = () => fake.ler(`config/${UID}`)?.reservaTracking
 /** Roda o N24 com o config que está no banco (como o agendador faz no início da execução). */
 const roda = async (txs, { tipos = ligado, wallet = 0 } = {}) => {
   const config = fake.ler(`config/${UID}`) || {}
-  return bot.checkN24AportePerdido(UID, txs, config, wallet, tipos)
+  const r = await bot.checkN24AportePerdido(UID, txs, config, wallet, tipos)
+  if (!r) return null
+  await r.confirmar() // como o agendador faz depois de um envio bem-sucedido
+  return r.text
 }
 
 beforeEach(() => {

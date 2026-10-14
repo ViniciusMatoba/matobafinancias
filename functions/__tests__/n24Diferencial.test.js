@@ -75,7 +75,9 @@ describe('N24 novo × antigo (aportes únicos posteriores à sobra)', () => {
       const estadoAntigo = fake.ler(`config/${UID}`).reservaTracking
 
       fake.limpar(); fake.seed(`config/${UID}`, tracking ? { reservaTracking: tracking } : {})
-      const msgNova = await bot.checkN24AportePerdido(UID, txs, fake.ler(`config/${UID}`), 0, { n24: true })
+      const resNova = await bot.checkN24AportePerdido(UID, txs, fake.ler(`config/${UID}`), 0, { n24: true })
+      if (resNova) await resNova.confirmar()
+      const msgNova = resNova ? resNova.text : null
       const estadoNovo = fake.ler(`config/${UID}`).reservaTracking
 
       if (tracking && sobraAtual <= 0 && !aportouDepois) {

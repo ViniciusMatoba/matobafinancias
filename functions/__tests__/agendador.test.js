@@ -230,3 +230,72 @@ describe('falhas de envio', () => {
     expect(fake.ler(`config/${UID}`).notificacoes.telegramEnabled).toBe(false)
   })
 })
+
+describe('N25 pelo agendador e envio que falha (N24 e N25)', () => {
+  const NOITE = '22:00:00' // 19h em Brasília: ciclo em que N24/N25 rodam
+  const gasto = (valor, mes) => lancamento({ tipo: 'saida', frequencia: 'unico', dataInicio: `${mes}-10`, descricao: 'Compra', valor, categoria: 'conforto' })
+  const prepararN25 = () => {
+    usuario({ alertas: ['n25'] })
+    for (const m of ['2026-07', '2026-08', '2026-09']) gasto(1000, m)
+    gasto(1500, '2026-10')
+    entrada(20000)
+  }
+  const avisosN25 = () => mensagensEnviadas().filter(t => t.includes('Gastos acima do seu padrão'))
+  const estadoN25 = () => fake.ler(`config/${UID}`).alertasAcimaMedia
+
+  it('envia uma vez no ciclo das 19h e grava a categoria como avisada', async () => {
+    prepararN25()
+    await executar('2026-10-14', NOITE)
+    expect(avisosN25()).toHaveLength(1)
+    expect(estadoN25()).toEqual({ '2026-10': ['conforto'] })
+    await executar('2026-10-15', NOITE)
+    expect(avisosN25()).toHaveLength(1)
+  })
+
+  it('não roda no ciclo da manhã', async () => {
+    prepararN25()
+    await executar('2026-10-14') // 07h
+    expect(avisosN25()).toHaveLength(0)
+  })
+
+  it('opção n25 desligada no Telegram: não envia nem grava', async () => {
+    usuario({ alertas: [], alertasTg: [] })
+    for (const m of ['2026-07', '2026-08', '2026-09']) gasto(1000, m)
+    gasto(1500, '2026-10')
+    await executar('2026-10-14', NOITE)
+    expect(avisosN25()).toHaveLength(0)
+    expect(estadoN25()).toBeUndefined()
+  })
+
+  it('N25: envio que falha NÃO marca a categoria como avisada e é refeito no ciclo seguinte', async () => {
+    prepararN25()
+    instalarTelegramFalso({ falharEnvio: { ok: false, error_code: 429, description: 'Too Many Requests' } })
+    await executar('2026-10-14', NOITE)
+    expect(estadoN25()).toBeUndefined()
+    instalarTelegramFalso()
+    await executar('2026-10-15', NOITE)
+    expect(avisosN25()).toHaveLength(1)
+    expect(estadoN25()).toEqual({ '2026-10': ['conforto'] })
+  })
+
+  it('N25: bot bloqueado desativa o Telegram e não marca nada', async () => {
+    prepararN25()
+    instalarTelegramFalso({ falharEnvio: { ok: false, error_code: 403, description: 'Forbidden: bot was blocked by the user' } })
+    await executar('2026-10-14', NOITE)
+    expect(estadoN25()).toBeUndefined()
+    expect(fake.ler(`users/${UID}`).telegramChatId).toBeUndefined()
+  })
+
+  it('N24: lembrete que falha ao enviar não registra lastRemindData e é refeito no ciclo seguinte', async () => {
+    usuario({ alertas: ['n24'] })
+    entrada(3000)
+    await executar('2026-10-14', NOITE) // começa a rastrear
+    instalarTelegramFalso({ falharEnvio: { ok: false, error_code: 429, description: 'Too Many Requests' } })
+    await executar('2026-10-19', NOITE) // 5 dias: tenta avisar e falha
+    expect(fake.ler(`config/${UID}`).reservaTracking.lastRemindData).toBeNull()
+    instalarTelegramFalso()
+    await executar('2026-10-20', NOITE)
+    expect(mensagensEnviadas().filter(t => t.includes('Aporte pendente'))).toHaveLength(1)
+    expect(fake.ler(`config/${UID}`).reservaTracking.lastRemindData).toBe('2026-10-20')
+  })
+})

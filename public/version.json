@@ -1,10 +1,9 @@
 {
-  "version": "1.6.163",
+  "version": "1.6.164",
   "date": "14/10/2026",
   "notes": [
-    "Telegram, alerta de aporte perdido (N24): agora reconhece aporte recorrente (mensal, semanal ou parcelado) criado antes da sobra e que caiu depois dela — antes cobrava mesmo de quem aporta no automático",
-    "Telegram N24: aporte feito no mesmo dia em que a sobra foi detectada passa a contar",
-    "Telegram N24: se a sobra acabar antes de você aportar, o aviso é encerrado em vez de cobrar um valor que não existe mais; se a sobra diminuiu, o aviso mostra o valor de hoje",
-    "Teste que compara 300 cenários mostra que o resto do comportamento do N24 ficou idêntico ao anterior; o app não foi alterado"
+    "Telegram, alertas \"Gastos acima do seu padrão\" (N25) e \"Aporte pendente\" (N24): se o envio falhar (limite de mensagens do Telegram, erro de rede), o aviso não é mais dado como enviado — ele é tentado de novo no próximo ciclo. Antes a categoria (N25) ou o lembrete (N24) ficava marcado como avisado e o aviso se perdia",
+    "Testes automatizados do N25 (limites de 130% e R$ 50, histórico, categorias ignoradas, uma vez por categoria e mês) e das falhas de envio de N24/N25 pelo agendador",
+    "O app não foi alterado"
   ]
 }

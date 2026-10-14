@@ -1212,14 +1212,16 @@ async function checkN24AportePerdido(uid, transactions, config, walletInitials, 
   const diasDesdeLembrete = tracking.lastRemindData ? daysBetween(tracking.lastRemindData, todayStr) : 999;
   if (diasDesdeLembrete < LIMIAR_DIAS) return null;
 
-  await db.collection('config').doc(uid).set({
-    reservaTracking: { ...tracking, lastRemindData: todayStr }
-  }, { merge: true }).catch(() => {});
-
   // Valor que ainda está disponível hoje (a sobra pode ter diminuído desde o primeiro dia)
   const valorAviso = Math.min(Number(tracking.sobraValor) || sobra, sobra);
   const [, mm, dd] = tracking.sobraData.split('-');
-  return `🔔 *Aporte pendente!*\n\nVocê tinha *${formatBRL(valorAviso)}* disponíveis para guardar ou investir desde ${dd}/${mm} e ainda não registrou nenhum aporte.\n\n_Que tal lançar agora no app?_`;
+  const text = `🔔 *Aporte pendente!*\n\nVocê tinha *${formatBRL(valorAviso)}* disponíveis para guardar ou investir desde ${dd}/${mm} e ainda não registrou nenhum aporte.\n\n_Que tal lançar agora no app?_`;
+  // O lembrete só é registrado quando quem chama confirma que o aviso FOI enviado; se o envio falhar,
+  // ele é tentado de novo no próximo ciclo (antes ficava marcado como enviado e se perdia por 5 dias).
+  const confirmar = () => db.collection('config').doc(uid).set({
+    reservaTracking: { ...tracking, lastRemindData: todayStr }
+  }, { merge: true }).catch(() => {});
+  return { text, confirmar };
 }
 
 // ─── N25 — Categoria acima da média dos últimos meses ────────────────────────
@@ -1259,8 +1261,10 @@ async function checkN25AcimaDaMedia(uid, transactions, config, tipos) {
   }
   if (novas.length === 0) return null;
 
-  // mergeFields substitui o campo inteiro, descartando meses antigos
-  await db.collection('config').doc(uid).set(
+  // O estado só é gravado quando quem chama confirma que o aviso FOI enviado; se o envio falhar, as categorias
+  // continuam "não avisadas" e o aviso é tentado de novo no próximo ciclo.
+  // mergeFields substitui o campo inteiro, descartando meses antigos.
+  const confirmar = () => db.collection('config').doc(uid).set(
     { alertasAcimaMedia: { [mesAtual]: [...jaAvisadas, ...novas.map(n => n.cat)] } },
     { mergeFields: ['alertasAcimaMedia'] }
   ).catch(() => {});
@@ -1272,7 +1276,7 @@ async function checkN25AcimaDaMedia(uid, transactions, config, tipos) {
     msg += `${c.icon} *${c.label}*: ${formatBRL(n.gasto)} lançados no mês — *${n.pct}% acima* da média dos últimos ${hist.length} meses (${formatBRL(n.media)})\n`;
   }
   msg += `\n_Veja os lançamentos: /gastos ${normTxt(GASTOS_CATS[novas[0].cat].label)}_`;
-  return msg;
+  return { text: msg, confirmar };
 }
 
 // ─── N18 — Economia do dia (19h, todos os usuários) ──────────────────────────
@@ -4148,18 +4152,21 @@ exports.dailyNotifications = onSchedule(
           if (telegramEnabled) {
             const n24Tipos = { n24: ((prefs.telegramTipos ?? prefs.tipos ?? {}).n24 !== false) };
             try {
-              const n24Msg = await checkN24AportePerdido(uid, transactions, config, walletInitials, n24Tipos);
-              if (n24Msg) {
-                const tgRes = await sendMessage(chatId, n24Msg);
+              const n24 = await checkN24AportePerdido(uid, transactions, config, walletInitials, n24Tipos);
+              if (n24) {
+                const tgRes = await sendMessage(chatId, n24.text);
                 if (tgRes && tgRes.ok === false) {
+                  // Envio falhou: NÃO confirma, para o lembrete ser tentado de novo no próximo ciclo
                   const isBlocked = tgRes.error_code === 403 ||
                     (tgRes.error_code === 400 && tgRes.description?.includes('chat not found'));
                   if (isBlocked) {
                     logger.warn(`[TELEGRAM] Envio N24 falhou (bot bloqueado) para uid=${uid}. Desativando.`);
                     await disableTelegramForUser(uid);
                   }
+                } else {
+                  await n24.confirmar();
+                  logger.info(`[N24] uid=${uid}: alerta de aporte perdido enviado`);
                 }
-                logger.info(`[N24] uid=${uid}: alerta de aporte perdido enviado`);
               }
             } catch (e24) {
               logger.error(`[N24] uid=${uid}:`, e24.message);
@@ -4170,18 +4177,21 @@ exports.dailyNotifications = onSchedule(
           if (telegramEnabled) {
             const n25Tipos = { n25: ((prefs.telegramTipos ?? prefs.tipos ?? {}).n25 !== false) };
             try {
-              const n25Msg = await checkN25AcimaDaMedia(uid, transactions, config, n25Tipos);
-              if (n25Msg) {
-                const tgRes = await sendMessage(chatId, n25Msg);
+              const n25 = await checkN25AcimaDaMedia(uid, transactions, config, n25Tipos);
+              if (n25) {
+                const tgRes = await sendMessage(chatId, n25.text);
                 if (tgRes && tgRes.ok === false) {
+                  // Envio falhou: NÃO marca as categorias como avisadas, para tentar de novo no próximo ciclo
                   const isBlocked = tgRes.error_code === 403 ||
                     (tgRes.error_code === 400 && tgRes.description?.includes('chat not found'));
                   if (isBlocked) {
                     logger.warn(`[TELEGRAM] Envio N25 falhou (bot bloqueado) para uid=${uid}. Desativando.`);
                     await disableTelegramForUser(uid);
                   }
+                } else {
+                  await n25.confirmar();
+                  logger.info(`[N25] uid=${uid}: alerta de categoria acima da média enviado`);
                 }
-                logger.info(`[N25] uid=${uid}: alerta de categoria acima da média enviado`);
               }
             } catch (e25) {
               logger.error(`[N25] uid=${uid}:`, e25.message);
@@ -4444,7 +4454,7 @@ exports.smsWebhook = onRequest(
 if (process.env.VITEST) {
   module.exports.__test = {
     expandRange, calcSaldoSimples, calcFaturaCardApp, calcParceladosBot, expandDespesasBot,
-    checkNotifications, checkN24AportePerdido, saldoCaixinhaBot, reservaDaCaixinhaBot, filtrarAlertasRepetidos, estadoAposEnvio,
+    checkNotifications, checkN24AportePerdido, checkN25AcimaDaMedia, saldoCaixinhaBot, reservaDaCaixinhaBot, filtrarAlertasRepetidos, estadoAposEnvio,
     calcSobraSeguraBot, sobraPorDataBot, resumirSobraBot,
     computeSpentByCategory, formatBRL,
   };
