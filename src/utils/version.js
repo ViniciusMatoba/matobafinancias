@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.158';
+export const APP_VERSION = '1.6.159';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.159',
+    date: '14/10/2026',
+    changes: [
+      'Limpeza no bot do Telegram: removido o cálculo antigo de fatura de cartão (já sem uso); /fatura, alerta de limite e botão Pago usam só o cálculo igual ao do app',
+      'Sem mudança de comportamento para o usuário; testes de paridade agora confirmam que app e bot calculam a fatura da mesma forma, inclusive fatura paga com parcelas futuras',
+    ],
+  },
   {
     version: '1.6.158',
     date: '14/10/2026',

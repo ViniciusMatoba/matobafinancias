@@ -179,15 +179,9 @@ function getProximoVencimentoBot(card, today) {
 }
 
 /**
- * Calcula faturaAtual e comprometidoFuturo de um cartão.
- * Espelha calcFaturaCard do frontend, incluindo projeção de parcelas virtuais.
- */
-/**
  * Fatura do cartão EXATAMENTE como o app calcula (calcFaturaCard): por expansão de ocorrências na data
- * do vencimento, de mês em mês. Usada só para LEITURA (/fatura e alerta N11). Ao contrário de
- * calcFaturaCardBot, conta as parcelas que uma fatura já paga ainda projeta para os meses seguintes
- * (o filtro de "conferido" vale por ocorrência, não pelo documento de origem).
- * O botão Pago do cartão continua usando calcFaturaCardBot, de propósito.
+ * do vencimento, de mês em mês (/fatura e alerta N11). Conta as parcelas que uma fatura já paga ainda
+ * projeta para os meses seguintes: o filtro de "conferido" vale por ocorrência, não pelo documento de origem.
  */
 function calcFaturaCardApp(card, transactions, today) {
   const proximoVenc = getProximoVencimentoBot(card, today);
@@ -212,73 +206,6 @@ function calcFaturaCardApp(card, transactions, today) {
     faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc: faturaVenc,
     ocorrencias: ocorrenciasEm(faturaVenc),
   };
-}
-
-// Vencimento do mês anterior ao de `venc` (mesmo dia, limitado ao último dia do mês)
-function vencimentoAnteriorBot(venc) {
-  const [y, m, d] = venc.split('-').map(Number);
-  const pm = m === 1 ? 12 : m - 1;
-  const py = m === 1 ? y - 1 : y;
-  const plast = new Date(py, pm, 0).getDate();
-  return `${py}-${String(pm).padStart(2,'0')}-${String(Math.min(d, plast)).padStart(2,'0')}`;
-}
-
-/**
- * Fatura do cartão. Espelha calcFaturaCard do app, inclusive a regra de fatura em atraso:
- * se o vencimento anterior já passou (ou é hoje) e ainda há valor pendente nele, a "fatura atual"
- * é essa vencida (proximoVenc devolve a data dela) e o ciclo aberto entra no comprometido futuro.
- */
-function calcFaturaCardBot(card, transactions, today) {
-  const cardTxs = transactions.filter(
-    t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
-  );
-  const proximoVenc = getProximoVencimentoBot(card, today);
-  const prevVenc = vencimentoAnteriorBot(proximoVenc);
-  const pendenteNoPrev = prevVenc <= today
-    ? expandRange(cardTxs, prevVenc, prevVenc).filter(o => o.date === prevVenc).reduce((a, o) => a + o.valor, 0)
-    : 0;
-  return calcCicloFaturaBot(card, cardTxs, pendenteNoPrev > 0 ? prevVenc : proximoVenc);
-}
-
-function calcCicloFaturaBot(card, cardTxs, proximoVenc) {
-  const prevVencStr = vencimentoAnteriorBot(proximoVenc);
-
-  const realInWindow = cardTxs.filter(
-    t => t.dataInicio > prevVencStr && t.dataInicio <= proximoVenc
-  );
-
-  let faturaAtual = 0;
-  if (realInWindow.length > 0) {
-    realInWindow.forEach(tx => { faturaAtual += Number(tx.valor) || 0; });
-  } else {
-    // Sem lançamento real: projeta parcelas de transações passadas
-    const occs = expandRange(
-      cardTxs.filter(t => t.dataInicio <= prevVencStr),
-      prevVencStr, proximoVenc
-    ).filter(o => o.date > prevVencStr && o.date <= proximoVenc);
-    occs.forEach(o => { faturaAtual += o.valor; });
-  }
-
-  let comprometidoFuturo = 0;
-  cardTxs.filter(t => t.dataInicio > proximoVenc).forEach(tx => {
-    comprometidoFuturo += Number(tx.valor) || 0;
-  });
-  cardTxs.forEach(tx => {
-    if (!tx.itens?.length) return;
-    tx.itens.forEach(item => {
-      if (!item.isParcelado) return;
-      const remaining = (item.totalParcelas || 1) - (item.parcelaAtual || 1);
-      if (remaining <= 0) return;
-      comprometidoFuturo += remaining * (Number(item.valor) || 0);
-    });
-  });
-  if (realInWindow.length === 0) {
-    comprometidoFuturo = Math.max(0, comprometidoFuturo - faturaAtual);
-  }
-
-  const limite = card.limite || 0;
-  const limiteDisponivel = Math.max(0, limite - faturaAtual - comprometidoFuturo);
-  return { faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc, prevVenc: prevVencStr };
 }
 
 // ─── Expansão de transações em um intervalo [from, to] ───────────────────────
@@ -4500,7 +4427,7 @@ exports.smsWebhook = onRequest(
 // Só para testes automatizados (vitest define VITEST); em produção nada extra é exportado.
 if (process.env.VITEST) {
   module.exports.__test = {
-    expandRange, calcSaldoSimples, calcFaturaCardBot, calcFaturaCardApp, calcParceladosBot, expandDespesasBot,
+    expandRange, calcSaldoSimples, calcFaturaCardApp, calcParceladosBot, expandDespesasBot,
     checkNotifications, filtrarAlertasRepetidos, estadoAposEnvio,
     calcSobraSeguraBot, sobraPorDataBot, resumirSobraBot,
     computeSpentByCategory, formatBRL,

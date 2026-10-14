@@ -123,7 +123,7 @@ describe('fatura do cartão: app × bot', () => {
     ['depois do fechamento, antes do vencimento (05/10)', '2026-10-05', 200],
   ])('%s: vencimento e valor coincidem', (_, hoje, esperado) => {
     const app = calcFaturaCard(card, [f1], hoje)
-    const b = bot.calcFaturaCardBot(card, [f1], hoje)
+    const b = bot.calcFaturaCardApp(card, [f1], hoje)
     expect(app.faturaAtual).toBe(esperado)
     expect(b.proximoVenc).toBe(app.proximoVenc)
     expect(b.faturaAtual).toBe(app.faturaAtual)
@@ -133,7 +133,7 @@ describe('fatura do cartão: app × bot', () => {
   describe('fatura vencida e não paga (regra de atraso, v1.6.116)', () => {
     const compara = (txs, hoje) => {
       const app = calcFaturaCard(card, txs, hoje)
-      const b = bot.calcFaturaCardBot(card, txs, hoje)
+      const b = bot.calcFaturaCardApp(card, txs, hoje)
       expect(b.proximoVenc).toBe(app.proximoVenc)
       expect(b.faturaAtual).toBe(app.faturaAtual)
       expect(b.comprometidoFuturo).toBe(app.comprometidoFuturo)
@@ -145,7 +145,7 @@ describe('fatura do cartão: app × bot', () => {
       const app = compara([f1], HOJE)
       expect(app.proximoVenc).toBe('2026-10-10')
       expect(app.faturaAtual).toBe(300)
-      expect(bot.calcFaturaCardBot(card, [f1], HOJE).proximoVenc).toBe('2026-10-10')
+      expect(bot.calcFaturaCardApp(card, [f1], HOJE).proximoVenc).toBe('2026-10-10')
     })
 
     it('vence hoje e não foi paga: ainda é a fatura atual', () => {
@@ -155,17 +155,16 @@ describe('fatura do cartão: app × bot', () => {
     it('depois de paga (conferida) deixa de ser atraso', () => {
       const paga = { ...f1, conferido: true }
       const app = calcFaturaCard(card, [paga], HOJE)
-      const b = bot.calcFaturaCardBot(card, [paga], HOJE)
+      const b = bot.calcFaturaCardApp(card, [paga], HOJE)
       expect(app.proximoVenc).toBe('2026-11-10')
       expect(b.proximoVenc).toBe('2026-11-10')
     })
 
-    // DIVERGÊNCIA CONHECIDA (ainda não corrigida): as parcelas que uma fatura PAGA ainda projeta para os
-    // meses seguintes (TV 2/3, 3/3). O app as conta na fatura do mês; o bot ignora lançamentos conferidos.
-    it('parcelas futuras de uma fatura paga: app conta, bot não', () => {
+    it('parcelas futuras de uma fatura paga: app e bot contam igual (200 no mês seguinte)', () => {
       const paga = { ...f1, conferido: true }
       expect(calcFaturaCard(card, [paga], HOJE).faturaAtual).toBe(200)
-      expect(bot.calcFaturaCardBot(card, [paga], HOJE).faturaAtual).toBe(0)
+      expect(bot.calcFaturaCardApp(card, [paga], HOJE).faturaAtual).toBe(200)
+      compara([paga], HOJE)
     })
 
     it('vencida com outra fatura já lançada no ciclo aberto', () => {

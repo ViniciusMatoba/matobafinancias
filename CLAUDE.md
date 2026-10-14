@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.158
+- **Versão atual**: v1.6.159
 
 ### Regra de bump
 
@@ -118,10 +118,11 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.158 — 14/10/2026
+**Versão**: v1.6.159 — 14/10/2026
 
 **Últimas features**:
-- v1.6.158 — Bot: `handlePayCardCallback` paga a fatura da DATA do botão por ocorrências pendentes (fatura paga continua projetando; real vira conferida; projeções viram um pagamento + exclusão no original; nada pendente = no-op "já estava paga"); N1/N2 mandam a data real do vencimento; `pagoCartao.test.js`. `calcFaturaCardBot` ficou sem uso em produção (só testes de paridade)
+- v1.6.159 — Removidos `calcFaturaCardBot`/`calcCicloFaturaBot`/`vencimentoAnteriorBot`; o bot só tem `calcFaturaCardApp` (paridade total com o app, sem divergências conhecidas de fatura)
+- v1.6.158 — Bot: `handlePayCardCallback` paga a fatura da DATA do botão por ocorrências pendentes (fatura paga continua projetando; real vira conferida; projeções viram um pagamento + exclusão no original; nada pendente = no-op "já estava paga"); N1/N2 mandam a data real do vencimento; `pagoCartao.test.js`.
 - v1.6.157 — Bot: `calcParceladosBot` (por ocorrências, só leitura) alimenta `/parcelados`; fatura paga continua listando parcelas futuras e avulsos contam só de hoje em diante; `parcelados.test.js` (inclui bate-com-o-caixa)
 - v1.6.156 — Bot: `calcFaturaCardApp` (cópia fiel de `calcFaturaCard` do app, por expansão de ocorrências) alimenta `/fatura` e N11, só leitura; `faturaPeloApp.test.js` compara 400 cenários com o app (zero diferenças). (resolvido na v1.6.157)
 - v1.6.155 — Bot: `calcFaturaCardBot` espelha a regra de fatura em atraso do app (`calcCicloFaturaBot` + `vencimentoAnteriorBot`); `handlePayCardCallback` quita a fatura real do ciclo (não cria 2º pagamento). Divergência que RESTA (documentada em `paridade.test.js`): parcelas futuras de fatura já paga — o app conta na fatura do mês, o bot ignora lançamentos conferidos
