@@ -3601,8 +3601,16 @@ async function completeOnboarding(chatId, uid, dataBruta) {
   await db.collection('users').doc(uid).update({
     telegramOnboarding: FieldValue.delete(),
   });
+  // As respostas sim/não valem para o canal TELEGRAM (notificacoes.telegramTipos), que é o que o agendador usa
+  // quando existe. Antes iam para notificacoes.tipos (o do push): responder "não" aqui desligava alertas do push
+  // e, para quem já tinha telegramTipos configurado no app, não valia para o Telegram.
+  // Parte do que o Telegram já usa (telegramTipos, ou tipos se ainda não houver) para não perder as outras escolhas.
+  const cfgDoc = await db.collection('config').doc(uid).get();
+  const notifAtual = (cfgDoc.exists ? cfgDoc.data().notificacoes : null) || {};
+  const baseTelegram = notifAtual.telegramTipos ?? notifAtual.tipos ?? {};
+  const { tipos: respostas = {}, ...ajustes } = data;
   await db.collection('config').doc(uid).set(
-    { notificacoes: { telegramEnabled: true, ...data } },
+    { notificacoes: { telegramEnabled: true, ...ajustes, telegramTipos: { ...baseTelegram, ...respostas } } },
     { merge: true }
   );
 
@@ -3811,12 +3819,18 @@ async function processUpdate(update) {
     );
   }
 
-  // Se usuário tem onboarding ativo, intercepta TODAS as mensagens
+  // Onboarding ativo: as respostas (texto comum e /pular) vão para o cadastro de alertas. Comandos com "/"
+  // funcionam normalmente (antes eram tratados como resposta inválida) e o bot lembra que o cadastro segue pendente.
+  let lembreteOnboarding = false;
   {
     const userData   = usersSnap.docs[0].data();
     const onboarding = userData.telegramOnboarding;
     if (onboarding?.active) {
-      return handleOnboardingStep(chatId, uid, onboarding, text);
+      const ehPular = /^\/(pular|skip)$/i.test(text);
+      if (!text.startsWith('/') || ehPular) {
+        return handleOnboardingStep(chatId, uid, onboarding, text);
+      }
+      lembreteOnboarding = true;
     }
   }
 
@@ -3826,6 +3840,7 @@ async function processUpdate(update) {
     return msgSomenteApp(chatId);
   }
 
+  const executarComando = async () => {
   switch (cmd) {
     case '/saldo':     return handleSaldo(chatId, uid);
     case '/hoje':      return handleHoje(chatId, uid);
@@ -3858,6 +3873,15 @@ async function processUpdate(update) {
         `Comando não reconhecido. Use /ajuda para ver todos os comandos disponíveis.`
       );
   }
+  };
+
+  const resultado = await executarComando();
+  if (lembreteOnboarding) {
+    await sendMessage(chatId,
+      `ℹ️ _Seu cadastro de alertas ainda está em andamento. Quando quiser, responda a última pergunta ou envie /pular para usar o padrão._`
+    );
+  }
+  return resultado;
 }
 
 // Desativa a integração do Telegram para um usuário que bloqueou o bot ou cujo chat não existe mais

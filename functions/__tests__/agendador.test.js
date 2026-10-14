@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   botModule, fake, UID, CHAT, instalarTelegramFalso, mensagensEnviadas, chamadasTelegram,
-  pushesEnviados, pushConfig,
+  pushesEnviados, pushConfig, enviarAoBot, mensagemTelegram,
 } from './helpers'
 
 /**
@@ -297,5 +297,26 @@ describe('N25 pelo agendador e envio que falha (N24 e N25)', () => {
     await executar('2026-10-20', NOITE)
     expect(mensagensEnviadas().filter(t => t.includes('Aporte pendente'))).toHaveLength(1)
     expect(fake.ler(`config/${UID}`).reservaTracking.lastRemindData).toBe('2026-10-20')
+  })
+})
+
+describe('onboarding do Telegram e o agendador', () => {
+  it('responder "não" ao saldo negativo no onboarding desliga só o Telegram: o push continua avisando', async () => {
+    fake.seed(`users/${UID}`, {
+      telegramChatId: String(CHAT), fcmToken: 'tok-push',
+      telegramOnboarding: { active: true, stepId: 'horario', data: {} },
+    })
+    fake.seed(`config/${UID}`, { notificacoes: { enabled: true, horaAlerta: 7, tipos: so('n6') } })
+    lancamento({ tipo: 'saida', frequencia: 'unico', dataInicio: '2026-10-01', descricao: 'Conta', valor: 500, categoria: 'custos_fixos' })
+
+    vi.setSystemTime(new Date('2026-10-14T09:00:00Z'))
+    // horário, cartão=não, orçamento=não, saldo negativo=não, semanal=não, diário=não
+    for (const r of ['manhã', 'não', 'não', 'não', 'não', 'não']) await enviarAoBot(mensagemTelegram(r))
+    expect(fake.ler(`users/${UID}`).telegramOnboarding).toBeUndefined()
+    chamadasTelegram.length = 0
+
+    await executar('2026-10-14') // 07h
+    expect(pushesEnviados.some(p => JSON.stringify(p).includes('negativo'))).toBe(true)
+    expect(mensagensEnviadas().filter(t => t.includes('Saldo atual negativo'))).toHaveLength(0)
   })
 })

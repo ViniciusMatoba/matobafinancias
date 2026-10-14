@@ -77,7 +77,7 @@ describe('caminho completo', () => {
       diasAntecedenciaVencimento: [3],
       diaSemanaResumo: [1, 5],
       diasResumoDiario: 'uteis',
-      tipos: { n1: true, n2: true, n3: true, n4: false, n5: false, n6: true, n7: true, n8: true },
+      telegramTipos: { n1: true, n2: true, n3: true, n4: false, n5: false, n6: true, n7: true, n8: true },
     })
     const resumo = ultimaMensagem()
     expect(resumo).toContain('Tudo configurado')
@@ -98,7 +98,7 @@ describe('caminho completo', () => {
     await diz('n');    expect(estado().stepId).toBe('diario')    // pulou semanal_dia
     await diz('Não')                                             // fim: pulou diario_dias
     expect(estado()).toBeUndefined()
-    expect(notificacoes().tipos).toEqual({ n1: false, n2: false, n3: false, n4: false, n5: false, n6: false, n7: false, n8: false })
+    expect(notificacoes().telegramTipos).toEqual({ n1: false, n2: false, n3: false, n4: false, n5: false, n6: false, n7: false, n8: false })
     expect(notificacoes().horaAlerta).toBe(7)
     expect(ultimaMensagem()).toContain('0 tipo(s) de alerta ativado(s)')
   })
@@ -125,7 +125,7 @@ describe('/pular usa o valor padrão de cada etapa', () => {
       diasAntecedenciaVencimento: [3],
       diaSemanaResumo: [1],
       diasResumoDiario: 'todos',
-      tipos: { n1: true, n2: true, n3: true, n4: true, n5: true, n6: true, n7: true, n8: true },
+      telegramTipos: { n1: true, n2: true, n3: true, n4: true, n5: true, n6: true, n7: true, n8: true },
     })
   })
 
@@ -234,6 +234,115 @@ describe('seleção múltipla', () => {
     expect(estado().data.tempSelections.sort()).toEqual([0, 3])
     await diz('☑️ Confirmar seleção')
     expect(estado().data.diaSemanaResumo).toEqual([0, 3])
+  })
+})
+
+describe('comandos durante o onboarding', () => {
+  const saldo = () => fake.seed(`transactions/${UID}/entries/e1`, { tipo: 'entrada', frequencia: 'unico', dataInicio: '2026-10-01', valor: 500, descricao: 'x' })
+
+  it('/saldo funciona e o bot lembra que o cadastro de alertas segue pendente', async () => {
+    await vincular(); saldo()
+    await diz('/saldo')
+    const todas = mensagensEnviadas()
+    expect(todas.some(t => t.includes('Saldo Global') && t.includes('R$ 500,00'))).toBe(true)
+    expect(ultimaMensagem()).toContain('cadastro de alertas ainda está em andamento')
+    expect(estado()).toMatchObject({ active: true, stepId: 'horario' }) // onboarding intacto
+  })
+
+  it('/ajuda e comando desconhecido também respondem, com o lembrete', async () => {
+    await vincular()
+    await diz('/ajuda')
+    expect(mensagensEnviadas().some(t => t.includes('/saldo'))).toBe(true)
+    expect(ultimaMensagem()).toContain('cadastro de alertas ainda está em andamento')
+    await diz('/xyz')
+    expect(mensagensEnviadas().some(t => t.includes('Comando não reconhecido'))).toBe(true)
+    expect(estado().stepId).toBe('horario')
+  })
+
+  it('/pular continua sendo resposta do onboarding (não é tratado como comando)', async () => {
+    await vincular()
+    await diz('/pular')
+    expect(estado().stepId).toBe('cartoes')
+    expect(ultimaMensagem()).not.toContain('cadastro de alertas ainda está em andamento')
+  })
+
+  it('texto comum continua sendo resposta (inclusive o que parece botão de outro menu)', async () => {
+    await vincular()
+    await diz('💰 Saldo')
+    expect(ultimaMensagem()).toContain('escolha um dos horários')
+    expect(estado().stepId).toBe('horario')
+  })
+
+  it('depois de concluir, os comandos não trazem mais o lembrete', async () => {
+    await vincular(); saldo()
+    for (let i = 0; i < 9; i++) await diz('/pular')
+    expect(estado()).toBeUndefined()
+    chamadasTelegram.length = 0
+    await diz('/saldo')
+    expect(mensagensEnviadas().join(' | ')).toContain('Saldo Global')
+    expect(mensagensEnviadas().join(' | ')).not.toContain('cadastro de alertas ainda está em andamento')
+  })
+
+  it('/vincular continua funcionando durante o onboarding', async () => {
+    await vincular()
+    await diz('manhã')
+    fake.seed('telegramLinks/NOVO11', { uid: UID, email: 'vini@exemplo.com', expiresAt: { toDate: () => new Date('2026-10-14T16:00:00Z') } })
+    await diz('/vincular NOVO11')
+    expect(estado().stepId).toBe('horario')
+  })
+
+  it('outros usuários não são afetados: chat sem onboarding usa os comandos sem lembrete', async () => {
+    fake.seed('users/u2', { telegramChatId: '999' })
+    fake.seed('config/u2', {})
+    await diz('/ajuda', 999)
+    expect(ultimaMensagem()).not.toContain('cadastro de alertas')
+  })
+})
+
+describe('onde as respostas são gravadas (canal Telegram, não o push)', () => {
+  const todosNao = async () => { for (const r of ['manhã', 'não', 'não', 'não', 'não', 'não']) await diz(r) }
+
+  it('não mexe nos tipos do push (notificacoes.tipos)', async () => {
+    await vincular()
+    fake.seed(`config/${UID}`, { notificacoes: { enabled: true, tipos: { n1: true, n6: true, n9: false } } })
+    await todosNao()
+    expect(notificacoes().tipos).toEqual({ n1: true, n6: true, n9: false })
+  })
+
+  it('sem telegramTipos anterior parte dos tipos atuais e aplica as respostas por cima', async () => {
+    await vincular()
+    fake.seed(`config/${UID}`, { notificacoes: { tipos: { n6: true, n9: false, n12: false } } })
+    await todosNao()
+    expect(notificacoes().telegramTipos).toEqual({
+      n9: false, n12: false, // vieram dos tipos que o Telegram já usava
+      n1: false, n2: false, n3: false, n4: false, n5: false, n6: false, n7: false, n8: false, // respostas
+    })
+  })
+
+  it('quem já tem telegramTipos (do app): respostas valem e as demais escolhas ficam como estão', async () => {
+    await vincular()
+    fake.seed(`config/${UID}`, { notificacoes: { telegramTipos: { n1: true, n4: true, n12: false, n22: true } } })
+    await todosNao()
+    const t = notificacoes().telegramTipos
+    expect(t.n1).toBe(false)   // respondido "não"
+    expect(t.n4).toBe(false)   // respondido "não"
+    expect(t.n12).toBe(false)  // não perguntado: mantido
+    expect(t.n22).toBe(true)   // não perguntado: mantido
+  })
+
+  it('config vazio: grava só as respostas', async () => {
+    await vincular()
+    await diz('manhã'); await diz('sim')
+    await diz('/pular')
+    for (const r of ['não', 'não', 'não', 'não']) await diz(r)
+    expect(notificacoes().telegramTipos).toMatchObject({ n1: true, n2: true, n3: true, n4: false, n6: false })
+    expect(notificacoes().tipos).toBeUndefined()
+  })
+
+  it('horário, dias e resumos continuam em notificacoes (valem para o agendador)', async () => {
+    await vincular()
+    await diz('noite'); await diz('não'); await diz('não'); await diz('não'); await diz('não'); await diz('não')
+    expect(notificacoes()).toMatchObject({ telegramEnabled: true, horaAlerta: 19 })
   })
 })
 

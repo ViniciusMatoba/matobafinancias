@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.166';
+export const APP_VERSION = '1.6.167';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.167',
+    date: '14/10/2026',
+    changes: [
+      'Onboarding do Telegram: durante o cadastro de alertas os comandos (/saldo, /ajuda etc.) agora funcionam normalmente e o bot lembra que o cadastro segue pendente; /pular continua valendo como resposta',
+      'Onboarding do Telegram: suas respostas sim/não agora valem para o canal Telegram (e partem do que você já tinha configurado), em vez de alterar os alertas do push — antes, responder "não" aqui desligava alertas do push e não valia para quem já configurou o Telegram no app',
+      'O app não foi alterado',
+    ],
+  },
   {
     version: '1.6.166',
     date: '14/10/2026',

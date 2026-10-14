@@ -1,9 +1,9 @@
 {
-  "version": "1.6.166",
+  "version": "1.6.167",
   "date": "14/10/2026",
   "notes": [
-    "Onboarding do Telegram: a seleção feita na etapa de cartão (dias de antecedência) não vaza mais para a etapa de dias da semana — antes o dia aparecia pré-marcado e confirmar sem tocar salvava um dia que você não escolheu",
-    "Onboarding do Telegram: \"17h\" não é mais entendido como 7h; o horário é reconhecido pelo número inteiro (7, 12 ou 19) ou pela palavra (manhã, tarde, noite)",
-    "Quem já fez o onboarding e usa o resumo semanal: vale conferir o dia em Configurações → Bot do Telegram. O app não foi alterado"
+    "Onboarding do Telegram: durante o cadastro de alertas os comandos (/saldo, /ajuda etc.) agora funcionam normalmente e o bot lembra que o cadastro segue pendente; /pular continua valendo como resposta",
+    "Onboarding do Telegram: suas respostas sim/não agora valem para o canal Telegram (e partem do que você já tinha configurado), em vez de alterar os alertas do push — antes, responder \"não\" aqui desligava alertas do push e não valia para quem já configurou o Telegram no app",
+    "O app não foi alterado"
   ]
 }
