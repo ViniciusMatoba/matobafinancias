@@ -43,7 +43,7 @@ describe('N23 — dia 15', () => {
   })
 
   it('reserva incompleta: percentual, barra, quanto falta e divisão 60/40 da sobra', () => {
-    const [m] = roda({ config: PERFIL, goals: [GOAL], txs: [entrada(6000, { goalId: 'g1' })] })
+    const [m] = roda({ config: PERFIL, goals: [GOAL], txs: [entrada(12000), investimento(6000, { metaId: 'g1' })] })
     expect(m).toContain('33%')
     expect(m).toContain('R$ 6.000,00 de R$ 18.000,00')
     expect(m).toContain('Falta: *R$ 12.000,00*')
@@ -53,7 +53,7 @@ describe('N23 — dia 15', () => {
   })
 
   it('reserva completa: parabéns e 100% livre para investir', () => {
-    const [m] = roda({ config: PERFIL, goals: [GOAL], txs: [entrada(18000, { goalId: 'g1' })] })
+    const [m] = roda({ config: PERFIL, goals: [GOAL], txs: [entrada(30000), investimento(18000, { metaId: 'g1' })] })
     expect(m).toContain('100%')
     expect(m).toContain('Reserva completa')
     expect(m).toContain('100% livre para investir')
@@ -117,46 +117,58 @@ describe('N23 — dias sem relatório', () => {
   })
 })
 
-describe('N23 — comportamentos atuais registrados (ver relatório da avaliação)', () => {
-  describe('fevereiro', () => {
-    fixarRelogio('2027-02-28T15:00:00Z')
-    it('o relatório "do fim do mês" não sai em fevereiro (não existe dia 30)', () => {
-      expect(roda({ config: PERFIL, goals: [GOAL], txs: [entrada(5000)] })).toHaveLength(0)
-    })
-  })
-
-  describe('vínculo da reserva', () => {
+describe('N23 — reserva = saldo da caixinha (mesma regra da tela Metas)', () => {
+  describe('dia 15', () => {
     fixarRelogio('2026-10-15T15:00:00Z')
-    const goalComSaldo = { ...GOAL, saldoInicial: 500 }
 
-    it('aporte ligado à caixinha por goalId é contado como entrada na reserva', () => {
-      const [m] = roda({ config: PERFIL, goals: [goalComSaldo], txs: [entrada(2000, { goalId: 'g1' })] })
-      expect(m).toContain('R$ 2.000,00 de R$ 18.000,00')
+    it('aporte gravado como o app grava (metaId) entra na reserva', () => {
+      const [m] = roda({ config: PERFIL, goals: [GOAL], txs: [entrada(9000), investimento(6000, { metaId: 'g1' })] })
+      expect(m).toContain('R$ 6.000,00 de R$ 18.000,00')
     })
 
-    // O app grava o vínculo do aporte em metaId (TransactionForm / tela Metas); o cálculo da reserva
-    // (tela Investir e N23) procura goalId/cartaoVinculo. Por isso aportes feitos pelo app não contam.
-    it('aporte gravado como o app grava (metaId) NÃO entra na reserva — cai no saldo inicial da meta', () => {
-      const [m] = roda({ config: PERFIL, goals: [goalComSaldo], txs: [entrada(5000), investimento(6000, { metaId: 'g1' })] })
-      expect(m).toContain('R$ 500,00 de R$ 18.000,00')
+    it('vários aportes e uma retirada (saída) na caixinha: soma e subtrai', () => {
+      const txs = [
+        entrada(20000),
+        investimento(5000, { metaId: 'g1' }), investimento(4000, { metaId: 'g1' }),
+        { id: 'r1', tipo: 'saida', frequencia: 'unico', dataInicio: '2026-10-05', descricao: 'Resgate', valor: 1500, metaId: 'g1' },
+      ]
+      const [m] = roda({ config: PERFIL, goals: [GOAL], txs })
+      expect(m).toContain('R$ 7.500,00 de R$ 18.000,00')
     })
 
-    it('aporte tipo investimento ligado por goalId conta NEGATIVO e a reserva vira zero (sinal do caixa)', () => {
-      const [m] = roda({ config: PERFIL, goals: [goalComSaldo], txs: [entrada(5000), investimento(6000, { goalId: 'g1' })] })
+    it('aportes de outra caixinha ou sem caixinha não contam', () => {
+      const txs = [entrada(9000), investimento(3000, { metaId: 'outra' }), investimento(2000)]
+      const [m] = roda({ config: PERFIL, goals: [GOAL], txs })
       expect(m).toContain('R$ 0,00 de R$ 18.000,00')
     })
 
-    it('movimentações que somam exatamente zero voltam ao saldo inicial da meta', () => {
-      const [m] = roda({
-        config: PERFIL, goals: [goalComSaldo],
-        txs: [entrada(5000), entrada(1000, { goalId: 'g1' }), investimento(1000, { goalId: 'g1' })],
-      })
-      expect(m).toContain('R$ 500,00 de R$ 18.000,00')
+    it('goalId (campo que o app nunca grava) não vale mais', () => {
+      const [m] = roda({ config: PERFIL, goals: [GOAL], txs: [entrada(9000), investimento(6000, { goalId: 'g1' })] })
+      expect(m).toContain('R$ 0,00 de R$ 18.000,00')
+    })
+
+    it('retiradas maiores que os aportes: a reserva nunca fica negativa', () => {
+      const txs = [entrada(9000), { id: 'r2', tipo: 'saida', frequencia: 'unico', dataInicio: '2026-10-05', descricao: 'x', valor: 800, metaId: 'g1' }]
+      const [m] = roda({ config: PERFIL, goals: [GOAL], txs })
+      expect(m).toContain('R$ 0,00 de R$ 18.000,00')
+    })
+
+    it('reserva completa pelos aportes da caixinha muda a divisão: 100% livre para investir', () => {
+      const [m] = roda({ config: PERFIL, goals: [GOAL], txs: [entrada(30000), investimento(18000, { metaId: 'g1' })] })
+      expect(m).toContain('Reserva completa')
+      expect(m).toContain('100% livre para investir')
     })
 
     it('caixinha configurada mas inexistente: não mostra bloco da reserva', () => {
       const [m] = roda({ config: PERFIL, goals: [], txs: [entrada(5000)] })
       expect(m).not.toContain('Reserva de Emergência')
+    })
+  })
+
+  describe('fevereiro (comportamento registrado)', () => {
+    fixarRelogio('2027-02-28T15:00:00Z')
+    it('o relatório "do fim do mês" não sai em fevereiro (não existe dia 30)', () => {
+      expect(roda({ config: PERFIL, goals: [GOAL], txs: [entrada(5000)] })).toHaveLength(0)
     })
   })
 })

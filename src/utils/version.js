@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.160';
+export const APP_VERSION = '1.6.161';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.161',
+    date: '14/10/2026',
+    changes: [
+      'Fix da reserva de emergência: a tela Investir e o Telegram (relatório N23, /reserva e /investimentos) procuravam os aportes por um campo que o app nunca grava, então o progresso da reserva ficava sempre em R$ 0. Agora a reserva é o saldo da caixinha escolhida — o mesmo número da tela Metas (aportes e entradas somam, saídas subtraem)',
+      'Com isso, ao completar a reserva a sugestão de divisão 60/40 passa a virar 100% livre para investir, como previsto',
+      'Nenhum dado foi alterado; é só o cálculo de leitura. A tela Metas e o card de reserva da Home não mudaram',
+    ],
+  },
   {
     version: '1.6.160',
     date: '14/10/2026',

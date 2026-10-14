@@ -1,8 +1,9 @@
 {
-  "version": "1.6.160",
+  "version": "1.6.161",
   "date": "14/10/2026",
   "notes": [
-    "Testes automatizados do relatório de investimentos do Telegram (N23, dias 15 e 30): mensagens, divisão 60/40, reserva completa, sobra abaixo de R$ 200 e dias sem disparo",
-    "Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes"
+    "Fix da reserva de emergência: a tela Investir e o Telegram (relatório N23, /reserva e /investimentos) procuravam os aportes por um campo que o app nunca grava, então o progresso da reserva ficava sempre em R$ 0. Agora a reserva é o saldo da caixinha escolhida — o mesmo número da tela Metas (aportes e entradas somam, saídas subtraem)",
+    "Com isso, ao completar a reserva a sugestão de divisão 60/40 passa a virar 100% livre para investir, como previsto",
+    "Nenhum dado foi alterado; é só o cálculo de leitura. A tela Metas e o card de reserva da Home não mudaram"
   ]
 }

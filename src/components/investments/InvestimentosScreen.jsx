@@ -3,6 +3,7 @@ import { ShieldCheck, TrendingUp, Info, Check, AlertTriangle } from 'lucide-reac
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { calcularSobraSegura, SOBRA_MINIMA } from '../../utils/projectionCalc';
+import { reservaDaCaixinha } from '../../utils/caixinha';
 
 const FAR_PAST = '2020-01-01';
 
@@ -87,20 +88,11 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
   }, [transactions]);
 
   // ── Saldo acumulado da caixinha de reserva ───────────────────────────────────
-  const reservaAtual = useMemo(() => {
-    if (!reservaGoalId || !goals?.length) return 0;
-    const g = goals.find(g => g.id === reservaGoalId);
-    if (!g) return 0;
-    // soma movimentações do tipo investimento vinculadas à caixinha
-    const movs = (transactions || []).filter(t =>
-      (t.goalId === reservaGoalId || t.cartaoVinculo === reservaGoalId) &&
-      (t.tipo === 'investimento' || t.tipo === 'entrada')
-    );
-    const total = movs.flatMap(t => expandOccurrences(t, FAR_PAST, today))
-      .reduce((acc, o) => acc + o.valor * o.sinal, 0);
-    // fallback: usa saldoInicial da meta se não houver movimentações
-    return total !== 0 ? Math.max(total, 0) : (g.saldoInicial || 0);
-  }, [reservaGoalId, goals, transactions, today]);
+  // Mesmo número da tela Metas: lançamentos ligados à caixinha por metaId (saída subtrai, o resto soma)
+  const reservaAtual = useMemo(
+    () => reservaDaCaixinha(transactions, goals, reservaGoalId),
+    [reservaGoalId, goals, transactions]
+  );
 
   // ── Sobra segura (valor disponível para poupar) ──────────────────────────────
   // `investivel` já é 0 quando a sobra está abaixo do mínimo (SOBRA_MINIMA); `proxima` é a próxima data em que ela cresce

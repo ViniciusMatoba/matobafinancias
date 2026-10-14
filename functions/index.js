@@ -505,6 +505,27 @@ function getTopExpensesForCategory(transactions, category, currentMonth) {
   return sorted.map(([desc, val]) => `${desc}: ${formatBRL(val)}`).join(', ');
 }
 
+/**
+ * Saldo de uma caixinha — mesma regra da tela Metas do app e do /meta: lançamentos ligados por `metaId`
+ * (o aporte pelo app é gravado assim); saída subtrai, o resto soma; cada lançamento conta uma vez.
+ * Espelha src/utils/caixinha.js (a paridade é testada).
+ */
+function saldoCaixinhaBot(transactions, goalId) {
+  if (!goalId) return 0;
+  return (transactions || [])
+    .filter(t => t.metaId === goalId)
+    .reduce((acc, t) => {
+      const valor = Number(t.valor) || 0;
+      return t.tipo === 'saida' ? acc - valor : acc + valor;
+    }, 0);
+}
+
+/** Reserva de emergência: saldo da caixinha escolhida, nunca negativo (0 se a caixinha não existe). */
+function reservaDaCaixinhaBot(transactions, goals, goalId) {
+  if (!goalId || !(goals || []).some(g => g.id === goalId)) return 0;
+  return Math.max(saldoCaixinhaBot(transactions, goalId), 0);
+}
+
 // ─── Verificações de notificação (N1-N17) ───────────────────────────────────
 function checkNotifications(cards, transactions, config, prefs, goals = [], walletInitials = 0) {
   const msgs  = [];
@@ -1042,15 +1063,8 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     if (reservaGoalId && goals.length > 0) {
       const reservaGoal = goals.find(g => g.id === reservaGoalId);
       if (reservaGoal) {
-        const movs = transactions.filter(t =>
-          (t.goalId === reservaGoalId || t.cartaoVinculo === reservaGoalId) &&
-          (t.tipo === 'investimento' || t.tipo === 'entrada')
-        );
-        const total = movs.flatMap(t => {
-          const occs = expandRange([t], FAR_PAST, todayStr);
-          return occs;
-        }).reduce((acc, o) => acc + (o.tipo === 'entrada' ? o.valor : -o.valor), 0);
-        reservaAtual = Math.max(total !== 0 ? total : (reservaGoal.saldoInicial || 0), 0);
+        // Mesmo número da tela Metas (aportes ligados à caixinha por metaId)
+        reservaAtual = reservaDaCaixinhaBot(transactions, goals, reservaGoalId);
         metaTotal = despesasMens * mesesMeta;
       }
     }
@@ -1761,13 +1775,7 @@ async function handleReserva(chatId, uid) {
   if (inv.reservaGoalId) {
     const reservaGoal = goals.find(g => g.id === inv.reservaGoalId);
     if (reservaGoal) {
-      const movs = transactions.filter(t =>
-        (t.goalId === inv.reservaGoalId || t.cartaoVinculo === inv.reservaGoalId) &&
-        (t.tipo === 'investimento' || t.tipo === 'entrada')
-      );
-      const total = expandRange(movs, FAR_PAST, todayStrBrasilia())
-        .reduce((acc, o) => acc + (o.tipo === 'entrada' ? o.valor : -o.valor), 0);
-      reservaAtual = Math.max(total !== 0 ? total : (reservaGoal.saldoInicial || 0), 0);
+      reservaAtual = reservaDaCaixinhaBot(transactions, goals, inv.reservaGoalId); // igual à tela Metas
     }
   }
 
@@ -1826,13 +1834,7 @@ async function handleInvestimentos(chatId, uid) {
     if (inv.reservaGoalId) {
       const reservaGoal = goals.find(g => g.id === inv.reservaGoalId);
       if (reservaGoal) {
-        const movs = transactions.filter(t =>
-          (t.goalId === inv.reservaGoalId || t.cartaoVinculo === inv.reservaGoalId) &&
-          (t.tipo === 'investimento' || t.tipo === 'entrada')
-        );
-        const total = expandRange(movs, FAR_PAST, todayStr)
-          .reduce((acc, o) => acc + (o.tipo === 'entrada' ? o.valor : -o.valor), 0);
-        reservaAtual = Math.max(total !== 0 ? total : (reservaGoal.saldoInicial || 0), 0);
+        reservaAtual = reservaDaCaixinhaBot(transactions, goals, inv.reservaGoalId); // igual à tela Metas
       }
     }
     const reservaCompleta = reservaAtual >= metaTotal;
@@ -4428,7 +4430,7 @@ exports.smsWebhook = onRequest(
 if (process.env.VITEST) {
   module.exports.__test = {
     expandRange, calcSaldoSimples, calcFaturaCardApp, calcParceladosBot, expandDespesasBot,
-    checkNotifications, checkN24AportePerdido, filtrarAlertasRepetidos, estadoAposEnvio,
+    checkNotifications, checkN24AportePerdido, saldoCaixinhaBot, reservaDaCaixinhaBot, filtrarAlertasRepetidos, estadoAposEnvio,
     calcSobraSeguraBot, sobraPorDataBot, resumirSobraBot,
     computeSpentByCategory, formatBRL,
   };
