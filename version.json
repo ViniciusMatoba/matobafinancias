@@ -1,10 +1,9 @@
 {
-  "version": "1.6.179",
+  "version": "1.6.180",
   "date": "14/10/2026",
   "notes": [
-    "Limite mensal por tag (opcional): em Configurações → Tags cada tag ganha o botão \"+ Limite\", onde você define, altera ou remove um teto mensal (ex.: Mercado R$ 800) quando quiser. Tag sem limite funciona como sempre, e renomear a tag mantém o limite",
-    "Painel → Tags: bloco \"Limites do mês\" com a barra de cada tag que tem limite (verde, amarelo a partir de 80%, vermelho acima de 100%), quanto resta ou quanto passou. Aparece nos períodos \"Mês atual\" e \"Mês anterior\"",
-    "Novo aviso no Telegram e no push (\"Limite mensal por tag\"): avisa em 80% e quando passa de 100%, uma vez por patamar em cada mês, só para tags que têm limite. Pode ser desligado em Configurações → Notificações",
-    "O comando /tags do Telegram mostra o percentual do limite e o que resta (ou quanto passou) abaixo de cada tag que tem limite"
+    "Projeção da reserva de emergência no seu ritmo real de aportes: na tela Investir, no /reserva e no relatório de investimentos do Telegram aparece \"No seu ritmo (R$ X/mês): N meses — mês/ano\". O ritmo é a mediana do que entrou na caixinha de reserva nos últimos 3 meses completos (um aporte isolado muito grande não distorce)",
+    "Sem aportes recentes a projeção diz que ainda não dá para calcular; com pouco histórico avisa; acima de 10 anos mostra \"mais de 10 anos\". A estimativa baseada na sobra sugerida continua, agora logo abaixo e com o texto \"Se você aportar a sugestão\"",
+    "Corrigido o plural \"1 meses\" na estimativa da tela Investir"
   ]
 }
