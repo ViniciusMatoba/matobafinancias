@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.151';
+export const APP_VERSION = '1.6.152';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.152',
+    date: '14/10/2026',
+    changes: [
+      'Testes do bot do Telegram de ponta a ponta (Firestore e Telegram simulados): vínculo, /saldo, /gastos, /tags, /meses, /investimentos, botões Pago e Adiar (inclusive fatura projetada sem duplicar o caixa) e os webhooks do Telegram e de notificação bancária',
+      'Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes; a pasta de testes não vai no deploy das functions',
+    ],
+  },
   {
     version: '1.6.151',
     date: '14/10/2026',

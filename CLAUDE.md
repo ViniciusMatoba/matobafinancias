@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.151
+- **Versão atual**: v1.6.152
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.151 — 14/10/2026
+**Versão**: v1.6.152 — 14/10/2026
 
 **Últimas features**:
+- v1.6.152 — Testes do bot de ponta a ponta: `functions/__tests__/fakeFirestore.js` (Firestore em memória, injetado no `firebase-admin` por `helpers.js`), `comandos.test.js` (comandos, Pago/Adiar), `webhooks.test.js` (telegramWebhook e smsWebhook). `firebase.json` ignora `__tests__` no deploy
 - v1.6.151 — Testes do bot em `functions/__tests__/` (`helpers.js` carrega o `index.js` com `VITEST=true`, que expõe `__test`): paridade app×bot (`paridade.test.js`) e alertas/dedupe (`alertas.test.js`). Divergência conhecida documentada: fatura vencida não paga (app mostra a vencida, bot a próxima). Ao mudar regra de caixa/competência/alerta, rodar `npx vitest run`
 - v1.6.150 — Estado de avisos só dos enviados (`estadoAposEnvio`); webhook Telegram recusa sem `TELEGRAM_SECRET_TOKEN`; regra `users/{uid}` bloqueia o app de alterar `telegramChatId` (deploy: `firebase deploy --only firestore:rules`); `npm audit fix`; lint limpo (resta só react-refresh em AppContext)
 - v1.6.149 — Telegram/push sem repetição (estado em `alertasEstado/{uid}`, `estado:{chave,sig,repetirDias}` nas msgs, `filtrarAlertasRepetidos`); Liberdade = meta; sobra segura ≥ R$ 200 (`SOBRA_MINIMA`) + próxima janela (`sobraPorData`/`resumirSobra` no app, `calcSobraSeguraBot` no bot); fix dupla contagem de hoje no bot

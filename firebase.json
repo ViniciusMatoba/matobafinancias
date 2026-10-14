@@ -10,7 +10,8 @@
       "ignore": [
         "node_modules",
         ".git",
-        ".env"
+        ".env",
+        "__tests__"
       ]
     }
   ]
