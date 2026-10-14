@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.159
+- **Versão atual**: v1.6.160
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.159 — 14/10/2026
+**Versão**: v1.6.160 — 14/10/2026
 
 **Últimas features**:
+- v1.6.160 — Testes do N23 (`n23.test.js`). ACHADOS ABERTOS (registrados em teste, não corrigidos): (1) aportes são gravados com `metaId` (formulário/tela Metas), mas a reserva na tela Investir e no N23 procura `goalId`/`cartaoVinculo` — aportes feitos pelo app não entram na reserva (cai no `saldoInicial` da meta); (2) com `goalId`, `investimento` conta negativo e a reserva vira 0; (3) movimentações que somam 0 voltam ao saldo inicial; (4) N23 do dia 30 não existe em fevereiro
 - v1.6.159 — Removidos `calcFaturaCardBot`/`calcCicloFaturaBot`/`vencimentoAnteriorBot`; o bot só tem `calcFaturaCardApp` (paridade total com o app, sem divergências conhecidas de fatura)
 - v1.6.158 — Bot: `handlePayCardCallback` paga a fatura da DATA do botão por ocorrências pendentes (fatura paga continua projetando; real vira conferida; projeções viram um pagamento + exclusão no original; nada pendente = no-op "já estava paga"); N1/N2 mandam a data real do vencimento; `pagoCartao.test.js`.
 - v1.6.157 — Bot: `calcParceladosBot` (por ocorrências, só leitura) alimenta `/parcelados`; fatura paga continua listando parcelas futuras e avulsos contam só de hoje em diante; `parcelados.test.js` (inclui bate-com-o-caixa)

@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.159';
+export const APP_VERSION = '1.6.160';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.160',
+    date: '14/10/2026',
+    changes: [
+      'Testes automatizados do relatório de investimentos do Telegram (N23, dias 15 e 30): mensagens, divisão 60/40, reserva completa, sobra abaixo de R$ 200 e dias sem disparo',
+      'Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes',
+    ],
+  },
   {
     version: '1.6.159',
     date: '14/10/2026',

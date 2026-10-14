@@ -4428,7 +4428,7 @@ exports.smsWebhook = onRequest(
 if (process.env.VITEST) {
   module.exports.__test = {
     expandRange, calcSaldoSimples, calcFaturaCardApp, calcParceladosBot, expandDespesasBot,
-    checkNotifications, filtrarAlertasRepetidos, estadoAposEnvio,
+    checkNotifications, checkN24AportePerdido, filtrarAlertasRepetidos, estadoAposEnvio,
     calcSobraSeguraBot, sobraPorDataBot, resumirSobraBot,
     computeSpentByCategory, formatBRL,
   };

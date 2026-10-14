@@ -1,8 +1,8 @@
 {
-  "version": "1.6.159",
+  "version": "1.6.160",
   "date": "14/10/2026",
   "notes": [
-    "Limpeza no bot do Telegram: removido o cálculo antigo de fatura de cartão (já sem uso); /fatura, alerta de limite e botão Pago usam só o cálculo igual ao do app",
-    "Sem mudança de comportamento para o usuário; testes de paridade agora confirmam que app e bot calculam a fatura da mesma forma, inclusive fatura paga com parcelas futuras"
+    "Testes automatizados do relatório de investimentos do Telegram (N23, dias 15 e 30): mensagens, divisão 60/40, reserva completa, sobra abaixo de R$ 200 e dias sem disparo",
+    "Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes"
   ]
 }
