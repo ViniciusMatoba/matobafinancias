@@ -1,8 +1,8 @@
 {
-  "version": "1.6.171",
+  "version": "1.6.172",
   "date": "14/10/2026",
   "notes": [
-    "Preparação para organizar o código do bot em módulos: teste de fumaça que roda todos os comandos, botões e funções exportadas e falha em qualquer erro, e verificação automática de identificadores indefinidos nas Cloud Functions (agora parte do release)",
-    "Nenhuma mudança de comportamento no app ou no bot"
+    "Organização do código do bot, etapa 1 de 5: infraestrutura, utilitários e motores de cálculo foram movidos do index.js para módulos (functions/lib)",
+    "Código movido sem nenhuma linha alterada; nenhuma mudança de comportamento no app ou no bot"
   ]
 }
