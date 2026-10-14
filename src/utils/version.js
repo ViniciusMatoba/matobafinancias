@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.157';
+export const APP_VERSION = '1.6.158';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.158',
+    date: '14/10/2026',
+    changes: [
+      'Telegram, botão Pago do cartão: agora quita a parcela do mês de uma fatura que já foi paga e ainda projeta parcelas (antes criava um pagamento de R$ 0, não quitava nada e dizia "Fatura paga")',
+      'O botão paga a fatura da data do alerta (não a de "hoje"); clique repetido ou alerta antigo não grava nada e avisa que a fatura já estava paga; nunca cria pagamento zerado',
+      'Alertas "Fatura vence hoje" e "Fatura em X dias" passam ao botão a data real do vencimento — antes, no dia do vencimento, o botão podia apontar para a fatura do mês seguinte. O texto dos alertas não mudou',
+      'As gravações são as mesmas do app (exclui a data no original e cria o pagamento sem reprojetar); o app não foi alterado',
+    ],
+  },
   {
     version: '1.6.157',
     date: '14/10/2026',

@@ -592,14 +592,14 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   if (tipos.n1 !== false) {
     for (const card of cards) {
       if (card.diaVencimento === day) {
-        const proximoVenc = getProximoVencimentoBot(card, todayStr);
+        // Vence HOJE: a data do botão é hoje (e não o "próximo ciclo" pela regra de fechamento)
         const realTx = transactions.find(
-          t => t.tipo === 'cartao' && t.cartaoId === card.id && t.dataInicio === proximoVenc
+          t => t.tipo === 'cartao' && t.cartaoId === card.id && t.dataInicio === todayStr && !t.conferido
         );
         msgs.push({
           text: `💳 *Fatura vence hoje!*\n${card.nome} — não esqueça de efetuar o pagamento.`,
           txId: realTx ? realTx.id : `virtual:${card.id}`,
-          occDate: proximoVenc
+          occDate: todayStr
         });
       }
     }
@@ -613,9 +613,10 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       const dX = new Date(hoje); dX.setDate(dX.getDate() + diasAviso);
       for (const card of cards) {
         if (card.diaVencimento === dX.getDate()) {
-          const proximoVenc = getProximoVencimentoBot(card, todayStr);
+          // A data do botão é a do vencimento que o aviso anuncia (hoje + X dias)
+          const proximoVenc = dateStrFromDate(dX);
           const realTx = transactions.find(
-            t => t.tipo === 'cartao' && t.cartaoId === card.id && t.dataInicio === proximoVenc
+            t => t.tipo === 'cartao' && t.cartaoId === card.id && t.dataInicio === proximoVenc && !t.conferido
           );
           msgs.push({
             text: `📅 *Fatura em ${diasAviso} dia${diasAviso > 1 ? 's' : ''}*\n${card.nome} vence no dia *${card.diaVencimento}*.`,
@@ -2526,6 +2527,15 @@ async function handlePayCallback(chatId, uid, txId, occDate) {
   }
 }
 
+/**
+ * Botão Pago de um cartão (alerta de vencimento sem fatura lançada de verdade).
+ * Paga a fatura da data `occDate` — a do alerta, não a de "hoje" —, com as mesmas gravações do app:
+ *  - fatura real pendente na data: vira paga e vai para hoje;
+ *  - parcelas projetadas na data: a data é excluída do lançamento de origem e um único pagamento
+ *    (itens como "não parcelados", para não projetar de novo) é criado.
+ * Uma fatura paga também projeta parcelas, por isso o filtro de "conferido" vale por ocorrência.
+ * Sem nada pendente na data não grava nada e devolve { jaPaga: true } (clique repetido, alerta antigo).
+ */
 async function handlePayCardCallback(chatId, uid, cardId, occDate) {
   const cardRef = db.collection('cards').doc(uid).collection('list').doc(cardId);
   const cardDoc = await cardRef.get();
@@ -2536,62 +2546,51 @@ async function handlePayCardCallback(chatId, uid, cardId, occDate) {
   card.id = cardDoc.id;
 
   const today = todayStrBrasilia();
-  
   const { transactions } = await loadUserData(uid);
-  const { faturaAtual, proximoVenc, prevVenc } = calcFaturaCardBot(card, transactions, today);
-  
-  const cardTxs = transactions.filter(
-    t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
-  );
+  const cardTxs = transactions.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id);
+  const pendentes = expandRange(cardTxs, occDate, occDate)
+    .filter(o => o.date === occDate && !o.tx.conferido);
+  if (pendentes.length === 0) return { jaPaga: true };
 
-  // Fatura já lançada de verdade no ciclo (o mesmo critério do cálculo da fatura): quita ela mesma,
-  // como o botão Pago de um lançamento. Criar outro pagamento por cima contaria a fatura duas vezes no caixa.
-  const reaisNoCiclo = cardTxs.filter(t => t.dataInicio > prevVenc && t.dataInicio <= proximoVenc);
-  if (reaisNoCiclo.length > 0) {
-    for (const t of reaisNoCiclo) {
-      await db.collection('transactions').doc(uid).collection('entries').doc(t.id)
-        .update({ dataInicio: today, conferido: true });
-    }
-    return;
+  const entries = db.collection('transactions').doc(uid).collection('entries');
+  const reais = new Map();
+  const projetadas = [];
+  for (const o of pendentes) {
+    if (String(o.tx.id || '').includes('-proj-')) projetadas.push(o);
+    else reais.set(o.tx.id, o);
   }
-  
-  const occs = expandRange(
-    cardTxs.filter(t => t.dataInicio <= prevVenc),
-    prevVenc, proximoVenc
-  ).filter(o => o.date > prevVenc && o.date <= proximoVenc);
-  
-  for (const o of occs) {
-    const parentId = o.tx.id.split('-proj-')[0];
-    const parentRef = db.collection('transactions').doc(uid).collection('entries').doc(parentId);
-    const parentDoc = await parentRef.get();
-    if (parentDoc.exists) {
-      const exclusoes = [...(parentDoc.data().exclusoes || [])];
-      if (!exclusoes.includes(o.date)) {
-        exclusoes.push(o.date);
-        await parentRef.update({ exclusoes });
+
+  for (const id of reais.keys()) {
+    await entries.doc(id).update({ dataInicio: today, conferido: true });
+  }
+
+  if (projetadas.length > 0) {
+    for (const o of projetadas) {
+      const parentRef = entries.doc(o.tx.id.split('-proj-')[0]);
+      const parentDoc = await parentRef.get();
+      if (parentDoc.exists) {
+        const exclusoes = [...(parentDoc.data().exclusoes || [])];
+        if (!exclusoes.includes(o.date)) {
+          exclusoes.push(o.date);
+          await parentRef.update({ exclusoes });
+        }
       }
     }
+    const itens = projetadas.flatMap(o => o.tx.itens || []);
+    await entries.add({
+      tipo: 'cartao',
+      frequencia: 'unico',
+      descricao: `Pagamento Fatura - ${card.nome}`,
+      valor: projetadas.reduce((acc, o) => acc + o.valor, 0),
+      dataInicio: today,
+      categoria: null,
+      dataFim: null,
+      itens: itensDoLancamentoRealBot(itens),
+      cartaoId: cardId,
+      conferido: true
+    });
   }
-  
-  const newItens = [];
-  occs.forEach(o => {
-    if (o.tx?.itens?.length > 0) {
-      o.tx.itens.forEach(item => newItens.push(item));
-    }
-  });
-
-  await db.collection('transactions').doc(uid).collection('entries').add({
-    tipo: 'cartao',
-    frequencia: 'unico',
-    descricao: `Pagamento Fatura - ${card.nome}`,
-    valor: faturaAtual,
-    dataInicio: today,
-    categoria: null,
-    dataFim: null,
-    itens: itensDoLancamentoRealBot(newItens),
-    cartaoId: cardId,
-    conferido: true
-  });
+  return { jaPaga: false };
 }
 
 async function handlePostponeCallback(chatId, uid, txId, occDate, days) {
@@ -2884,8 +2883,10 @@ async function handleCallbackQuery(cbq) {
     const cardId = parts[1];
     const occDate = parts[2];
     try {
-      await handlePayCardCallback(chatId, uid, cardId, occDate);
-      const updatedText = (cbq.message?.text || '') + `\n\n✅ *Fatura paga em ${todayStrBrasilia().split('-').reverse().join('/')}*`;
+      const res = await handlePayCardCallback(chatId, uid, cardId, occDate);
+      const updatedText = (cbq.message?.text || '') + (res?.jaPaga
+        ? '\n\nℹ️ *Essa fatura já estava paga — nada foi alterado.*'
+        : `\n\n✅ *Fatura paga em ${todayStrBrasilia().split('-').reverse().join('/')}*`);
       await tgFetch('editMessageText', {
         chat_id: chatId,
         message_id: msgId,
