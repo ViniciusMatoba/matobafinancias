@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.161';
+export const APP_VERSION = '1.6.162';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.162',
+    date: '14/10/2026',
+    changes: [
+      'Testes automatizados do alerta de aporte perdido (N24) e do agendador de notificações de ponta a ponta: horários, canais Telegram e push, memória de avisos, falhas de envio (push, limite do Telegram, bot bloqueado) e vários dias seguidos',
+      'Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes',
+    ],
+  },
   {
     version: '1.6.161',
     date: '14/10/2026',

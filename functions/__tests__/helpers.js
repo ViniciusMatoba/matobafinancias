@@ -6,12 +6,29 @@ import { criarFakeFirestore, FieldValue } from './fakeFirestore'
 
 const require = createRequire(import.meta.url)
 process.env.VITEST = 'true'
+// As Cloud Functions rodam em UTC e o bot lê getHours()/getDate() do relógio local: os testes imitam isso
+process.env.TZ = 'UTC'
 
 export const fake = criarFakeFirestore()
 // firebase-admin/firestore é substituído no cache do require antes de o bot ser carregado
 const caminho = require.resolve('firebase-admin/firestore')
 require('firebase-admin/firestore') // garante a entrada no cache
 require.cache[caminho].exports = { getFirestore: () => fake.db, FieldValue }
+
+// Push (FCM) simulado: registra o que seria enviado e pode falhar sob demanda
+export const pushesEnviados = []
+export const pushConfig = { falhar: null } // ex.: { code: 'messaging/registration-token-not-registered' }
+const caminhoMsg = require.resolve('firebase-admin/messaging')
+require('firebase-admin/messaging')
+require.cache[caminhoMsg].exports = {
+  getMessaging: () => ({
+    send: async (m) => {
+      if (pushConfig.falhar) { const e = new Error('push falhou'); e.code = pushConfig.falhar; throw e }
+      pushesEnviados.push(m)
+      return 'ok'
+    },
+  }),
+}
 
 export const botModule = require('../index.js')
 export const bot = botModule.__test
