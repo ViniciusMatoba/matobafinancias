@@ -1,9 +1,8 @@
 {
-  "version": "1.6.180",
+  "version": "1.6.181",
   "date": "14/10/2026",
   "notes": [
-    "Projeção da reserva de emergência no seu ritmo real de aportes: na tela Investir, no /reserva e no relatório de investimentos do Telegram aparece \"No seu ritmo (R$ X/mês): N meses — mês/ano\". O ritmo é a mediana do que entrou na caixinha de reserva nos últimos 3 meses completos (um aporte isolado muito grande não distorce)",
-    "Sem aportes recentes a projeção diz que ainda não dá para calcular; com pouco histórico avisa; acima de 10 anos mostra \"mais de 10 anos\". A estimativa baseada na sobra sugerida continua, agora logo abaixo e com o texto \"Se você aportar a sugestão\"",
-    "Corrigido o plural \"1 meses\" na estimativa da tela Investir"
+    "Data prevista para quitar as parcelas: o /parcelados do Telegram ganhou a seção \"Quando você fica livre\" — quanto as parcelas pesam por mês hoje, o mês em que cada compra termina, quanto isso libera por mês e a data a partir da qual você fica livre de parcelas (se não fizer novas compras parceladas). O texto que já existia não mudou",
+    "Nova aba \"Parcelas\" no Painel com a mesma informação: totais (ainda a pagar, peso por mês, livre a partir de), o cronograma de términos e as compras por cartão e avulsas, com a última parcela de cada uma. As datas são as de pagamento (vencimento da fatura)"
   ]
 }
