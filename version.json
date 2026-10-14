@@ -1,10 +1,8 @@
 {
-  "version": "1.6.150",
+  "version": "1.6.151",
   "date": "14/10/2026",
   "notes": [
-    "Telegram e push: se o envio de um aviso falhar, ele não fica mais marcado como \"já avisado\" e é tentado de novo no próximo horário",
-    "Segurança: o webhook do Telegram passa a recusar chamadas quando o segredo não estiver configurado; o perfil do usuário não aceita mais que o app altere o telegramChatId (só as Cloud Functions vinculam)",
-    "Dependências atualizadas (npm audit fix) — vulnerabilidade crítica do websocket-driver e as do vite/postcss removidas",
-    "Limpeza de código: erros de lint corrigidos (dica de tela, donut de alocação em Investir, imports e variáveis sem uso)"
+    "Testes automatizados do bot do Telegram (functions/__tests__): paridade app × bot em caixa, competência, sobra segura e fatura do cartão; cenários dos alertas N4/N5/N6/N9/N11/N22 e do controle de repetição de avisos",
+    "Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes"
   ]
 }
