@@ -1,8 +1,8 @@
 {
-  "version": "1.6.181",
+  "version": "1.6.182",
   "date": "14/10/2026",
   "notes": [
-    "Data prevista para quitar as parcelas: o /parcelados do Telegram ganhou a seção \"Quando você fica livre\" — quanto as parcelas pesam por mês hoje, o mês em que cada compra termina, quanto isso libera por mês e a data a partir da qual você fica livre de parcelas (se não fizer novas compras parceladas). O texto que já existia não mudou",
-    "Nova aba \"Parcelas\" no Painel com a mesma informação: totais (ainda a pagar, peso por mês, livre a partir de), o cronograma de términos e as compras por cartão e avulsas, com a última parcela de cada uma. As datas são as de pagamento (vencimento da fatura)"
+    "Novo aviso \"Assinaturas: reajuste e nova\" (Telegram e push): avisa quando uma assinatura do cartão muda de valor (para mais ou para menos) e quando aparece uma assinatura nova, uma vez por mudança. DESLIGADO por padrão — revise a lista em Painel → Assinaturas e ligue em Configurações → Notificações quando estiver satisfeito",
+    "Para não gerar uma enxurrada no começo: o reajuste só vale para itens com pelo menos 3 meses de histórico, e \"assinatura nova\" só avisa quando você já tem 4 meses ou mais de compras no cartão (itens com a tag Assinaturas avisam já na primeira vez). Itens ocultos no app e itens de valor variável (mercado, delivery) nunca avisam"
   ]
 }
