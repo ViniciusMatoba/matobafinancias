@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.173
+- **Versão atual**: v1.6.174
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.173 — 14/10/2026
+**Versão**: v1.6.174 — 14/10/2026
 
 **Últimas features**:
+- v1.6.174 — Divisão do `functions/index.js`, etapa 3/5: `lib/comandos` (consultas, planejamento, gastos, investimentos, faturas, configurar, ajuda). Movido VERBATIM por script; validado por lint:functions, fumaca.test.js e suíte completa
 - v1.6.173 — Divisão do `functions/index.js`, etapa 2/5: `lib/alertas` (notificacoes = checkNotifications N1-N23, aporte = N24, acimaMedia = N25, economiaDia = N18, memoria = memória de avisos). Movido VERBATIM por script; validado por lint:functions, fumaca.test.js e suíte completa
 - v1.6.172 — Divisão do `functions/index.js`, etapa 1/5: `lib/infra` (firebase, telegram, config, dados), `lib/util` (datas, formato) e `lib/motor` (caixa, competência, fatura projetada, sobra, caixinha, parcelados). Código movido VERBATIM por script (trecho a trecho, comparado ao original) e conferido por `npm run lint:functions` + `fumaca.test.js`
 - v1.6.171 — Etapa 0 da divisão do `functions/index.js` em módulos: `fumaca.test.js` (todo comando/botão/exportada roda sem erro) e `npm run lint:functions` (`eslint.functions.config.mjs`, só `no-undef`; também roda no release)

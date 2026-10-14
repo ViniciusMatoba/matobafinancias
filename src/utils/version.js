@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.173';
+export const APP_VERSION = '1.6.174';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.174',
+    date: '14/10/2026',
+    changes: [
+      'Organização do código do bot, etapa 3 de 5: comandos do Telegram (consultas, planejamento, gastos, investimentos, faturas, configurar, ajuda) movidos para functions/lib/comandos',
+      'Código movido sem nenhuma linha alterada; nenhuma mudança de comportamento no app ou no bot',
+    ],
+  },
   {
     version: '1.6.173',
     date: '14/10/2026',

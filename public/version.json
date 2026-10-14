@@ -1,8 +1,8 @@
 {
-  "version": "1.6.173",
+  "version": "1.6.174",
   "date": "14/10/2026",
   "notes": [
-    "Organização do código do bot, etapa 2 de 5: alertas (N1 a N25) e memória de avisos movidos do index.js para functions/lib/alertas",
+    "Organização do código do bot, etapa 3 de 5: comandos do Telegram (consultas, planejamento, gastos, investimentos, faturas, configurar, ajuda) movidos para functions/lib/comandos",
     "Código movido sem nenhuma linha alterada; nenhuma mudança de comportamento no app ou no bot"
   ]
 }
