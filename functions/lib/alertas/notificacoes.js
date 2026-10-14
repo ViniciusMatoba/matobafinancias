@@ -2,6 +2,7 @@
 
 const { calcFaturaCardApp, calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange } = require('../motor/caixa');
 const { reservaDaCaixinhaBot } = require('../motor/caixinha');
+const { linhaProjecaoReserva, projecaoReservaBot, ritmoDaReservaBot } = require('../motor/reservaRitmo');
 const { CATEGORY_ORDER, collectMonthExpenses, computeSpentByCategory, expandDespesasBot, getTopExpensesForCategory } = require('../motor/competencia');
 const { SOBRA_MINIMA_BOT, calcSobraSeguraBot } = require('../motor/sobra');
 const { addOneMonthClamped, dateStrFromDate, getNowBrasilia } = require('../util/datas');
@@ -619,7 +620,12 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         if (reservaCompleta) {
           msg += `✅ _Reserva completa! Parabéns!_\n\n`;
         } else {
-          msg += `Falta: *${formatBRL(metaTotal - reservaAtual)}*\n\n`;
+          msg += `Falta: *${formatBRL(metaTotal - reservaAtual)}*\n`;
+          // Projeção no ritmo real de aportes (mediana dos últimos 3 meses completos)
+          const ritmo = ritmoDaReservaBot({ transactions, goalId: reservaGoalId });
+          const proj = projecaoReservaBot({ falta: metaTotal - reservaAtual, ritmoMensal: ritmo.ritmoMensal });
+          const linhaProj = linhaProjecaoReserva(ritmo, proj, formatBRL);
+          msg += linhaProj ? `${linhaProj}\n\n` : `\n`;
         }
       }
 

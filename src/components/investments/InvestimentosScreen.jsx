@@ -4,6 +4,7 @@ import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { calcularSobraSegura, SOBRA_MINIMA } from '../../utils/projectionCalc';
 import { reservaDaCaixinha } from '../../utils/caixinha';
+import { ritmoDaReserva, projecaoReserva, rotuloMes } from '../../utils/reservaRitmo';
 
 const FAR_PAST = '2020-01-01';
 
@@ -108,6 +109,13 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
   const reservaPct    = metaTotal > 0 ? (reservaAtual / metaTotal) * 100 : 0;
   const reservaCompleta = reservaAtual >= metaTotal && metaTotal > 0;
   const faltaReserva  = Math.max(metaTotal - reservaAtual, 0);
+
+  // Projeção no ritmo REAL de aportes (mediana dos últimos 3 meses completos da caixinha de reserva)
+  const ritmoReserva = useMemo(
+    () => ritmoDaReserva({ transactions, goalId: reservaGoalId, hoje: today }),
+    [transactions, reservaGoalId, today]
+  );
+  const projecaoRitmo = projecaoReserva({ falta: faltaReserva, ritmoMensal: ritmoReserva.ritmoMensal, hoje: today });
 
   const aporteRecomendado = sobraSegura;
   const aporteReserva     = reservaCompleta ? 0 : aporteRecomendado * 0.6;
@@ -357,11 +365,27 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
                   </p>
                 )}
 
-                {/* Estimativa de conclusão */}
-                {aporteReserva > 0 && faltaReserva > 0 && (
-                  <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-                    ⏱ Estimativa: {Math.ceil(faltaReserva / aporteReserva)} meses para completar a reserva
-                  </p>
+                {/* Estimativa de conclusão: a principal é no seu ritmo real; a da sugestão vem logo abaixo */}
+                {faltaReserva > 0 && (
+                  <div style={{ textAlign: 'center' }}>
+                    {projecaoRitmo.semRitmo ? (
+                      <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--text-muted)' }}>
+                        ⏱ Sem aportes na reserva nos últimos meses — ainda não dá para projetar quando ela completa.
+                      </p>
+                    ) : (
+                      <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                        ⏱ No seu ritmo ({formatBRL(ritmoReserva.ritmoMensal)}/mês{ritmoReserva.mesesBase === 1 ? ', só 1 mês de histórico' : ''}):{' '}
+                        {projecaoRitmo.maisDeDezAnos
+                          ? 'mais de 10 anos para completar a reserva'
+                          : `${projecaoRitmo.meses} ${projecaoRitmo.meses === 1 ? 'mês' : 'meses'} — ${rotuloMes(projecaoRitmo.previsto)}`}
+                      </p>
+                    )}
+                    {aporteReserva > 0 && (
+                      <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>
+                        Se você aportar a sugestão ({formatBRL(aporteReserva)}/mês): {Math.ceil(faltaReserva / aporteReserva)} {Math.ceil(faltaReserva / aporteReserva) === 1 ? 'mês' : 'meses'}
+                      </p>
+                    )}
+                  </div>
                 )}
               </>
             )}

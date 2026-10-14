@@ -5,6 +5,7 @@ const { db } = require('../infra/firebase');
 const { sendMessage } = require('../infra/telegram');
 const { expandRange } = require('../motor/caixa');
 const { reservaDaCaixinhaBot } = require('../motor/caixinha');
+const { linhaProjecaoReserva, projecaoReservaBot, ritmoDaReservaBot } = require('../motor/reservaRitmo');
 const { SOBRA_MINIMA_BOT, calcSobraSeguraBot } = require('../motor/sobra');
 const { dateStrFromDate, getNowBrasilia } = require('../util/datas');
 const { barra, formatBRL } = require('../util/formato');
@@ -49,6 +50,13 @@ async function handleReserva(chatId, uid) {
     msg += completa
       ? `✅ *Reserva completa!* 100% da sua sobra já pode ir para investimentos.`
       : `Falta *${formatBRL(metaTotal - reservaAtual)}* para completar.`;
+    if (!completa) {
+      // Projeção no ritmo real de aportes (mediana dos últimos 3 meses completos)
+      const ritmo = ritmoDaReservaBot({ transactions, goalId: inv.reservaGoalId });
+      const proj = projecaoReservaBot({ falta: metaTotal - reservaAtual, ritmoMensal: ritmo.ritmoMensal });
+      const linha = linhaProjecaoReserva(ritmo, proj, formatBRL);
+      if (linha) msg += `\n\n${linha}`;
+    }
   } else {
     msg += `_Meta ainda não calculada — verifique a configuração no app._`;
   }

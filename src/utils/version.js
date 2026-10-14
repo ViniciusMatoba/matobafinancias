@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.179';
+export const APP_VERSION = '1.6.180';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.180',
+    date: '14/10/2026',
+    changes: [
+      'Projeção da reserva de emergência no seu ritmo real de aportes: na tela Investir, no /reserva e no relatório de investimentos do Telegram aparece "No seu ritmo (R$ X/mês): N meses — mês/ano". O ritmo é a mediana do que entrou na caixinha de reserva nos últimos 3 meses completos (um aporte isolado muito grande não distorce)',
+      'Sem aportes recentes a projeção diz que ainda não dá para calcular; com pouco histórico avisa; acima de 10 anos mostra "mais de 10 anos". A estimativa baseada na sobra sugerida continua, agora logo abaixo e com o texto "Se você aportar a sugestão"',
+      'Corrigido o plural "1 meses" na estimativa da tela Investir',
+    ],
+  },
   {
     version: '1.6.179',
     date: '14/10/2026',
