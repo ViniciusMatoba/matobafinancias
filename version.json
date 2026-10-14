@@ -1,9 +1,8 @@
 {
-  "version": "1.6.161",
+  "version": "1.6.162",
   "date": "14/10/2026",
   "notes": [
-    "Fix da reserva de emergência: a tela Investir e o Telegram (relatório N23, /reserva e /investimentos) procuravam os aportes por um campo que o app nunca grava, então o progresso da reserva ficava sempre em R$ 0. Agora a reserva é o saldo da caixinha escolhida — o mesmo número da tela Metas (aportes e entradas somam, saídas subtraem)",
-    "Com isso, ao completar a reserva a sugestão de divisão 60/40 passa a virar 100% livre para investir, como previsto",
-    "Nenhum dado foi alterado; é só o cálculo de leitura. A tela Metas e o card de reserva da Home não mudaram"
+    "Testes automatizados do alerta de aporte perdido (N24) e do agendador de notificações de ponta a ponta: horários, canais Telegram e push, memória de avisos, falhas de envio (push, limite do Telegram, bot bloqueado) e vários dias seguidos",
+    "Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes"
   ]
 }
