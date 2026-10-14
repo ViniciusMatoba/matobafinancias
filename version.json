@@ -1,10 +1,10 @@
 {
-  "version": "1.6.178",
+  "version": "1.6.179",
   "date": "14/10/2026",
   "notes": [
-    "Nova aba \"Assinaturas\" no Painel: lista o que cai todo mês no cartão (itens que repetem em meses seguintes, uma vez por mês, com valor estável, mais tudo com a tag Assinaturas), com o valor atual, desde quando existe, o último reajuste e o total por mês e por ano",
-    "A mesma tela mostra os recorrentes fora do cartão (Pix e débito) e, separado e fora dos totais, os itens que repetem todo mês mas com valor variável (mercado, delivery, transporte). Um botão \"Ocultar\" tira da lista o que não é assinatura, e dá para mostrar de novo",
-    "Novo comando /assinaturas no Telegram com a mesma lista e os totais",
-    "Para desenvolvimento: modo de demonstração (npm run dev:demo) que abre o app com dados fictícios, sem login e sem tocar na produção. Não faz parte do app publicado"
+    "Limite mensal por tag (opcional): em Configurações → Tags cada tag ganha o botão \"+ Limite\", onde você define, altera ou remove um teto mensal (ex.: Mercado R$ 800) quando quiser. Tag sem limite funciona como sempre, e renomear a tag mantém o limite",
+    "Painel → Tags: bloco \"Limites do mês\" com a barra de cada tag que tem limite (verde, amarelo a partir de 80%, vermelho acima de 100%), quanto resta ou quanto passou. Aparece nos períodos \"Mês atual\" e \"Mês anterior\"",
+    "Novo aviso no Telegram e no push (\"Limite mensal por tag\"): avisa em 80% e quando passa de 100%, uma vez por patamar em cada mês, só para tags que têm limite. Pode ser desligado em Configurações → Notificações",
+    "O comando /tags do Telegram mostra o percentual do limite e o que resta (ou quanto passou) abaixo de cada tag que tem limite"
   ]
 }
