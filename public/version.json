@@ -1,8 +1,8 @@
 {
-  "version": "1.6.169",
+  "version": "1.6.170",
   "date": "14/10/2026",
   "notes": [
-    "Telegram, relatório de investimentos (N23): o relatório do fim do mês agora também sai em fevereiro (dia 28, ou 29 em ano bissexto). Nos demais meses continua no dia 30; antes o relatório só existia no dia 30 e nunca saía em fevereiro",
-    "O cabeçalho mostra o dia real do relatório (por exemplo \"Dia 28 de Fevereiro\") e a descrição do alerta em Configurações foi atualizada. O resto do relatório não mudou"
+    "Revisão geral final: limpeza de uma constante sem uso no bot e atualização da documentação interna. Nenhuma mudança de comportamento no app ou no bot",
+    "Verificação: 494 testes automatizados passando em quatro fusos horários, build sem erros e nenhum erro nos logs das Cloud Functions"
   ]
 }

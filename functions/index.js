@@ -29,7 +29,6 @@ const db = getFirestore();
 // ─── Configuração ──────────────────────────────────────────────────────────────
 const BOT_TOKEN   = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM    = `https://api.telegram.org/bot${BOT_TOKEN}`;
-const PROJECT_ID  = process.env.GCLOUD_PROJECT || 'matobafinancas';
 const REGION      = 'us-central1';
 
 // Meses em português (índice 1–12 = Janeiro–Dezembro)

@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.169
+- **Versão atual**: v1.6.170
 
 ### Regra de bump
 
@@ -118,14 +118,15 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.169 — 14/10/2026
+**Versão**: v1.6.170 — 14/10/2026
 
 **Últimas features**:
+- v1.6.170 — Revisão geral final: removida constante sem uso (`PROJECT_ID`) e corrigida nota desatualizada do onboarding neste arquivo. Suíte (494 testes) verificada em 4 fusos horários (UTC, São Paulo, Tóquio, Los Angeles). Risco conhecido: o bot depende de o servidor rodar em UTC (`getNowBrasilia` devolve uma data "deslocada" lida com getHours/getDate locais) — os testes fixam TZ=UTC como na produção
 - v1.6.169 — N23: fim do mês = `min(30, último dia do mês)` (fevereiro 28/29; demais meses seguem no dia 30); cabeçalho com o dia real; `n23.test.js` varre todos os dias de 2026 e fev/2028 (exatamente 2 relatórios por mês). Escolhida a regra R1 (R2 = sempre o último dia, mudaria 7 meses)
 - v1.6.168 — Home: banner da reserva usa `resumoReservaHome`/`acharCaixinhaReserva` (`src/utils/caixinha.js`): caixinha = `config.investimentos.reservaGoalId` (senão o nome), saldo = `saldoCaixinha` (igual Metas; recorrente conta uma vez), meta = `goal.metaFinal` (senão `despesasMens × mesesMeta`), caso `semMeta` com botão "Definir a meta da reserva". Antes: busca só por nome, saldo pelo sinal do caixa (aporte negativo), meta de 3 fontes. `caixinha.test.js` (18)
 - v1.6.167 — Onboarding: comandos "/x" passam durante o cadastro (com lembrete; `/pular` segue sendo resposta); `completeOnboarding` grava em `notificacoes.telegramTipos` (base = telegramTipos ou tipos atuais) e não mexe mais em `tipos` (push). Todos os 4 defeitos do onboarding resolvidos (v1.6.166 e v1.6.167). Escolhido entre 5 planos: Plano 2 (duas versões por risco)
 - v1.6.166 — Onboarding: estado gravado com `mergeFields:['telegramOnboarding']` (substitui; `merge:true` mesclava `data` e vazava `tempSelections`), `completeOnboarding` descarta `tempSelections`, horário reconhecido por número inteiro. (defeitos 3 e 4 resolvidos na v1.6.167)
-- v1.6.165 — Testes do onboarding (`onboarding.test.js`); o Firestore fake agora mescla mapas aninhados em `set(..., {merge:true})` como o real. ACHADOS ABERTOS do onboarding (registrados em teste, não corrigidos): (1) `tempSelections` vaza entre etapas de seleção múltipla porque `set(merge:true)` mescla o mapa `telegramOnboarding.data` (a seleção de dias de antecedência aparece pré-marcada nos dias da semana, e confirmar sem tocar salva esse dia; tempSelections ainda cai em `notificacoes`) — correção provável: `mergeFields:['telegramOnboarding']` ao avançar; (2) horário "17h" vira 7h (regex procura o dígito); (3) durante o onboarding `/saldo`, `/ajuda` etc. são tratados como resposta inválida; (4) o onboarding grava `notificacoes.tipos`, mas o agendador usa `telegramTipos` quando existe
+- v1.6.165 — Testes do onboarding (`onboarding.test.js`); o Firestore fake agora mescla mapas aninhados em `set(..., {merge:true})` como o real (isso expôs o vazamento de `tempSelections`, corrigido na v1.6.166). Os 4 defeitos do onboarding foram resolvidos nas v1.6.166 e v1.6.167
 - v1.6.164 — N24/N25 passam a devolver `{ text, confirmar }`: o estado (`reservaTracking.lastRemindData`, `alertasAcimaMedia`) só é gravado DEPOIS de o Telegram aceitar o envio (falha = tenta de novo no próximo ciclo das 19h); `n25.test.js` + casos de falha em `agendador.test.js`. Escolhido entre 3 planos (só testes / testes + confirmar-depois-do-envio / migrar para `alertasEstado`): a migração foi descartada por risco e porque a regra de 5 dias do N24 não cabe no modelo de assinatura
 - v1.6.163 — N24 corrigido (só bot): aporte reconhecido por OCORRÊNCIAS de sobraData até hoje, inclusive (recorrente e mesmo dia), sobra zerada encerra o rastreio, aviso usa min(valor guardado, sobra de hoje); `n24Diferencial.test.js` prova identidade com a versão antiga nos aportes únicos. Aporte agendado para o futuro não encerra a cobrança (a sobra já o desconta). Efeito conhecido: o aporte que reinicia o rastreio é visto mais uma vez no dia seguinte (atrasa a cobrança em 1 dia, uma vez)
 - v1.6.162 — Testes do N24 (`n24.test.js`) e do agendador `dailyNotifications.run` (`agendador.test.js`; `helpers.js` fixa TZ=UTC como a produção e simula o push). (achados do N24 resolvidos na v1.6.163.) N24/N25 só rodam no ciclo das 19h (junto do N18), independente de `horaAlerta`
