@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.176';
+export const APP_VERSION = '1.6.177';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.177',
+    date: '14/10/2026',
+    changes: [
+      'Segurança do webhook do Telegram: o segredo (TELEGRAM_SECRET_TOKEN) agora fica no Secret Manager do Firebase e é ligado às funções do webhook, valendo em qualquer máquina de onde se publique. O webhook volta a validar o cabeçalho do Telegram, e o registro do webhook envia o mesmo segredo',
+      'Corrige o bot sem resposta a comandos e botões, que ocorria porque o segredo não existia no ambiente publicado desde a v1.6.150',
+    ],
+  },
   {
     version: '1.6.176',
     date: '14/10/2026',

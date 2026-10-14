@@ -1,8 +1,12 @@
 'use strict';
 
 const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { REGION } = require('../infra/config');
 const { tgFetch } = require('../infra/telegram');
+
+// Mesmo segredo do webhook: é enviado ao Telegram ao registrar a URL (secret_token)
+const TELEGRAM_SECRET_TOKEN = defineSecret('TELEGRAM_SECRET_TOKEN');
 
 // ─── EXPORT 3: Status e configuração do webhook ───────────────────────────────
 // GET  → retorna informações atuais do webhook registrado no Telegram
@@ -31,7 +35,7 @@ const BOT_COMMANDS = [
 ];
 
 exports.setTelegramWebhook = onRequest(
-  { region: REGION },
+  { region: REGION, secrets: [TELEGRAM_SECRET_TOKEN] },
   async (req, res) => {
     if (req.method === 'POST' && req.body?.url) {
       const webhookResult = await tgFetch('setWebhook', {

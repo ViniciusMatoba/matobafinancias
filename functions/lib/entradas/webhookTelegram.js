@@ -2,13 +2,18 @@
 
 const { logger } = require('firebase-functions');
 const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { processUpdate } = require('./roteador');
 const { REGION } = require('../infra/config');
+
+// Segredo guardado no Secret Manager (firebase functions:secrets:set TELEGRAM_SECRET_TOKEN); em execução
+// fica disponível em process.env.TELEGRAM_SECRET_TOKEN. Vale em qualquer máquina de onde se publique.
+const TELEGRAM_SECRET_TOKEN = defineSecret('TELEGRAM_SECRET_TOKEN');
 
 // ─── EXPORT 1: Webhook HTTPS ──────────────────────────────────────────────────
 // invoker: 'public' — permite chamadas não autenticadas (necessário para o Telegram)
 exports.telegramWebhook = onRequest(
-  { region: REGION, timeoutSeconds: 30, invoker: 'public' },
+  { region: REGION, timeoutSeconds: 30, invoker: 'public', secrets: [TELEGRAM_SECRET_TOKEN] },
   async (req, res) => {
     if (req.method !== 'POST') { res.sendStatus(405); return; }
 

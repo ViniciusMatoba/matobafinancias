@@ -1,8 +1,8 @@
 {
-  "version": "1.6.176",
+  "version": "1.6.177",
   "date": "14/10/2026",
   "notes": [
-    "Organização do código do bot, etapa 5 de 5: o index.js agora é só uma fachada (45 linhas); as 5 funções do Firebase vivem em functions/lib/entradas",
-    "Código movido sem nenhuma linha alterada; nenhuma mudança de comportamento no app ou no bot"
+    "Segurança do webhook do Telegram: o segredo (TELEGRAM_SECRET_TOKEN) agora fica no Secret Manager do Firebase e é ligado às funções do webhook, valendo em qualquer máquina de onde se publique. O webhook volta a validar o cabeçalho do Telegram, e o registro do webhook envia o mesmo segredo",
+    "Corrige o bot sem resposta a comandos e botões, que ocorria porque o segredo não existia no ambiente publicado desde a v1.6.150"
   ]
 }
