@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.156';
+export const APP_VERSION = '1.6.157';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.157',
+    date: '14/10/2026',
+    changes: [
+      'Telegram /parcelados: agora calcula as parcelas ainda a pagar pelas ocorrências (mesma base do caixa e da Projeção). Uma fatura já paga continua mostrando as parcelas dos meses seguintes (antes a compra sumia da lista)',
+      'Telegram /parcelados: parcelados avulsos contam só as parcelas de hoje em diante (antes mostravam sempre a parcela do dia em que foram criados, inflando o total a pagar)',
+      'Parcela de fatura vencida e não paga continua contando como a pagar; o texto da mensagem não mudou. O app não foi alterado',
+    ],
+  },
   {
     version: '1.6.156',
     date: '14/10/2026',
