@@ -1,8 +1,8 @@
 {
-  "version": "1.6.153",
+  "version": "1.6.154",
   "date": "14/10/2026",
   "notes": [
-    "Atualização do Firebase: app (firebase 12 → 13) e Cloud Functions (firebase-admin 12 → 14, firebase-functions 6 → 7) — zera as vulnerabilidades conhecidas das functions",
-    "Sem mudança de comportamento; os 243 testes e o build passam nas versões novas"
+    "Fix das Cloud Functions na atualização do Firebase: o firebase-admin 14 removeu admin.firestore()/admin.messaging(); o bot agora usa firebase-admin/firestore e firebase-admin/messaging (a v1.6.153 publicou o app, mas as functions não subiram)",
+    "Novo teste carrega as functions com as bibliotecas reais, como o deploy faz, para que erro desse tipo seja pego antes de publicar"
   ]
 }
