@@ -171,6 +171,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             transactions={transactions}
             wallets={wallets}
             config={config}
+            onSaveConfig={saveConfig}
             onNavigate={handleNavigate}
           />
         )}

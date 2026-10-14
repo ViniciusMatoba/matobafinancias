@@ -7,11 +7,13 @@ import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer, HelpCircle } from 'lucide-react';
 import HelpModal from '../shared/HelpModal';
 import { tagsById, computeTagStats, SEM_TAG } from '../../utils/tags';
+import AssinaturasTab from './AssinaturasTab';
 
 const TABS = {
   RESUMO: 'resumo',
   CATEGORIAS: 'categorias',
   TAGS: 'tags',
+  ASSINATURAS: 'assinaturas',
   TOP_GASTOS: 'top_gastos',
   EVOLUCAO: 'evolucao',
 };
@@ -20,6 +22,7 @@ const TAB_LABELS = {
   resumo: 'Resumo',
   categorias: 'Categorias',
   tags: 'Tags',
+  assinaturas: 'Assinaturas',
   top_gastos: 'Top Gastos',
   evolucao: 'Evolução',
 };
@@ -38,7 +41,7 @@ function getMonthRange(offset) {
   return { from, to, label: `${MONTH_NAMES_SHORT[m]}/${String(y).slice(2)}` };
 }
 
-export default function ReportsScreen({ transactions, wallets = [], config, onNavigate }) {
+export default function ReportsScreen({ transactions, wallets = [], config, onSaveConfig, onNavigate }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(TABS.RESUMO);
   const [period, setPeriod] = useState('current_month');
@@ -654,6 +657,11 @@ export default function ReportsScreen({ transactions, wallets = [], config, onNa
               </>
             )}
           </div>
+        )}
+
+        {/* Conteúdo da Tab: ASSINATURAS (independe do período: olha os últimos 6 meses) */}
+        {activeTab === TABS.ASSINATURAS && (
+          <AssinaturasTab transactions={transactions} config={config} onSaveConfig={onSaveConfig} />
         )}
 
         {/* Conteúdo da Tab: TOP_GASTOS */}

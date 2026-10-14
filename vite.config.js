@@ -2,9 +2,18 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import path from 'node:path';
 
-export default defineConfig({
-  plugins: [
+// Modo demonstração (npm run dev:demo): troca login e Firestore por dados fictícios em memória (src/demo),
+// para testar as telas sem login e sem tocar na produção. Não afeta o build normal.
+const pastaDemo = path.resolve(import.meta.dirname, 'src/demo').replace(/\\/g, '/');
+const aliasDemo = [
+  { find: /^(?:\.{1,2}\/)+firebase(?:\.js)?$/, replacement: `${pastaDemo}/firebase.js` },
+  { find: /^(?:\.{1,2}\/)+hooks\/(useAuth|useTransactions|useCards|useWallets|useGoals|useConfig)(?:\.js)?$/, replacement: `${pastaDemo}/$1.js` },
+];
+
+export default defineConfig(({ mode }) => ({
+  resolve: { alias: mode === 'demo' ? aliasDemo : [] },  plugins: [
     react(),
     tailwindcss(),
     VitePWA({
@@ -38,4 +47,4 @@ export default defineConfig({
     })
   ],
   base: './',
-});
+}));

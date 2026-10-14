@@ -3,6 +3,7 @@
 const { logger } = require('firebase-functions');
 const { handleCallbackQuery } = require('../acoes/callbacks');
 const { handleAjuda } = require('../comandos/ajuda');
+const { handleAssinaturas } = require('../comandos/assinaturas');
 const { handleConfigurar } = require('../comandos/configurar');
 const { handleCartoes, handleCategoria, handleHistorico, handleHoje, handleMes, handleMeta, handleResumo, handleSaldo, handleSemana, msgSomenteApp } = require('../comandos/consultas');
 const { handleFatura, handleParcelados } = require('../comandos/faturas');
@@ -59,6 +60,7 @@ async function processUpdate(update) {
     else if (t.includes('investiment')) cmd = '/investimentos';
     else if (t.includes('insig') || t.includes('dica') || t.includes('insight')) cmd = '/insight';
     else if (t.includes('ajuda') || t.includes('help')) cmd = '/ajuda';
+    else if (t.includes('assinatur') || t.includes('recorrent')) cmd = '/assinaturas';
     else if (t.includes('parcela')) cmd = '/parcelados';
     else if (t.includes('hoje')) cmd = '/hoje';
     else if (t.includes('hist')) cmd = '/historico';
@@ -126,6 +128,8 @@ async function processUpdate(update) {
     case '/previsao':    return handlePrevisao(chatId, uid);
     case '/economias':   return handleEconomias(chatId, uid);
     case '/parcelados':  return handleParcelados(chatId, uid);
+    case '/assinaturas':
+    case '/assinatura':  return handleAssinaturas(chatId, uid);
     case '/saldofinal':  return handleSaldoFinal(chatId, uid, args);
     case '/configurar':
     case '/alertas':   return handleConfigurar(chatId, uid);

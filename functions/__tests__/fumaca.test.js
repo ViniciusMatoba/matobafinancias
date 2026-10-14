@@ -58,7 +58,7 @@ const COMANDOS = [
   '/saldo', '/hoje', '/historico', '/semana', '/mes', '/mes setembro', '/resumo', '/categoria', '/meta',
   '/gastos', '/gastos top', '/gastos conforto', '/meses', '/tags', '/reserva', '/investimentos',
   '/cartoes', '/fatura', '/projecao', '/insight', '/proximas', '/previsao', '/economias', '/parcelados',
-  '/saldofinal', '/saldofinal dezembro', '/configurar', '/alertas', '/ajuda', '/help', '/adicionar', '/xyz',
+  '/saldofinal', '/saldofinal dezembro', '/assinaturas', '/configurar', '/alertas', '/ajuda', '/help', '/adicionar', '/xyz',
   '💰 Saldo', '📊 Projeção',
 ]
 

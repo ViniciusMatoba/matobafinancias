@@ -10,6 +10,7 @@ import { DEFAULT_BUDGET_PCTS } from '../utils/categories';
  * @property {Record<string,number>} budgetPcts      — percentual de orçamento por categoria
  * @property {boolean}             onboardingDone
  * @property {{id:string,label:string,cor:string}[]} tags — tags de despesa criadas pelo usuário
+ * @property {string[]}            [assinaturasIgnoradas] — itens ocultados na aba Assinaturas do Painel (chaves)
  * @property {boolean}             [tourDone]
  * @property {string}              [telegramChatId]
  */

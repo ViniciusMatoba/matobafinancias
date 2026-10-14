@@ -24,6 +24,7 @@ const BOT_COMMANDS = [
   { command: 'gastos',     description: 'Despesas do mes por categoria (ex: /gastos agosto, /gastos top)' },
   { command: 'meses',      description: 'Total gasto por mes e mes mais alto' },
   { command: 'tags',       description: 'Total gasto por tag no mes (ex: /tags agosto)' },
+  { command: 'assinaturas', description: 'O que cai todo mes: assinaturas, Pix/debito e totais' },
   { command: 'reserva',    description: 'Status da reserva de emergencia' },
   { command: 'investimentos', description: 'Total investido e sobra disponivel' },
   { command: 'insight',    description: 'Dicas e analises inteligentes de gastos' },

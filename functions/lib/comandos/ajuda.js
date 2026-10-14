@@ -40,7 +40,8 @@ async function handleAjuda(chatId) {
     `*💳 Cartões de Crédito*\n` +
     `/cartoes — Seus cartões, limites e vencimentos\n` +
     `/fatura — Detalhamento de faturas e compras do ciclo atual 🧾\n` +
-    `/parcelados — Compras parceladas em aberto: parcelas restantes e valores 📋\n\n` +
+    `/parcelados — Compras parceladas em aberto: parcelas restantes e valores 📋\n` +
+    `/assinaturas — O que cai todo mês: assinaturas no cartão, Pix/débito e totais 🔁\n\n` +
 
     `*📈 Projeção e Economia*\n` +
     `/saldofinal — Saldo projetado no fim de cada mês 📅\n` +

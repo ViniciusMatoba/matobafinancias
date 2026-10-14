@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.177
+- **Versão atual**: v1.6.178
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.177 — 14/10/2026
+**Versão**: v1.6.178 — 14/10/2026
 
 **Últimas features**:
+- v1.6.178 — Item 1 do plano de melhorias: ASSINATURAS. Motor `src/utils/assinaturas.js` (app) + cópia `functions/lib/motor/assinaturas.js` (bot), paridade testada em 300 cenários; regras: mesma descrição normalizada (sem números/datas) em meses seguidos, 1 ocorrência por mês, valor estável (≤1 mudança >5%), deslize de 3 dias entre meses, tag "Assinaturas" sempre inclui, itens variáveis à parte; recorrentes comuns (saída mensal/semanal) numa seção separada. UI: aba Assinaturas no Painel (`AssinaturasTab.jsx`, "Ocultar" grava `config.assinaturasIgnoradas`); bot: `/assinaturas`. NOVO modo demonstração: `npm run dev:demo` (porta 5174, `.claude/launch.json` "demo") troca firebase/hooks por `src/demo/*` com dados fictícios (alias só no modo demo; não vai ao build). Próximos itens do plano: 2 (aviso de reajuste/assinatura nova, N26 nasce DESLIGADO até revisar a lista), 3 (limite por tag, opcional), 5 (reserva no ritmo atual), 4 (data de quitação das parcelas)
 - v1.6.177 — Segredo do webhook no Secret Manager: `defineSecret('TELEGRAM_SECRET_TOKEN')` ligado em `lib/entradas/webhookTelegram` e `setWebhook` (`firebase functions:secrets:set TELEGRAM_SECRET_TOKEN`); depois do deploy é preciso REGISTRAR o webhook de novo (POST em `setTelegramWebhook` com `{url}`) para o Telegram passar a enviar o cabeçalho. Corrige o 503 que derrubava comandos/botões desde a v1.6.150
 - v1.6.176 — Divisão do `functions/index.js`, etapa 5/5 (concluída): `lib/entradas` (roteador, webhookTelegram, agendador, sendTestPush, setWebhook, smsWebhook); `index.js` virou fachada de 45 linhas que só registra as 5 funções e expõe `__test` sob VITEST. Estrutura final: `lib/infra`, `lib/util`, `lib/motor`, `lib/alertas`, `lib/comandos`, `lib/acoes`, `lib/onboarding`, `lib/entradas`. Para achar uma função: o nome do módulo diz a área; `npm run lint:functions` pega import esquecido
 - v1.6.175 — Divisão do `functions/index.js`, etapa 4/5: `lib/acoes` (pagar, despesaPendente, callbacks), `lib/onboarding` (passos, fluxo) e `lib/comandos/vincular`. Movido VERBATIM por script; validado por lint:functions, fumaca.test.js e suíte completa

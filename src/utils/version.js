@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.177';
+export const APP_VERSION = '1.6.178';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.178',
+    date: '14/10/2026',
+    changes: [
+      'Nova aba "Assinaturas" no Painel: lista o que cai todo mês no cartão (itens que repetem em meses seguintes, uma vez por mês, com valor estável, mais tudo com a tag Assinaturas), com o valor atual, desde quando existe, o último reajuste e o total por mês e por ano',
+      'A mesma tela mostra os recorrentes fora do cartão (Pix e débito) e, separado e fora dos totais, os itens que repetem todo mês mas com valor variável (mercado, delivery, transporte). Um botão "Ocultar" tira da lista o que não é assinatura, e dá para mostrar de novo',
+      'Novo comando /assinaturas no Telegram com a mesma lista e os totais',
+      'Para desenvolvimento: modo de demonstração (npm run dev:demo) que abre o app com dados fictícios, sem login e sem tocar na produção. Não faz parte do app publicado',
+    ],
+  },
   {
     version: '1.6.177',
     date: '14/10/2026',
