@@ -1,8 +1,9 @@
 {
-  "version": "1.6.154",
+  "version": "1.6.155",
   "date": "14/10/2026",
   "notes": [
-    "Fix das Cloud Functions na atualização do Firebase: o firebase-admin 14 removeu admin.firestore()/admin.messaging(); o bot agora usa firebase-admin/firestore e firebase-admin/messaging (a v1.6.153 publicou o app, mas as functions não subiram)",
-    "Novo teste carrega as functions com as bibliotecas reais, como o deploy faz, para que erro desse tipo seja pego antes de publicar"
+    "Telegram: fatura vencida e não paga agora aparece como a fatura atual (igual ao app) em /fatura e no alerta de limite do cartão (N11), em vez de pular para o próximo ciclo",
+    "Telegram: o botão Pago do cartão agora quita a fatura já lançada no ciclo em vez de criar um segundo pagamento por cima (que contava a fatura em dobro no caixa)",
+    "Testes de paridade app × bot para fatura vencida, paga e com ciclo aberto"
   ]
 }
