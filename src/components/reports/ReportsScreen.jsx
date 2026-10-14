@@ -8,12 +8,14 @@ import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Pr
 import HelpModal from '../shared/HelpModal';
 import { tagsById, computeTagStats, SEM_TAG, limitesDoMes } from '../../utils/tags';
 import AssinaturasTab from './AssinaturasTab';
+import ParcelasTab from './ParcelasTab';
 
 const TABS = {
   RESUMO: 'resumo',
   CATEGORIAS: 'categorias',
   TAGS: 'tags',
   ASSINATURAS: 'assinaturas',
+  PARCELAS: 'parcelas',
   TOP_GASTOS: 'top_gastos',
   EVOLUCAO: 'evolucao',
 };
@@ -23,6 +25,7 @@ const TAB_LABELS = {
   categorias: 'Categorias',
   tags: 'Tags',
   assinaturas: 'Assinaturas',
+  parcelas: 'Parcelas',
   top_gastos: 'Top Gastos',
   evolucao: 'Evolução',
 };
@@ -41,7 +44,7 @@ function getMonthRange(offset) {
   return { from, to, label: `${MONTH_NAMES_SHORT[m]}/${String(y).slice(2)}` };
 }
 
-export default function ReportsScreen({ transactions, wallets = [], config, onSaveConfig, onNavigate }) {
+export default function ReportsScreen({ transactions, wallets = [], cards = [], config, onSaveConfig, onNavigate }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(TABS.RESUMO);
   const [period, setPeriod] = useState('current_month');
@@ -693,6 +696,11 @@ export default function ReportsScreen({ transactions, wallets = [], config, onSa
         {/* Conteúdo da Tab: ASSINATURAS (independe do período: olha os últimos 6 meses) */}
         {activeTab === TABS.ASSINATURAS && (
           <AssinaturasTab transactions={transactions} config={config} onSaveConfig={onSaveConfig} />
+        )}
+
+        {/* Conteúdo da Tab: PARCELAS (independe do período: olha o que ainda falta pagar) */}
+        {activeTab === TABS.PARCELAS && (
+          <ParcelasTab transactions={transactions} cards={cards} />
         )}
 
         {/* Conteúdo da Tab: TOP_GASTOS */}

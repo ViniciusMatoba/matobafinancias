@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.180';
+export const APP_VERSION = '1.6.181';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.181',
+    date: '14/10/2026',
+    changes: [
+      'Data prevista para quitar as parcelas: o /parcelados do Telegram ganhou a seção "Quando você fica livre" — quanto as parcelas pesam por mês hoje, o mês em que cada compra termina, quanto isso libera por mês e a data a partir da qual você fica livre de parcelas (se não fizer novas compras parceladas). O texto que já existia não mudou',
+      'Nova aba "Parcelas" no Painel com a mesma informação: totais (ainda a pagar, peso por mês, livre a partir de), o cronograma de términos e as compras por cartão e avulsas, com a última parcela de cada uma. As datas são as de pagamento (vencimento da fatura)',
+    ],
+  },
   {
     version: '1.6.180',
     date: '14/10/2026',

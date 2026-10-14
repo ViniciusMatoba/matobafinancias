@@ -33,6 +33,7 @@ function calcParceladosBot(txs, today) {
         cartaoId: o.tx.cartaoId, descricao: item.descricao || o.tx.descricao || 'Item',
         grupo: `${o.tx.cartaoId}|${desc}|${item.totalParcelas}`,
         valor: Number(item.valor) || 0, k, totalParcelas: item.totalParcelas, real: !projetada,
+        data: o.date, // quando a parcela sai do caixa (vencimento da fatura)
       });
     }
   }
@@ -48,6 +49,7 @@ function calcParceladosBot(txs, today) {
       cartaoId: g.cartaoId, descricao: g.descricao, totalParcelas: g.totalParcelas,
       parcelaAtual: g.lista[0].k, valor: g.lista[0].valor,
       restam: g.lista.length, totalRestante: g.lista.reduce((acc, p) => acc + p.valor, 0),
+      ultimaData: g.lista.reduce((a, p) => (p.data > a ? p.data : a), g.lista[0].data),
     };
   });
 
@@ -63,9 +65,39 @@ function calcParceladosBot(txs, today) {
       descricao: t.descricao || 'Parcelado', valor: Number(t.valor) || 0, totalParcelas: total,
       parcelaAtual: Math.max(1, total - futuras.length + 1),
       restam: futuras.length, totalRestante: futuras.reduce((acc, o) => acc + o.valor, 0),
+      ultimaData: futuras.reduce((a, o) => (o.date > a ? o.date : a), futuras[0].date),
     });
   }
   return { cartaoItems, avulsos };
 }
 
-module.exports = { calcParceladosBot };
+const arred = (n) => Math.round(n * 100) / 100;
+
+/**
+ * Quando cada compra termina e quanto o orçamento libera: agrupa os itens pelo mês da ÚLTIMA parcela (data em que
+ * ela sai do caixa). `livreAPartirDe` é o mês seguinte ao da última parcela de todas. Só vale se não houver novas
+ * compras parceladas. Há uma cópia fiel em src/utils/parcelas.js do app (a paridade é testada).
+ */
+function cronogramaParcelasBot({ cartaoItems, avulsos }) {
+  const itens = [...cartaoItems, ...avulsos].filter(i => i.ultimaData);
+  if (itens.length === 0) return { mensalHoje: 0, liberacoes: [], ultimaParcela: null, livreAPartirDe: null };
+
+  const porMes = new Map();
+  for (const i of itens) {
+    const mes = i.ultimaData.slice(0, 7);
+    (porMes.get(mes) || porMes.set(mes, []).get(mes)).push(i);
+  }
+  const liberacoes = [...porMes.keys()].sort().map(mes => {
+    const lista = porMes.get(mes).sort((a, b) => b.valor - a.valor || a.descricao.localeCompare(b.descricao));
+    return { mes, itens: lista.map(i => i.descricao), libera: arred(lista.reduce((s, i) => s + i.valor, 0)) };
+  });
+  const ultimaParcela = liberacoes.at(-1).mes;
+  return {
+    mensalHoje: arred(itens.reduce((s, i) => s + i.valor, 0)),
+    liberacoes,
+    ultimaParcela,
+    livreAPartirDe: addMonthsStr(`${ultimaParcela}-01`, 1).slice(0, 7),
+  };
+}
+
+module.exports = { calcParceladosBot, cronogramaParcelasBot };

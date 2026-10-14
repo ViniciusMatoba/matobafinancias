@@ -170,6 +170,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
           <ReportsScreen
             transactions={transactions}
             wallets={wallets}
+            cards={cards}
             config={config}
             onSaveConfig={saveConfig}
             onNavigate={handleNavigate}

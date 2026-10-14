@@ -3,9 +3,10 @@
 const { db } = require('../infra/firebase');
 const { sendMessage } = require('../infra/telegram');
 const { calcFaturaCardApp } = require('../motor/caixa');
-const { calcParceladosBot } = require('../motor/parcelados');
+const { calcParceladosBot, cronogramaParcelasBot } = require('../motor/parcelados');
+const { rotuloMes } = require('../motor/reservaRitmo');
 const { dateStrFromDate, getNowBrasilia, todayStrBrasilia } = require('../util/datas');
-const { formatBRL } = require('../util/formato');
+const { formatBRL, mdEscape } = require('../util/formato');
 
 async function handleFatura(chatId, uid) {
   const agora = getNowBrasilia();
@@ -118,6 +119,19 @@ async function handleParcelados(chatId, uid) {
 
   text += `─────────────────\n`;
   text += `💸 *Total ainda a pagar: ${formatBRL(totalGeral)}*`;
+
+  // ── Quando você fica livre: mês em que cada compra termina e quanto isso libera por mês ──────────
+  const cron = cronogramaParcelasBot({ cartaoItems, avulsos });
+  if (cron.liberacoes.length > 0) {
+    text += `\n\n📅 *Quando você fica livre*\nHoje as parcelas pesam *${formatBRL(cron.mensalHoje)}/mês*.\n`;
+    const MAX = 5;
+    for (const l of cron.liberacoes.slice(0, MAX)) {
+      const nomes = l.itens.map(mdEscape).join(', ');
+      text += ` • ${rotuloMes(l.mes)} — ${l.itens.length === 1 ? 'acaba' : 'acabam'}: ${nomes} → libera *${formatBRL(l.libera)}/mês*\n`;
+    }
+    if (cron.liberacoes.length > MAX) text += ` _…e mais ${cron.liberacoes.length - MAX} data${cron.liberacoes.length - MAX > 1 ? 's' : ''} de término_\n`;
+    text += `🎉 Última parcela em *${rotuloMes(cron.ultimaParcela)}*; livre a partir de *${rotuloMes(cron.livreAPartirDe)}* _(se não fizer novas compras parceladas)_.`;
+  }
 
   return sendMessage(chatId, text.trim());
 }

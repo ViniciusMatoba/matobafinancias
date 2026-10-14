@@ -51,11 +51,15 @@ export function criarDadosDemo(hoje = todayStr()) {
     ];
     if (k <= 1) itens.push({ descricao: 'Disney+', valor: 33.9, categoria: 'prazeres', dataCompra: dia(mes, 3) });
     if (k <= 3) {
-      itens.push({ descricao: 'TV', valor: 200, categoria: 'conforto', dataCompra: dia(mesDe(hoje, -4), 2), isParcelado: true, parcelaAtual: 4 - k, totalParcelas: 6 });
+      // Só a fatura de origem (k = 3) projeta as parcelas seguintes; nas faturas dos meses seguintes o item vai
+      // como "não parcelado" (isParcelado:false), que é como o app grava ao pagar/editar uma projeção.
+      itens.push({ descricao: 'TV', valor: 200, categoria: 'conforto', dataCompra: dia(mesDe(hoje, -4), 2), isParcelado: k === 3, parcelaAtual: 4 - k, totalParcelas: 6 });
     }
     transactions.push({
       id: `fat${k}`, tipo: 'cartao', frequencia: 'unico', cartaoId: 'c1', descricao: 'Fatura Nubank', dataInicio: vence,
       valor: itens.reduce((s, i) => s + i.valor, 0), itens, conferido: k >= 1 && vence < hoje,
+      // A fatura de origem da TV exclui as datas em que já existe fatura real (como o app faz ao pagar uma projeção)
+      ...(k === 3 ? { exclusoes: [2, 1, 0].map(kk => dia(mesDe(hoje, -kk + 1), 10)) } : {}),
     });
   }
 
