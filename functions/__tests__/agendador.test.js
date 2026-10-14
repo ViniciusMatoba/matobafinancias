@@ -119,6 +119,27 @@ describe('N24 pelo agendador (Telegram) — roda no ciclo das 19h, junto com o N
     expect(rastreio().sobraData).toBe('2026-10-20')
   })
 
+  it('aporte automático (mensal, criado meses antes) que cai no período evita a cobrança indevida', async () => {
+    usuario({ alertas: ['n24'] })
+    entrada(9000)
+    lancamento({ tipo: 'investimento', frequencia: 'mensal', dataInicio: '2026-01-16', descricao: 'Aporte automático', valor: 500 })
+    const dias = ['14', '15', '16', '17', '18', '19', '20', '21'].map(d => `2026-10-${d}`)
+    for (const d of dias) await executar(d, NOITE)
+    // sem o reconhecimento por ocorrência, a cobrança sairia em 19/10 (5 dias após 14/10)
+    expect(avisosN24()).toHaveLength(0)
+  })
+
+  it('a sobra gasta antes de aportar encerra o rastreio e não cobra', async () => {
+    usuario({ alertas: ['n24'] })
+    entrada(3000)
+    await executar('2026-10-14', NOITE)
+    expect(rastreio()).toBeTruthy()
+    lancamento({ tipo: 'saida', frequencia: 'unico', dataInicio: '2026-10-15', descricao: 'Compra grande', valor: 2900, categoria: 'conforto' })
+    await executar('2026-10-20', NOITE)
+    expect(avisosN24()).toHaveLength(0)
+    expect(fake.ler(`config/${UID}`).reservaTracking).toBeUndefined()
+  })
+
   it('opção n24 desligada no Telegram: não rastreia nem avisa', async () => {
     usuario({ alertas: [], alertasTg: [] })
     entrada(3000)

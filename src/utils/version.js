@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.162';
+export const APP_VERSION = '1.6.163';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.163',
+    date: '14/10/2026',
+    changes: [
+      'Telegram, alerta de aporte perdido (N24): agora reconhece aporte recorrente (mensal, semanal ou parcelado) criado antes da sobra e que caiu depois dela — antes cobrava mesmo de quem aporta no automático',
+      'Telegram N24: aporte feito no mesmo dia em que a sobra foi detectada passa a contar',
+      'Telegram N24: se a sobra acabar antes de você aportar, o aviso é encerrado em vez de cobrar um valor que não existe mais; se a sobra diminuiu, o aviso mostra o valor de hoje',
+      'Teste que compara 300 cenários mostra que o resto do comportamento do N24 ficou idêntico ao anterior; o app não foi alterado',
+    ],
+  },
   {
     version: '1.6.162',
     date: '14/10/2026',

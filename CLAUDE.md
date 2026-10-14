@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.162
+- **Versão atual**: v1.6.163
 
 ### Regra de bump
 
@@ -118,10 +118,11 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.162 — 14/10/2026
+**Versão**: v1.6.163 — 14/10/2026
 
 **Últimas features**:
-- v1.6.162 — Testes do N24 (`n24.test.js`) e do agendador `dailyNotifications.run` (`agendador.test.js`; `helpers.js` fixa TZ=UTC como a produção e simula o push). ACHADOS ABERTOS do N24 (registrados em teste, não corrigidos): (1) aporte no MESMO dia da sobra não conta (`dataInicio > sobraData`); (2) aporte mensal recorrente criado antes da sobra nunca é reconhecido (olha `dataInicio`, não as ocorrências); (3) com rastreio antigo e sem aporte, cobra o valor de antes mesmo que a sobra tenha acabado. N24/N25 só rodam no ciclo das 19h (junto do N18), independente de `horaAlerta`
+- v1.6.163 — N24 corrigido (só bot): aporte reconhecido por OCORRÊNCIAS de sobraData até hoje, inclusive (recorrente e mesmo dia), sobra zerada encerra o rastreio, aviso usa min(valor guardado, sobra de hoje); `n24Diferencial.test.js` prova identidade com a versão antiga nos aportes únicos. Aporte agendado para o futuro não encerra a cobrança (a sobra já o desconta). Efeito conhecido: o aporte que reinicia o rastreio é visto mais uma vez no dia seguinte (atrasa a cobrança em 1 dia, uma vez)
+- v1.6.162 — Testes do N24 (`n24.test.js`) e do agendador `dailyNotifications.run` (`agendador.test.js`; `helpers.js` fixa TZ=UTC como a produção e simula o push). (achados do N24 resolvidos na v1.6.163.) N24/N25 só rodam no ciclo das 19h (junto do N18), independente de `horaAlerta`
 - v1.6.161 — Reserva de emergência = saldo da caixinha por `metaId` (mesma regra da tela Metas/`/meta`): `src/utils/caixinha.js` (`saldoCaixinha`, `reservaDaCaixinha`) usada na tela Investir; `saldoCaixinhaBot`/`reservaDaCaixinhaBot` no bot (N23, `/reserva`, `/investimentos`); `reserva.test.js` compara com a conta literal da tela Metas. Antes procurava `goalId`/`cartaoVinculo` (nunca gravados). Aporte recorrente conta uma vez (como na tela Metas). ABERTO: N23 do dia 30 não existe em fevereiro; card de reserva da Home (acha a meta pelo nome, usa sinal do caixa) não foi revisado
 - v1.6.160 — Testes do N23 (`n23.test.js`)
 - v1.6.159 — Removidos `calcFaturaCardBot`/`calcCicloFaturaBot`/`vencimentoAnteriorBot`; o bot só tem `calcFaturaCardApp` (paridade total com o app, sem divergências conhecidas de fatura)

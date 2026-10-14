@@ -1176,8 +1176,12 @@ async function checkN24AportePerdido(uid, transactions, config, walletInitials, 
   const tracking = config?.reservaTracking || {};
   const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 86400000);
 
+  // Aportou desde a sobra? Olha as OCORRÊNCIAS dos investimentos de sobraData até hoje (inclusive os dois
+  // dias): reconhece aporte no mesmo dia da sobra e aporte recorrente (mensal/semanal) criado antes dela.
+  // Só conta o que já aconteceu; a sobra segura já desconta o que está agendado para o futuro.
   const investedSince = tracking.sobraData
-    ? transactions.some(t => t.tipo === 'investimento' && t.dataInicio > tracking.sobraData)
+    ? expandRange(transactions.filter(t => t.tipo === 'investimento'), tracking.sobraData, todayStr)
+        .some(o => o.date >= tracking.sobraData && o.date <= todayStr)
     : false;
 
   // Sem rastreio ativo ou usuário já aportou desde então: (re)inicia o rastreio
@@ -1194,6 +1198,14 @@ async function checkN24AportePerdido(uid, transactions, config, walletInitials, 
     return null;
   }
 
+  // A sobra acabou antes de o usuário aportar: não há mais o que cobrar, encerra o rastreio
+  if (sobra <= 0) {
+    await db.collection('config').doc(uid).set({
+      reservaTracking: FieldValue.delete()
+    }, { merge: true }).catch(() => {});
+    return null;
+  }
+
   const diasSemAporte = daysBetween(tracking.sobraData, todayStr);
   if (diasSemAporte < LIMIAR_DIAS) return null;
 
@@ -1204,8 +1216,10 @@ async function checkN24AportePerdido(uid, transactions, config, walletInitials, 
     reservaTracking: { ...tracking, lastRemindData: todayStr }
   }, { merge: true }).catch(() => {});
 
+  // Valor que ainda está disponível hoje (a sobra pode ter diminuído desde o primeiro dia)
+  const valorAviso = Math.min(Number(tracking.sobraValor) || sobra, sobra);
   const [, mm, dd] = tracking.sobraData.split('-');
-  return `🔔 *Aporte pendente!*\n\nVocê tinha *${formatBRL(tracking.sobraValor)}* disponíveis para guardar ou investir desde ${dd}/${mm} e ainda não registrou nenhum aporte.\n\n_Que tal lançar agora no app?_`;
+  return `🔔 *Aporte pendente!*\n\nVocê tinha *${formatBRL(valorAviso)}* disponíveis para guardar ou investir desde ${dd}/${mm} e ainda não registrou nenhum aporte.\n\n_Que tal lançar agora no app?_`;
 }
 
 // ─── N25 — Categoria acima da média dos últimos meses ────────────────────────

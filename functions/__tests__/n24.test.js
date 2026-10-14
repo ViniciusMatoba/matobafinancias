@@ -122,41 +122,102 @@ describe('N24 — quando o usuário aporta', () => {
   })
 })
 
-describe('N24 — comportamentos atuais registrados (ver relatório da avaliação)', () => {
-  const comRastreio = (sobraData) => fake.seed(`config/${UID}`, {
-    reservaTracking: { sobraData, sobraValor: 3000, lastRemindData: null },
+describe('N24 — reconhecimento do aporte pelas ocorrências', () => {
+  const comRastreio = (sobraData, extra = {}) => fake.seed(`config/${UID}`, {
+    reservaTracking: { sobraData, sobraValor: 3000, lastRemindData: null, ...extra },
   })
 
-  // A conferência usa t.dataInicio > sobraData (estritamente maior): aporte no mesmo dia não vale
-  it('aporte feito NO MESMO DIA em que a sobra foi detectada não conta, e o usuário é cobrado', async () => {
+  it('aporte feito NO MESMO DIA em que a sobra foi detectada conta', async () => {
     comRastreio('2026-10-09')
-    const msg = await roda([entrada(9000), aporte(500, { dataInicio: '2026-10-09' })])
-    expect(msg).toContain('Aporte pendente')
+    expect(await roda([entrada(9000), aporte(500, { dataInicio: '2026-10-09' })])).toBeNull()
+    expect(tracking().sobraData).toBe('2026-10-14') // reiniciou
   })
 
-  // A conferência olha a data de INÍCIO do lançamento, não as ocorrências: um aporte mensal criado
-  // antes da sobra nunca é reconhecido, mesmo caindo todo mês
-  it('aporte mensal recorrente criado antes da sobra não é reconhecido: o usuário é cobrado mesmo aportando', async () => {
+  it('aporte mensal recorrente criado ANTES da sobra e que caiu depois dela é reconhecido', async () => {
     comRastreio('2026-10-01')
     const recorrente = aporte(500, { frequencia: 'mensal', dataInicio: '2026-01-10' }) // caiu em 10/10
+    expect(await roda([entrada(9000), recorrente])).toBeNull()
+    expect(tracking().sobraData).toBe('2026-10-14')
+  })
+
+  it('aporte semanal recorrente também', async () => {
+    comRastreio('2026-10-08')
+    expect(await roda([entrada(9000), aporte(100, { frequencia: 'semanal', dataInicio: '2026-06-03' })])).toBeNull()
+  })
+
+  it('aporte parcelado conta pela parcela que caiu no período', async () => {
+    comRastreio('2026-10-01')
+    const parcelado = aporte(300, { frequencia: 'parcelado', dataInicio: '2026-08-12', parcelaAtual: 1, totalParcelas: 6 }) // 12/10
+    expect(await roda([entrada(9000), parcelado])).toBeNull()
+  })
+
+  it('recorrente cuja próxima data ainda não chegou NÃO conta: continua a cobrança', async () => {
+    fake.seed(`config/${UID}`, { reservaTracking: { sobraData: '2026-10-05', sobraValor: 3000, lastRemindData: null } })
+    const recorrente = aporte(500, { frequencia: 'mensal', dataInicio: '2026-01-25' }) // próxima: 25/10
     expect(await roda([entrada(9000), recorrente])).toContain('Aporte pendente')
   })
 
-  it('aporte recorrente criado depois da sobra é reconhecido', async () => {
-    comRastreio('2026-10-01')
-    const recorrente = aporte(500, { frequencia: 'mensal', dataInicio: '2026-10-10' })
-    expect(await roda([entrada(9000), recorrente])).toBeNull()
+  it('ocorrência excluída do aporte recorrente não conta', async () => {
+    fake.seed(`config/${UID}`, { reservaTracking: { sobraData: '2026-10-05', sobraValor: 3000, lastRemindData: null } })
+    const recorrente = aporte(500, { frequencia: 'mensal', dataInicio: '2026-01-10', exclusoes: ['2026-10-10'] })
+    expect(await roda([entrada(9000), recorrente])).toContain('Aporte pendente')
   })
 
-  // Com rastreio ativo e sem aporte, o aviso sai mesmo que a sobra tenha acabado (usa o valor antigo)
-  it('a sobra acabou mas o rastreio antigo continua cobrando o valor de antes', async () => {
+  it('aporte agendado para o futuro (ainda não aconteceu) não encerra a cobrança', async () => {
+    fake.seed(`config/${UID}`, { reservaTracking: { sobraData: '2026-10-05', sobraValor: 3000, lastRemindData: null } })
+    expect(await roda([entrada(9000), aporte(500, { dataInicio: '2026-10-20' })])).toContain('Aporte pendente')
+  })
+
+  it('o aporte que reiniciou o rastreio não causa reinícios em cascata', async () => {
+    comRastreio('2026-10-09')
+    const txs = [entrada(9000), aporte(500, { dataInicio: '2026-10-14' })]
+    await roda(txs) // 14/10: vê o aporte e reinicia com sobraData = 14/10
+    expect(tracking().sobraData).toBe('2026-10-14')
+    dia('2026-10-15')
+    await roda(txs) // 15/10: o aporte de 14/10 conta mais uma vez (>= sobraData) e reinicia de novo
+    expect(tracking().sobraData).toBe('2026-10-15')
+    dia('2026-10-16')
+    await roda(txs) // 16/10: agora o aporte (14/10) é anterior à sobraData (15/10): nada mais o reinicia
+    expect(tracking().sobraData).toBe('2026-10-15')
+    dia('2026-10-20')
+    expect(await roda(txs)).toContain('Aporte pendente')
+  })
+})
+
+describe('N24 — a sobra acabou', () => {
+  const comRastreio = (sobraData, extra = {}) => fake.seed(`config/${UID}`, {
+    reservaTracking: { sobraData, sobraValor: 3000, lastRemindData: null, ...extra },
+  })
+
+  it('rastreio antigo e sobra zerada: encerra o rastreio e não cobra', async () => {
     comRastreio('2026-10-05')
-    const msg = (await roda([entrada(100)])).replace(/[  ]/g, ' ')
-    expect(msg).toContain('R$ 3.000,00')
+    expect(await roda([entrada(100)])).toBeNull()
+    expect(tracking()).toBeUndefined()
   })
 
+  it('sobra menor que a de antes: o aviso mostra o valor de hoje, não o antigo', async () => {
+    comRastreio('2026-10-05')
+    const msg = (await roda([entrada(800)])).replace(/[\u00a0\u202f]/g, ' ')
+    expect(msg).toContain('R$ 800,00')
+    expect(msg).not.toContain('R$ 3.000,00')
+  })
+
+  it('sobra maior que a de antes: continua mostrando o valor guardado (o que o usuário tinha)', async () => {
+    comRastreio('2026-10-05', { sobraValor: 1000 })
+    const msg = (await roda([entrada(8000)])).replace(/[\u00a0\u202f]/g, ' ')
+    expect(msg).toContain('R$ 1.000,00')
+  })
+
+  it('sobra zerada mas dentro dos 5 dias: também encerra', async () => {
+    comRastreio('2026-10-12')
+    expect(await roda([entrada(100)])).toBeNull()
+    expect(tracking()).toBeUndefined()
+  })
+})
+
+describe('N24 — isolamento', () => {
   it('dados de outro usuário não interferem', async () => {
-    comRastreio('2026-10-05')
+    fake.seed(`config/${UID}`, { reservaTracking: { sobraData: '2026-10-05', sobraValor: 3000, lastRemindData: null } })
     fake.seed('config/outro', { reservaTracking: { sobraData: '2026-09-01', sobraValor: 1, lastRemindData: null } })
     await roda([entrada(3000)])
     expect(fake.ler('config/outro').reservaTracking.sobraData).toBe('2026-09-01')
