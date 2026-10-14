@@ -10,6 +10,7 @@ const DEFAULT_TG_TIPOS = {
   n8:true,n9:true,n10:true,n11:true,n12:true,
   n13:true,n14:true,n15:true,n16:true,n17:true,n18:true,
   n19:true,n20:true,n21:true,n22:true,n23:true,n24:true,n25:true,
+  n27:true, // limite mensal por tag (n26 é reservado para o aviso de assinaturas)
 };
 
 const ALERT_LABELS = {
@@ -22,12 +23,13 @@ const ALERT_LABELS = {
   n19:'Gasto atípico do dia', n20:'Progresso metas (sex)', n21:'Conferência (dia 20)',
   n22:'Sobra segura',          n23:'Relatório invest. (15/fim)', n24:'Aporte pendente',
   n25:'Acima da média',
+  n27:'Limite por tag',
 };
 
 // Grupos de alertas para organizar o menu
 const ALERT_GROUPS = [
   { emoji:'💳', title:'Cartão',        ids:['n1','n2','n3','n13'] },
-  { emoji:'💰', title:'Orçamento',     ids:['n4','n5','n9'] },
+  { emoji:'💰', title:'Orçamento',     ids:['n4','n5','n9','n27'] },
   { emoji:'⚠️', title:'Alertas',       ids:['n6','n10','n11','n14','n15'] },
   { emoji:'📊', title:'Resumos',       ids:['n7','n8','n12','n16','n17'] },
   { emoji:'💚', title:'Economia',      ids:['n18','n19','n25'] },

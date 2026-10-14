@@ -248,6 +248,50 @@ export function computeTagStats(eventos, tags) {
   return { total, list, catTags };
 }
 
+// ─── Limite mensal por tag (opcional) ────────────────────────────────────────
+// Cada tag pode ter `limite` (R$ por mês). Sem o campo a tag funciona como sempre. Pode ser definido, alterado
+// ou removido a qualquer momento; renomear a tag preserva o limite.
+
+/** Limite da tag em R$ (0 quando não tem). */
+export function limiteDaTag(tag) {
+  const n = Number(tag?.limite);
+  return n > 0 ? n : 0;
+}
+
+/** Devolve a lista de tags com o limite da tag `id` definido (valor > 0) ou removido (vazio, 0 ou inválido). */
+export function setTagLimit(tags, id, limite) {
+  const n = Math.round(Number(limite) * 100) / 100;
+  return (Array.isArray(tags) ? tags : []).map(t => {
+    if (t.id !== id) return t;
+    const resto = { ...t };
+    delete resto.limite;
+    return n > 0 ? { ...resto, limite: n } : resto;
+  });
+}
+
+/** Situação do gasto frente ao limite: ok (<80%), alerta (80% a 100%) ou estourou (>100%). null sem limite. */
+export function statusLimite(gasto, limite) {
+  if (!(limite > 0)) return null;
+  const pct = (gasto / limite) * 100;
+  return { pct, nivel: pct > 100 ? 'estourou' : pct >= 80 ? 'alerta' : 'ok' };
+}
+
+/**
+ * Limites do mês: uma linha por tag que tem limite (mesmo sem gasto), com o gasto vindo de computeTagStats.
+ * Ordenado do mais perto do limite para o mais folgado.
+ */
+export function limitesDoMes(tags, tagStats) {
+  const gastoPorTag = Object.fromEntries((tagStats?.list || []).map(g => [g.id, g.value]));
+  return (Array.isArray(tags) ? tags : [])
+    .filter(t => limiteDaTag(t) > 0)
+    .map(t => {
+      const limite = limiteDaTag(t);
+      const gasto = gastoPorTag[t.id] || 0;
+      return { id: t.id, label: t.label, cor: t.cor, limite, gasto, ...statusLimite(gasto, limite) };
+    })
+    .sort((a, b) => b.pct - a.pct);
+}
+
 /** Quantos lançamentos e itens de fatura usam cada tag: { [tagId]: n } */
 export function countTagUsage(transactions) {
   const counts = {};

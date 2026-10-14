@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Pencil, Trash2, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
-import { addTagToList, countTagUsage, countUntagged, normalizeText, TAG_SUGGESTIONS, TAG_LABEL_MAX } from '../../utils/tags';
+import { addTagToList, countTagUsage, countUntagged, normalizeText, TAG_SUGGESTIONS, TAG_LABEL_MAX, limiteDaTag, setTagLimit } from '../../utils/tags';
+import { formatBRL, parseBRLInput, numberToBRLInput } from '../../utils/formatters';
 import TagBatchClassifier from './TagBatchClassifier';
 
 const btnIcon = { background: 'none', border: 'none', padding: 4, display: 'flex', cursor: 'pointer', color: 'var(--text-muted)' };
@@ -11,6 +12,8 @@ export default function TagSettings({ tags = [], transactions = [], onSaveConfig
   const [editId, setEditId] = useState(null);
   const [editText, setEditText] = useState('');
   const [confirmId, setConfirmId] = useState(null);
+  const [limitId, setLimitId] = useState(null);   // tag cujo limite está sendo editado
+  const [limitText, setLimitText] = useState('');
   const [erro, setErro] = useState('');
 
   const usage = useMemo(() => countTagUsage(transactions), [transactions]);
@@ -43,6 +46,17 @@ export default function TagSettings({ tags = [], transactions = [], onSaveConfig
     setErro('');
   };
 
+  // Limite mensal da tag: opcional, definido/alterado/removido a qualquer momento
+  const startLimit = (t) => { setLimitId(t.id); setLimitText(numberToBRLInput(limiteDaTag(t))); setEditId(null); setConfirmId(null); setErro(''); };
+  const commitLimit = () => {
+    const valor = parseBRLInput(limitText);
+    if (limitText.trim() && !(valor > 0)) { setErro('Informe um valor maior que zero ou use "Remover limite".'); return; }
+    save(setTagLimit(tags, limitId, valor));
+    setLimitId(null);
+    setErro('');
+  };
+  const removeLimit = () => { save(setTagLimit(tags, limitId, 0)); setLimitId(null); setErro(''); };
+
   const remove = (id) => {
     save(tags.filter(t => t.id !== id));
     setConfirmId(null);
@@ -60,6 +74,7 @@ export default function TagSettings({ tags = [], transactions = [], onSaveConfig
       <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
         Tags detalham suas despesas além das categorias do orçamento (ex: Mercado, Streaming, Transporte).
         Cada lançamento tem no máximo uma tag. Você também pode criar tags direto ao lançar uma despesa.
+        Se quiser, defina um <strong>limite mensal</strong> para uma tag (ex: Mercado R$ 800) e receba aviso em 80% e 100% — é opcional e pode ser mudado ou removido quando quiser.
       </p>
 
       {tags.length === 0 ? (
@@ -89,6 +104,24 @@ export default function TagSettings({ tags = [], transactions = [], onSaveConfig
                   <button type="button" onClick={commitEdit} style={{ ...btnIcon, color: '#10b981' }} title="Salvar"><Check size={16} /></button>
                   <button type="button" onClick={() => { setEditId(null); setErro(''); }} style={btnIcon} title="Cancelar"><X size={16} /></button>
                 </>
+              ) : limitId === t.id ? (
+                <>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{t.label} · limite R$</span>
+                  <input
+                    type="text" inputMode="decimal" autoFocus value={limitText} placeholder="ex: 500,00" aria-label={`Limite mensal da tag ${t.label}`}
+                    onChange={e => setLimitText(e.target.value.replace(/[^0-9.,]/g, ''))}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); commitLimit(); }
+                      if (e.key === 'Escape') { setLimitId(null); setErro(''); }
+                    }}
+                    style={{ flex: 1, minWidth: 0, fontSize: 13, height: 32 }}
+                  />
+                  <button type="button" onClick={commitLimit} style={{ ...btnIcon, color: '#10b981' }} title="Salvar limite"><Check size={16} /></button>
+                  {limiteDaTag(t) > 0 && (
+                    <button type="button" onClick={removeLimit} style={{ ...btnIcon, fontSize: 11, fontWeight: 700, color: 'var(--saida)' }}>Remover limite</button>
+                  )}
+                  <button type="button" onClick={() => { setLimitId(null); setErro(''); }} style={btnIcon} title="Cancelar"><X size={16} /></button>
+                </>
               ) : confirmId === t.id ? (
                 <>
                   <span style={{ flex: 1, fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -106,6 +139,10 @@ export default function TagSettings({ tags = [], transactions = [], onSaveConfig
                   <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                     {usage[t.id] || 0} lançamento{(usage[t.id] || 0) === 1 ? '' : 's'}
                   </span>
+                  <button type="button" onClick={() => startLimit(t)} title="Limite mensal da tag (opcional)"
+                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', color: limiteDaTag(t) > 0 ? 'var(--primary)' : 'var(--text-muted)' }}>
+                    {limiteDaTag(t) > 0 ? `Limite ${formatBRL(limiteDaTag(t))}` : '+ Limite'}
+                  </button>
                   <button type="button" onClick={() => startEdit(t)} style={btnIcon} title="Renomear"><Pencil size={14} /></button>
                   <button type="button" onClick={() => { setConfirmId(t.id); setEditId(null); setErro(''); }}
                     style={{ ...btnIcon, color: 'var(--saida)' }} title="Excluir"><Trash2 size={14} /></button>

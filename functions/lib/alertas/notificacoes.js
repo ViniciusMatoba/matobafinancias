@@ -2,10 +2,10 @@
 
 const { calcFaturaCardApp, calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange } = require('../motor/caixa');
 const { reservaDaCaixinhaBot } = require('../motor/caixinha');
-const { CATEGORY_ORDER, computeSpentByCategory, expandDespesasBot, getTopExpensesForCategory } = require('../motor/competencia');
+const { CATEGORY_ORDER, collectMonthExpenses, computeSpentByCategory, expandDespesasBot, getTopExpensesForCategory } = require('../motor/competencia');
 const { SOBRA_MINIMA_BOT, calcSobraSeguraBot } = require('../motor/sobra');
 const { addOneMonthClamped, dateStrFromDate, getNowBrasilia } = require('../util/datas');
-const { barra, formatBRL } = require('../util/formato');
+const { barra, formatBRL, mdEscape } = require('../util/formato');
 
 // ─── Verificações de notificação (N1-N17) ───────────────────────────────────
 function checkNotifications(cards, transactions, config, prefs, goals = [], walletInitials = 0) {
@@ -261,6 +261,37 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
           text: `⚠️ *Limite Geral em ${Math.round(pct)}%*\nVocê já utilizou ${formatBRL(totalGasto)} de ${formatBRL(rendaMensal)} do seu orçamento geral deste mês.`,
           estado: { chave: `limite-geral:${currentMonth}`, sig: `${faixa9}` },
         });
+      }
+    }
+  }
+
+  // N27 — Limite mensal por tag (opcional: só tags que têm `limite`). Avisa em 80% e em 100% do limite,
+  // uma vez por patamar em cada mês. Gasto por competência (data da compra), igual ao Painel.
+  if (tipos.n27 !== false) {
+    const tagsComLimite = (Array.isArray(config?.tags) ? config.tags : []).filter(t => t && t.id && Number(t.limite) > 0);
+    if (tagsComLimite.length > 0) {
+      const gastoPorTag = {};
+      for (const e of collectMonthExpenses(transactions, currentMonth)) {
+        if (e.tipo === 'investimento' || !e.tag) continue;
+        gastoPorTag[e.tag] = (gastoPorTag[e.tag] || 0) + e.valor;
+      }
+      for (const tag of tagsComLimite) {
+        const limite = Number(tag.limite);
+        const gasto = gastoPorTag[tag.id] || 0;
+        const pct = (gasto / limite) * 100;
+        const chave = `tag-limite:${currentMonth}:${tag.id}`;
+        const nome = mdEscape(tag.label);
+        if (pct > 100) {
+          msgs.push({
+            text: `🚨 *Limite da tag ${nome} estourado!*\nGasto ${formatBRL(gasto)} de ${formatBRL(limite)} neste mês — passou *${formatBRL(gasto - limite)}*.`,
+            estado: { chave, sig: '100' },
+          });
+        } else if (pct >= 80) {
+          msgs.push({
+            text: `⚠️ *Tag ${nome} em ${Math.round(pct)}% do limite*\n${formatBRL(gasto)} de ${formatBRL(limite)} neste mês — restam *${formatBRL(limite - gasto)}*.`,
+            estado: { chave, sig: '80' },
+          });
+        }
       }
     }
   }

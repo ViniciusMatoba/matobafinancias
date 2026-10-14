@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.178';
+export const APP_VERSION = '1.6.179';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.179',
+    date: '14/10/2026',
+    changes: [
+      'Limite mensal por tag (opcional): em Configurações → Tags cada tag ganha o botão "+ Limite", onde você define, altera ou remove um teto mensal (ex.: Mercado R$ 800) quando quiser. Tag sem limite funciona como sempre, e renomear a tag mantém o limite',
+      'Painel → Tags: bloco "Limites do mês" com a barra de cada tag que tem limite (verde, amarelo a partir de 80%, vermelho acima de 100%), quanto resta ou quanto passou. Aparece nos períodos "Mês atual" e "Mês anterior"',
+      'Novo aviso no Telegram e no push ("Limite mensal por tag"): avisa em 80% e quando passa de 100%, uma vez por patamar em cada mês, só para tags que têm limite. Pode ser desligado em Configurações → Notificações',
+      'O comando /tags do Telegram mostra o percentual do limite e o que resta (ou quanto passou) abaixo de cada tag que tem limite',
+    ],
+  },
   {
     version: '1.6.178',
     date: '14/10/2026',

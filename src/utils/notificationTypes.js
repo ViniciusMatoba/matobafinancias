@@ -6,6 +6,7 @@ export const DEFAULT_NOTIFICATION_TIPOS = {
   n8: true, n9: true, n10: true, n11: true, n12: true,
   n13: true, n14: true, n15: true, n16: true, n17: true, n18: true,
   n19: true, n20: true, n21: true, n22: true, n23: true, n24: true, n25: true,
+  n27: true, // limite mensal por tag (n26 é reservado para o aviso de assinaturas)
 };
 
 export const TIPO_INFO = {
@@ -34,4 +35,5 @@ export const TIPO_INFO = {
   n23: { label: 'Relatório de investimentos',    icon: '📈', desc: 'Dia 15 e fim do mês (dia 30; em fevereiro, o último dia): status da reserva de emergência, total investido e sobra para aportar' },
   n24: { label: 'Aporte pendente',               icon: '🔔', desc: 'Telegram: cobra quando há sobra recomendada há 5+ dias e nenhum aporte foi registrado' },
   n25: { label: 'Gasto acima da média',          icon: '📈', desc: 'Telegram: avisa quando uma categoria passa 30% da média dos últimos 3 meses (1x por categoria/mês)' },
+  n27: { label: 'Limite mensal por tag',         icon: '🏷️', desc: 'Só para tags que têm limite (Configurações → Tags): avisa em 80% e quando passa de 100% do limite no mês' },
 };

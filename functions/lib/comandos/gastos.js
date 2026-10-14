@@ -189,7 +189,22 @@ async function handleTags(chatId, uid, args) {
     return `\`[${bar}]\` *${nome}* — ${formatBRL(g.valor)} (${pct}%) · ${g.count} lanç.`;
   };
 
-  const lines = comTag.map(([id, g]) => fmtLinha(`🏷 ${mdEscape(tagById[id].label)}`, g));
+  // Limite mensal da tag (opcional): uma linha logo abaixo da tag que tem limite
+  const linhaLimite = (tag, gasto) => {
+    const limite = Number(tag?.limite);
+    if (!(limite > 0)) return '';
+    const pct = (gasto / limite) * 100;
+    const icone = pct > 100 ? '🚨' : pct >= 80 ? '⚠️' : '✅';
+    const resto = pct > 100 ? `passou ${formatBRL(gasto - limite)}` : `restam ${formatBRL(limite - gasto)}`;
+    return `\n   ${icone} limite ${formatBRL(limite)}: *${Math.round(pct)}%* (${resto})`;
+  };
+
+  const lines = comTag.map(([id, g]) => fmtLinha(`🏷 ${mdEscape(tagById[id].label)}`, g) + linhaLimite(tagById[id], g.valor));
+  // tags com limite e sem nenhum gasto no mês também aparecem (para o limite não "sumir")
+  const comGasto = new Set(comTag.map(([id]) => id));
+  for (const t of tags) {
+    if (!comGasto.has(t.id) && Number(t.limite) > 0) lines.push(`🏷 *${mdEscape(t.label)}* — sem gasto${linhaLimite(t, 0)}`);
+  }
   if (sem) lines.push(fmtLinha('Sem tag', sem));
   lines.push(`\n_Detalhe de uma tag: /gastos ${normTxt(tagById[comTag[0]?.[0]]?.label || 'mercado')} — outro mês: /tags agosto_`);
   if (sem && sem.valor / total >= 0.2) {

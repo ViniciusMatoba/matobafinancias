@@ -6,7 +6,7 @@ import { expandDespesas } from '../../utils/despesas';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { TrendingUp, TrendingDown, Calendar, DollarSign, Download, ArrowLeft, Printer, HelpCircle } from 'lucide-react';
 import HelpModal from '../shared/HelpModal';
-import { tagsById, computeTagStats, SEM_TAG } from '../../utils/tags';
+import { tagsById, computeTagStats, SEM_TAG, limitesDoMes } from '../../utils/tags';
 import AssinaturasTab from './AssinaturasTab';
 
 const TABS = {
@@ -158,6 +158,9 @@ export default function ReportsScreen({ transactions, wallets = [], config, onSa
   // Despesas por tag (investimento não recebe tag e fica de fora)
   const tagMap = useMemo(() => tagsById(config?.tags), [config?.tags]);
   const tagStats = useMemo(() => computeTagStats(periodDespesas, config?.tags), [periodDespesas, config?.tags]);
+  // Limite mensal por tag (opcional): só faz sentido quando o período analisado é um mês
+  const periodoEhMes = period === 'current_month' || period === 'last_month';
+  const limitesTags = useMemo(() => (periodoEhMes ? limitesDoMes(config?.tags, tagStats) : []), [periodoEhMes, config?.tags, tagStats]);
 
   // Lista dos Top 10 maiores gastos individuais (na data em que aconteceram)
   const topExpenses = useMemo(() => {
@@ -593,12 +596,40 @@ export default function ReportsScreen({ transactions, wallets = [], config, onSa
                   </button>
                 )}
               </div>
-            ) : tagStats.list.length === 0 ? (
+            ) : (limitesTags.length === 0 && tagStats.list.length === 0) ? (
               <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '30px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 13 }}>
                 Nenhuma despesa registrada neste período.
               </div>
             ) : (
               <>
+                {limitesTags.length > 0 && (
+                  <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px' }}>
+                    <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Limites do mês</p>
+                    {limitesTags.map(l => {
+                      const cor = l.nivel === 'estourou' ? '#ef4444' : l.nivel === 'alerta' ? '#f59e0b' : '#10b981';
+                      return (
+                        <div key={l.id} style={{ marginBottom: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+                            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+                              <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 2, background: l.cor, marginRight: 6 }} />
+                              {l.label}
+                            </span>
+                            <span style={{ color: cor, fontWeight: 700 }}>{Math.round(l.pct)}%</span>
+                          </div>
+                          <div style={{ width: '100%', height: 7, borderRadius: 4, background: 'var(--bg-surface)', overflow: 'hidden' }}>
+                            <div style={{ width: `${Math.min(l.pct, 100)}%`, height: '100%', borderRadius: 4, background: cor }} />
+                          </div>
+                          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>
+                            {formatBRL(l.gasto)} de {formatBRL(l.limite)}
+                            {l.nivel === 'estourou' ? ` — passou ${formatBRL(l.gasto - l.limite)}` : ` — restam ${formatBRL(l.limite - l.gasto)}`}
+                          </p>
+                        </div>
+                      );
+                    })}
+                    <p style={{ margin: 0, fontSize: 11, color: 'var(--text-muted)' }}>Gasto pela data da compra. Defina ou mude os limites em Configurações → Tags.</p>
+                  </div>
+                )}
+
                 <p style={{ margin: '0 0 4px', fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                   Despesas do período por tag — <strong>{formatBRL(tagStats.total)}</strong> no total. Toque numa tag para ver em quais categorias ela se divide. Investimentos não entram aqui.
                 </p>

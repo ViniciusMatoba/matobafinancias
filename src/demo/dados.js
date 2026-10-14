@@ -14,9 +14,9 @@ export function criarDadosDemo(hoje = todayStr()) {
     tourDone: true,
     toursVistas: ['transactions', 'projection', 'reports', 'goals', 'settings'],
     tags: [
-      { id: 'assinaturas', label: 'Assinaturas', cor: '#8b5cf6' },
-      { id: 'mercado', label: 'Mercado', cor: '#10b981' },
-      { id: 'transporte', label: 'Transporte', cor: '#3b82f6' },
+      { id: 'assinaturas', label: 'Assinaturas', cor: '#8b5cf6', limite: 60 },
+      { id: 'mercado', label: 'Mercado', cor: '#10b981', limite: 380 },
+      { id: 'transporte', label: 'Transporte', cor: '#3b82f6', limite: 100 },
     ],
     investimentos: { perfil: 'clt', mesesMeta: 6, despesasMens: 3000, reservaGoalId: 'g1' },
   };
