@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.181
+- **Versão atual**: v1.6.182
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.181 — 14/10/2026
+**Versão**: v1.6.182 — 14/10/2026
 
 **Últimas features**:
+- v1.6.182 — Item 2 do plano de melhorias: AVISO DE ASSINATURAS (N26), DESLIGADO por padrão. `functions/lib/alertas/assinaturas.js` (`alertasAssinaturasBot`) chamado em `checkNotifications` só quando `tipos.n26 === true` (ao contrário dos demais, que valem até serem desligados); `n26:false` em `DEFAULT_NOTIFICATION_TIPOS` e `DEFAULT_TG_TIPOS`. Regras sem estado próprio (dedupe pela memória de avisos, chave `assin:<chave do item>`, sig `r:<valor>` ou `n:<valor>`): REAJUSTE = assinatura com ≥3 meses e `ultimoReajuste` no mês atual/anterior (sobe ou baixa); NOVA = 2 meses seguidos, sem aparecer antes, e `contexto.historicoMeses ≥ 4`; tag "Assinaturas" avisa na 1ª aparição. Os motores (app e bot) ganharam `contexto {mesAtual, mesAnterior, historicoMeses}`. Limitação: 2 reajustes na janela de 6 meses viram "variável" e deixam de avisar. Plano de melhorias concluído (itens 1 a 5); o N26 só deve ser ligado depois da revisão da lista de assinaturas
 - v1.6.181 — Item 4 do plano de melhorias: DATA DE QUITAÇÃO DAS PARCELAS. `calcParceladosBot` agora devolve `ultimaData` (data do caixa da última parcela) por item e `cronogramaParcelasBot` agrupa por mês de término (libera = Σ parcela mensal; `livreAPartirDe` = mês seguinte à última parcela); seção "Quando você fica livre" no `/parcelados`. App: `src/utils/parcelas.js` (`calcParcelados` + `cronogramaParcelas`, cópia fiel do bot, paridade em 300 cenários) + aba "Parcelas" no Painel (`ParcelasTab.jsx`; `ReportsScreen` agora recebe `cards`). Datas = vencimento da fatura (caixa), não a da compra. Dados do demo ajustados: só a fatura de origem da TV é `isParcelado` e ela exclui as datas que já têm fatura real (faturas manuais duplicando parcelas distorciam o resultado — o mesmo caso que "Verificar duplicidades de fatura" aponta)
 - v1.6.180 — Item 5 do plano de melhorias: PROJEÇÃO DA RESERVA NO RITMO REAL. Motor `src/utils/reservaRitmo.js` (app) + cópia `functions/lib/motor/reservaRitmo.js` (bot; também `linhaProjecaoReserva` para os textos), paridade em 300 cenários. Regras: ritmo = MEDIANA do líquido mensal da caixinha (metaId; saída subtrai, o resto soma) nos 3 meses COMPLETOS (mês atual fora; meses antes do 1º movimento não contam; meses sem aporte depois dele contam como zero); ocorrências de recorrentes valem todo mês (o SALDO segue a regra da tela Metas, recorrente uma vez — limitação documentada em teste); meses = ceil(falta/ritmo), teto 120 (>10 anos). Aparece na tela Investir (principal, acima da estimativa da sobra sugerida), no `/reserva` e no N23
 - v1.6.179 — Item 3 do plano de melhorias: LIMITE MENSAL POR TAG (opcional, editável a qualquer momento). Dado: `config.tags[i].limite` (R$, campo opcional; `setTagLimit`/`limiteDaTag`/`statusLimite`/`limitesDoMes` em `src/utils/tags.js`; renomear preserva). UI: botão "+ Limite" em Configurações → Tags (`TagSettings.jsx`) e bloco "Limites do mês" na aba Tags do Painel (só períodos Mês atual/anterior). Bot: alerta N27 em `lib/alertas/notificacoes.js` (80% e >100%, estado `tag-limite:<mês>:<tag>`, sig 80/100, só tags com limite, gasto por competência), linhas de limite no `/tags`. `n27` entrou nas listas do app (`notificationTypes.js`) e do bot (`configurar.js`); n26 fica reservado para o aviso de assinaturas; `limiteTag.test.js` compara as duas listas. Armadilha encontrada na tela: regex com `d` perdeu a barra ao gravar o arquivo (campo apagava os dígitos) — conferir regex no navegador

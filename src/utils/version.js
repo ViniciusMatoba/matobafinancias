@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.181';
+export const APP_VERSION = '1.6.182';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.182',
+    date: '14/10/2026',
+    changes: [
+      'Novo aviso "Assinaturas: reajuste e nova" (Telegram e push): avisa quando uma assinatura do cartão muda de valor (para mais ou para menos) e quando aparece uma assinatura nova, uma vez por mudança. DESLIGADO por padrão — revise a lista em Painel → Assinaturas e ligue em Configurações → Notificações quando estiver satisfeito',
+      'Para não gerar uma enxurrada no começo: o reajuste só vale para itens com pelo menos 3 meses de histórico, e "assinatura nova" só avisa quando você já tem 4 meses ou mais de compras no cartão (itens com a tag Assinaturas avisam já na primeira vez). Itens ocultos no app e itens de valor variável (mercado, delivery) nunca avisam',
+    ],
+  },
   {
     version: '1.6.181',
     date: '14/10/2026',

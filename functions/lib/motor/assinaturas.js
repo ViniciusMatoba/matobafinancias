@@ -71,6 +71,12 @@ function detectarAssinaturasBot({ transactions, tags, ignoradas, hoje = todayStr
   const eventos = expandDespesasBot(transactions || [], from, hoje)
     .filter(e => e.tipo === 'cartao' && !e.parcela && !e.projetada);
 
+  const contexto = {
+    mesAtual: mesAtualLogico,
+    mesAnterior: addMonthsStr(`${mesAtualLogico}-01`, -1).slice(0, 7),
+    historicoMeses: new Set(eventos.map(e => mesLogico(e.date, cfg.deslizeDias))).size,
+  };
+
   const grupos = new Map();
   for (const e of eventos) {
     const chaveNome = chaveDescricao(e.descricao);
@@ -161,7 +167,7 @@ function detectarAssinaturasBot({ transactions, tags, ignoradas, hoje = todayStr
     geralAnual: arred((mensalCartao + comunsMensal) * 12),
   };
 
-  return { assinaturas, variaveis, recorrentesComuns, totais, ignoradosCount };
+  return { assinaturas, variaveis, recorrentesComuns, totais, ignoradosCount, contexto };
 }
 
 module.exports = { ASSINATURAS_CFG, TAG_ASSINATURAS, chaveDescricao, detectarAssinaturasBot };

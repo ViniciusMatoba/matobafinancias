@@ -1,6 +1,7 @@
 'use strict';
 
 const { calcFaturaCardApp, calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange } = require('../motor/caixa');
+const { alertasAssinaturasBot } = require('./assinaturas');
 const { reservaDaCaixinhaBot } = require('../motor/caixinha');
 const { linhaProjecaoReserva, projecaoReservaBot, ritmoDaReservaBot } = require('../motor/reservaRitmo');
 const { CATEGORY_ORDER, collectMonthExpenses, computeSpentByCategory, expandDespesasBot, getTopExpensesForCategory } = require('../motor/competencia');
@@ -295,6 +296,12 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         }
       }
     }
+  }
+
+  // N26 — Assinaturas: reajuste de valor e assinatura nova. Nasce DESLIGADO: só roda quando o usuário liga
+  // (por isso `=== true`, ao contrário dos outros alertas, que valem enquanto não forem desligados).
+  if (tipos.n26 === true) {
+    msgs.push(...alertasAssinaturasBot({ transactions, config, hoje: todayStr }));
   }
 
   // N10 — Alerta de Contas Fixas/Lançamentos Recorrentes Pendentes

@@ -70,6 +70,13 @@ export function detectarAssinaturas({ transactions, tags, ignoradas, hoje = toda
   const eventos = expandDespesas(transactions || [], from, hoje)
     .filter(e => e.tipo === 'cartao' && !e.parcela && !e.projetada);
 
+  // Contexto para os avisos: meses lógicos atual/anterior e quantos meses distintos têm compras de cartão
+  const contexto = {
+    mesAtual: mesAtualLogico,
+    mesAnterior: addMonths(`${mesAtualLogico}-01`, -1).slice(0, 7),
+    historicoMeses: new Set(eventos.map(e => mesLogico(e.date, cfg.deslizeDias))).size,
+  };
+
   const grupos = new Map();
   for (const e of eventos) {
     const chaveNome = chaveDescricao(e.descricao);
@@ -162,5 +169,5 @@ export function detectarAssinaturas({ transactions, tags, ignoradas, hoje = toda
     geralAnual: arred((mensalCartao + comunsMensal) * 12),
   };
 
-  return { assinaturas, variaveis, recorrentesComuns, totais, ignoradosCount };
+  return { assinaturas, variaveis, recorrentesComuns, totais, ignoradosCount, contexto };
 }
