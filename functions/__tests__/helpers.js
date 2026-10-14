@@ -30,6 +30,7 @@ require.cache[caminhoMsg].exports = {
   }),
 }
 
+export const logger = require('firebase-functions').logger
 export const botModule = require('../index.js')
 export const bot = botModule.__test
 

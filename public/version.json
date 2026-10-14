@@ -1,8 +1,8 @@
 {
-  "version": "1.6.170",
+  "version": "1.6.171",
   "date": "14/10/2026",
   "notes": [
-    "Revisão geral final: limpeza de uma constante sem uso no bot e atualização da documentação interna. Nenhuma mudança de comportamento no app ou no bot",
-    "Verificação: 494 testes automatizados passando em quatro fusos horários, build sem erros e nenhum erro nos logs das Cloud Functions"
+    "Preparação para organizar o código do bot em módulos: teste de fumaça que roda todos os comandos, botões e funções exportadas e falha em qualquer erro, e verificação automática de identificadores indefinidos nas Cloud Functions (agora parte do release)",
+    "Nenhuma mudança de comportamento no app ou no bot"
   ]
 }

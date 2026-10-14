@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.170
+- **Versão atual**: v1.6.171
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.170 — 14/10/2026
+**Versão**: v1.6.171 — 14/10/2026
 
 **Últimas features**:
+- v1.6.171 — Etapa 0 da divisão do `functions/index.js` em módulos: `fumaca.test.js` (todo comando/botão/exportada roda sem erro) e `npm run lint:functions` (`eslint.functions.config.mjs`, só `no-undef`; também roda no release)
 - v1.6.170 — Revisão geral final: removida constante sem uso (`PROJECT_ID`) e corrigida nota desatualizada do onboarding neste arquivo. Suíte (494 testes) verificada em 4 fusos horários (UTC, São Paulo, Tóquio, Los Angeles). Risco conhecido: o bot depende de o servidor rodar em UTC (`getNowBrasilia` devolve uma data "deslocada" lida com getHours/getDate locais) — os testes fixam TZ=UTC como na produção
 - v1.6.169 — N23: fim do mês = `min(30, último dia do mês)` (fevereiro 28/29; demais meses seguem no dia 30); cabeçalho com o dia real; `n23.test.js` varre todos os dias de 2026 e fev/2028 (exatamente 2 relatórios por mês). Escolhida a regra R1 (R2 = sempre o último dia, mudaria 7 meses)
 - v1.6.168 — Home: banner da reserva usa `resumoReservaHome`/`acharCaixinhaReserva` (`src/utils/caixinha.js`): caixinha = `config.investimentos.reservaGoalId` (senão o nome), saldo = `saldoCaixinha` (igual Metas; recorrente conta uma vez), meta = `goal.metaFinal` (senão `despesasMens × mesesMeta`), caso `semMeta` com botão "Definir a meta da reserva". Antes: busca só por nome, saldo pelo sinal do caixa (aporte negativo), meta de 3 fontes. `caixinha.test.js` (18)

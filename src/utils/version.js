@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.170';
+export const APP_VERSION = '1.6.171';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.171',
+    date: '14/10/2026',
+    changes: [
+      'Preparação para organizar o código do bot em módulos: teste de fumaça que roda todos os comandos, botões e funções exportadas e falha em qualquer erro, e verificação automática de identificadores indefinidos nas Cloud Functions (agora parte do release)',
+      'Nenhuma mudança de comportamento no app ou no bot',
+    ],
+  },
   {
     version: '1.6.170',
     date: '14/10/2026',

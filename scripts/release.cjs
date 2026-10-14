@@ -91,6 +91,8 @@ try {
   if (SKIP_TESTS) {
     console.log('🧪 Testes pulados (--skip-tests).');
   } else {
+    console.log('🔎 Conferindo identificadores indefinidos nas Cloud Functions...');
+    run('npm run lint:functions');
     console.log('🧪 Rodando testes...');
     run('npx vitest run');
   }

@@ -1,12 +1,13 @@
 {
   "name": "matoba-financas",
   "private": true,
-  "version": "1.6.170",
+  "version": "1.6.171",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
+    "lint:functions": "eslint -c eslint.functions.config.mjs \"functions/**/*.js\"",
     "preview": "vite preview",
     "deploy": "gh-pages -d dist",
     "release": "node scripts/release.cjs",
