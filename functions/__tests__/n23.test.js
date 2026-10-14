@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { bot, fixarRelogio } from './helpers'
 
 /**
@@ -165,9 +165,42 @@ describe('N23 — reserva = saldo da caixinha (mesma regra da tela Metas)', () =
     })
   })
 
-  describe('fevereiro (comportamento registrado)', () => {
-    fixarRelogio('2027-02-28T15:00:00Z')
-    it('o relatório "do fim do mês" não sai em fevereiro (não existe dia 30)', () => {
+  describe('fim do mês: dia 30, ou o último dia quando o mês é menor', () => {
+    fixarRelogio('2026-01-01T15:00:00Z')
+    const diasComRelatorio = (ano, mes) => {
+      const ultimo = new Date(ano, mes, 0).getDate()
+      const dias = []
+      for (let d = 1; d <= ultimo; d++) {
+        vi.setSystemTime(new Date(Date.UTC(ano, mes - 1, d, 15)))
+        if (roda({ config: PERFIL, goals: [GOAL], txs: [entrada(5000)] }).length > 0) dias.push(d)
+      }
+      return dias
+    }
+
+    it.each([
+      [2026, 1, 30], [2026, 2, 28], [2026, 3, 30], [2026, 4, 30], [2026, 5, 30], [2026, 6, 30],
+      [2026, 7, 30], [2026, 8, 30], [2026, 9, 30], [2026, 10, 30], [2026, 11, 30], [2026, 12, 30],
+      [2028, 2, 29], // ano bissexto
+    ])('%i-%i: relatórios nos dias 15 e %i (e em nenhum outro)', (ano, mes, fim) => {
+      expect(diasComRelatorio(ano, mes)).toEqual([15, fim])
+    })
+
+    it('cabeçalho de fevereiro mostra o dia real (28) e o de ano bissexto o 29', () => {
+      vi.setSystemTime(new Date('2027-02-28T15:00:00Z'))
+      expect(roda({ config: PERFIL, goals: [GOAL], txs: [entrada(5000)] })[0]).toContain('Dia 28 de Fevereiro')
+      vi.setSystemTime(new Date('2028-02-29T15:00:00Z'))
+      expect(roda({ config: PERFIL, goals: [GOAL], txs: [entrada(5000)] })[0]).toContain('Dia 29 de Fevereiro')
+    })
+
+    it('o lembrete sem perfil também usa o dia real em fevereiro', () => {
+      vi.setSystemTime(new Date('2027-02-28T15:00:00Z'))
+      expect(roda()[0]).toContain('Lembrete de Investimento — Dia 28')
+    })
+
+    it('fevereiro: o dia 27 e o dia 30 inexistente não disparam; meses de 31 dias não disparam no 31', () => {
+      vi.setSystemTime(new Date('2027-02-27T15:00:00Z'))
+      expect(roda({ config: PERFIL, goals: [GOAL], txs: [entrada(5000)] })).toHaveLength(0)
+      vi.setSystemTime(new Date('2026-01-31T15:00:00Z'))
       expect(roda({ config: PERFIL, goals: [GOAL], txs: [entrada(5000)] })).toHaveLength(0)
     })
   })

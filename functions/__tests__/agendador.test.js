@@ -320,3 +320,25 @@ describe('onboarding do Telegram e o agendador', () => {
     expect(mensagensEnviadas().filter(t => t.includes('Saldo atual negativo'))).toHaveLength(0)
   })
 })
+
+describe('N23 em fevereiro pelo agendador', () => {
+  it('o relatório do fim do mês sai no dia 28 de fevereiro (antes não saía em fevereiro)', async () => {
+    usuario({ alertas: ['n23'] })
+    entrada(3000)
+    await executar('2027-02-27')
+    expect(mensagensEnviadas()).toHaveLength(0)
+    await executar('2027-02-28')
+    const msgs = mensagensEnviadas().join(' | ')
+    expect(msgs).toContain('Dia 28')
+    expect(msgs).toContain('Investimento')
+  })
+
+  it('ano bissexto: sai no dia 29 e não no 28', async () => {
+    usuario({ alertas: ['n23'] })
+    entrada(3000)
+    await executar('2028-02-28')
+    expect(mensagensEnviadas()).toHaveLength(0)
+    await executar('2028-02-29')
+    expect(mensagensEnviadas().join(' | ')).toContain('Dia 29')
+  })
+})

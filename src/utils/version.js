@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.168';
+export const APP_VERSION = '1.6.169';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.169',
+    date: '14/10/2026',
+    changes: [
+      'Telegram, relatório de investimentos (N23): o relatório do fim do mês agora também sai em fevereiro (dia 28, ou 29 em ano bissexto). Nos demais meses continua no dia 30; antes o relatório só existia no dia 30 e nunca saía em fevereiro',
+      'O cabeçalho mostra o dia real do relatório (por exemplo "Dia 28 de Fevereiro") e a descrição do alerta em Configurações foi atualizada. O resto do relatório não mudou',
+    ],
+  },
   {
     version: '1.6.168',
     date: '14/10/2026',

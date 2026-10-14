@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.168
+- **Versão atual**: v1.6.169
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.168 — 14/10/2026
+**Versão**: v1.6.169 — 14/10/2026
 
 **Últimas features**:
+- v1.6.169 — N23: fim do mês = `min(30, último dia do mês)` (fevereiro 28/29; demais meses seguem no dia 30); cabeçalho com o dia real; `n23.test.js` varre todos os dias de 2026 e fev/2028 (exatamente 2 relatórios por mês). Escolhida a regra R1 (R2 = sempre o último dia, mudaria 7 meses)
 - v1.6.168 — Home: banner da reserva usa `resumoReservaHome`/`acharCaixinhaReserva` (`src/utils/caixinha.js`): caixinha = `config.investimentos.reservaGoalId` (senão o nome), saldo = `saldoCaixinha` (igual Metas; recorrente conta uma vez), meta = `goal.metaFinal` (senão `despesasMens × mesesMeta`), caso `semMeta` com botão "Definir a meta da reserva". Antes: busca só por nome, saldo pelo sinal do caixa (aporte negativo), meta de 3 fontes. `caixinha.test.js` (18)
 - v1.6.167 — Onboarding: comandos "/x" passam durante o cadastro (com lembrete; `/pular` segue sendo resposta); `completeOnboarding` grava em `notificacoes.telegramTipos` (base = telegramTipos ou tipos atuais) e não mexe mais em `tipos` (push). Todos os 4 defeitos do onboarding resolvidos (v1.6.166 e v1.6.167). Escolhido entre 5 planos: Plano 2 (duas versões por risco)
 - v1.6.166 — Onboarding: estado gravado com `mergeFields:['telegramOnboarding']` (substitui; `merge:true` mesclava `data` e vazava `tempSelections`), `completeOnboarding` descarta `tempSelections`, horário reconhecido por número inteiro. (defeitos 3 e 4 resolvidos na v1.6.167)
@@ -128,7 +129,7 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 - v1.6.164 — N24/N25 passam a devolver `{ text, confirmar }`: o estado (`reservaTracking.lastRemindData`, `alertasAcimaMedia`) só é gravado DEPOIS de o Telegram aceitar o envio (falha = tenta de novo no próximo ciclo das 19h); `n25.test.js` + casos de falha em `agendador.test.js`. Escolhido entre 3 planos (só testes / testes + confirmar-depois-do-envio / migrar para `alertasEstado`): a migração foi descartada por risco e porque a regra de 5 dias do N24 não cabe no modelo de assinatura
 - v1.6.163 — N24 corrigido (só bot): aporte reconhecido por OCORRÊNCIAS de sobraData até hoje, inclusive (recorrente e mesmo dia), sobra zerada encerra o rastreio, aviso usa min(valor guardado, sobra de hoje); `n24Diferencial.test.js` prova identidade com a versão antiga nos aportes únicos. Aporte agendado para o futuro não encerra a cobrança (a sobra já o desconta). Efeito conhecido: o aporte que reinicia o rastreio é visto mais uma vez no dia seguinte (atrasa a cobrança em 1 dia, uma vez)
 - v1.6.162 — Testes do N24 (`n24.test.js`) e do agendador `dailyNotifications.run` (`agendador.test.js`; `helpers.js` fixa TZ=UTC como a produção e simula o push). (achados do N24 resolvidos na v1.6.163.) N24/N25 só rodam no ciclo das 19h (junto do N18), independente de `horaAlerta`
-- v1.6.161 — Reserva de emergência = saldo da caixinha por `metaId` (mesma regra da tela Metas/`/meta`): `src/utils/caixinha.js` (`saldoCaixinha`, `reservaDaCaixinha`) usada na tela Investir; `saldoCaixinhaBot`/`reservaDaCaixinhaBot` no bot (N23, `/reserva`, `/investimentos`); `reserva.test.js` compara com a conta literal da tela Metas. Antes procurava `goalId`/`cartaoVinculo` (nunca gravados). Aporte recorrente conta uma vez (como na tela Metas). ABERTO: N23 do dia 30 não existe em fevereiro; (card de reserva da Home corrigido na v1.6.168)
+- v1.6.161 — Reserva de emergência = saldo da caixinha por `metaId` (mesma regra da tela Metas/`/meta`): `src/utils/caixinha.js` (`saldoCaixinha`, `reservaDaCaixinha`) usada na tela Investir; `saldoCaixinhaBot`/`reservaDaCaixinhaBot` no bot (N23, `/reserva`, `/investimentos`); `reserva.test.js` compara com a conta literal da tela Metas. Antes procurava `goalId`/`cartaoVinculo` (nunca gravados). Aporte recorrente conta uma vez (como na tela Metas). (N23 em fevereiro resolvido na v1.6.169); (card de reserva da Home corrigido na v1.6.168)
 - v1.6.160 — Testes do N23 (`n23.test.js`)
 - v1.6.159 — Removidos `calcFaturaCardBot`/`calcCicloFaturaBot`/`vencimentoAnteriorBot`; o bot só tem `calcFaturaCardApp` (paridade total com o app, sem divergências conhecidas de fatura)
 - v1.6.158 — Bot: `handlePayCardCallback` paga a fatura da DATA do botão por ocorrências pendentes (fatura paga continua projetando; real vira conferida; projeções viram um pagamento + exclusão no original; nada pendente = no-op "já estava paga"); N1/N2 mandam a data real do vencimento; `pagoCartao.test.js`.

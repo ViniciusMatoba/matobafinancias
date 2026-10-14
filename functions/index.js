@@ -1048,8 +1048,12 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     }
   }
 
-  // ── N23 — Lembrete de investimento e reserva (dias 15 e 30) ─────────────────
-  if (tipos.n23 !== false && (day === 15 || day === 30)) {
+  // ── N23 — Lembrete de investimento e reserva (dia 15 e fim do mês) ──────────────
+  // Fim do mês = dia 30, ou o último dia quando o mês é menor (fevereiro: 28/29). Antes só havia o dia 30,
+  // então o relatório nunca saía em fevereiro.
+  const ultimoDiaMesN23 = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+  const diaFimN23 = Math.min(30, ultimoDiaMesN23);
+  if (tipos.n23 !== false && (day === 15 || day === diaFimN23)) {
     const FAR_PAST = '2020-01-01';
     const invConfig = config?.investimentos || {};
     const temPerfil = !!invConfig.perfil;
@@ -1082,11 +1086,10 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const reservaCompleta = metaTotal > 0 && reservaAtual >= metaTotal;
 
     const nomeMes = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
-    const periodo = day === 15 ? 'metade' : 'fim';
 
     if (!temPerfil) {
       // Sem configuração: mensagem motivacional
-      let msg = `🌱 *Lembrete de Investimento — ${periodo === 'metade' ? 'Dia 15' : 'Dia 30'}*\n\n`;
+      let msg = `🌱 *Lembrete de Investimento — Dia ${day}*\n\n`;
       msg += `Você ainda não configurou sua reserva de emergência no app.\n\n`;
       msg += `🔐 *Por que começar?*\nUma reserva de emergência de 3 a 12 meses de despesas fixas te protege de imprevistos e te dá liberdade para investir com tranquilidade.\n\n`;
       msg += `💡 *Dica:* Guarde em conta corrente ou CDB/Tesouro com liquidez diária.\n\n`;
@@ -1094,7 +1097,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       msgs.push(msg);
     } else {
       // Com configuração: relatório com saldos reais
-      let msg = `📈 *Relatório de Investimentos — ${periodo === 'metade' ? 'Dia 15' : 'Dia 30'} de ${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}*\n\n`;
+      let msg = `📈 *Relatório de Investimentos — Dia ${day} de ${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}*\n\n`;
 
       if (metaTotal > 0) {
         const pct = Math.min(100, Math.round((reservaAtual / metaTotal) * 100));
@@ -2319,7 +2322,7 @@ const ALERT_LABELS = {
   n13:'Fecha amanhã',       n14:'Última parcela',       n15:'Saldo mínimo',
   n16:'Caixinhas (dia 1)',  n17:'Metade do mês',        n18:'Economia do dia',
   n19:'Gasto atípico do dia', n20:'Progresso metas (sex)', n21:'Conferência (dia 20)',
-  n22:'Sobra segura',          n23:'Relatório invest. (15/30)', n24:'Aporte pendente',
+  n22:'Sobra segura',          n23:'Relatório invest. (15/fim)', n24:'Aporte pendente',
   n25:'Acima da média',
 };
 
