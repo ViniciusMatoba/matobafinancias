@@ -1,8 +1,8 @@
 {
-  "version": "1.6.175",
+  "version": "1.6.176",
   "date": "14/10/2026",
   "notes": [
-    "Organização do código do bot, etapa 4 de 5: ações dos botões (pagar, adiar), tratamento de callbacks, onboarding e vínculo movidos para functions/lib",
+    "Organização do código do bot, etapa 5 de 5: o index.js agora é só uma fachada (45 linhas); as 5 funções do Firebase vivem em functions/lib/entradas",
     "Código movido sem nenhuma linha alterada; nenhuma mudança de comportamento no app ou no bot"
   ]
 }
