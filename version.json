@@ -1,8 +1,8 @@
 {
-  "version": "1.6.172",
+  "version": "1.6.173",
   "date": "14/10/2026",
   "notes": [
-    "Organização do código do bot, etapa 1 de 5: infraestrutura, utilitários e motores de cálculo foram movidos do index.js para módulos (functions/lib)",
+    "Organização do código do bot, etapa 2 de 5: alertas (N1 a N25) e memória de avisos movidos do index.js para functions/lib/alertas",
     "Código movido sem nenhuma linha alterada; nenhuma mudança de comportamento no app ou no bot"
   ]
 }
