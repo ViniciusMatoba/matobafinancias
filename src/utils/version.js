@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.155';
+export const APP_VERSION = '1.6.156';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.156',
+    date: '14/10/2026',
+    changes: [
+      'Telegram: /fatura e o alerta de limite do cartão (N11) agora calculam a fatura exatamente como o app — contam as parcelas que uma fatura já paga ainda projeta nos meses seguintes e o comprometido futuro mês a mês. Antes o bot subestimava a fatura e o uso do limite depois de pagar uma fatura parcelada',
+      'O botão Pago do cartão não mudou; o app não foi alterado',
+      'Teste com 400 cenários gerados confirma zero diferenças entre o app e o bot no cálculo da fatura',
+    ],
+  },
   {
     version: '1.6.155',
     date: '14/10/2026',

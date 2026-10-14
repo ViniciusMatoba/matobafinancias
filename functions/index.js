@@ -182,6 +182,38 @@ function getProximoVencimentoBot(card, today) {
  * Calcula faturaAtual e comprometidoFuturo de um cartão.
  * Espelha calcFaturaCard do frontend, incluindo projeção de parcelas virtuais.
  */
+/**
+ * Fatura do cartão EXATAMENTE como o app calcula (calcFaturaCard): por expansão de ocorrências na data
+ * do vencimento, de mês em mês. Usada só para LEITURA (/fatura e alerta N11). Ao contrário de
+ * calcFaturaCardBot, conta as parcelas que uma fatura já paga ainda projeta para os meses seguintes
+ * (o filtro de "conferido" vale por ocorrência, não pelo documento de origem).
+ * O botão Pago do cartão continua usando calcFaturaCardBot, de propósito.
+ */
+function calcFaturaCardApp(card, transactions, today) {
+  const proximoVenc = getProximoVencimentoBot(card, today);
+  const prevVenc = addMonthsStr(proximoVenc, -1);
+  const cardTxs = transactions.filter(
+    t => (t.tipo === 'cartao' && t.cartaoId === card.id) || t.cartaoVinculo === card.id
+  );
+  const ocorrenciasEm = (venc) => expandRange(cardTxs, venc, venc)
+    .filter(o => o.date === venc && !o.tx.conferido);
+  const pendentesVenc = (venc) => ocorrenciasEm(venc).reduce((acc, o) => acc + o.valor, 0);
+
+  const prevPendente = pendentesVenc(prevVenc);
+  const faturaVenc = (prevPendente > 0 && prevVenc <= today) ? prevVenc : proximoVenc;
+  const faturaAtual = faturaVenc === prevVenc ? prevPendente : pendentesVenc(proximoVenc);
+
+  let comprometidoFuturo = 0;
+  for (let k = 1; k <= 24; k++) comprometidoFuturo += pendentesVenc(addMonthsStr(faturaVenc, k));
+
+  const limite = card.limite || 0;
+  const limiteDisponivel = Math.max(0, limite - faturaAtual - comprometidoFuturo);
+  return {
+    faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc: faturaVenc,
+    ocorrencias: ocorrenciasEm(faturaVenc),
+  };
+}
+
 // Vencimento do mês anterior ao de `venc` (mesmo dia, limitado ao último dia do mês)
 function vencimentoAnteriorBot(venc) {
   const [y, m, d] = venc.split('-').map(Number);
@@ -862,7 +894,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     for (const card of cards) {
       if (!card.limite || card.limite <= 0) continue;
 
-      const { faturaAtual, comprometidoFuturo } = calcFaturaCardBot(card, transactions, todayStr);
+      const { faturaAtual, comprometidoFuturo } = calcFaturaCardApp(card, transactions, todayStr);
       const totalComprometido = faturaAtual + comprometidoFuturo;
       const pct = (totalComprometido / card.limite) * 100;
       if (pct >= 80) {
@@ -2285,36 +2317,15 @@ async function handleFatura(chatId, uid) {
   let text = `🧾 *Detalhamento das Faturas*\n\n`;
 
   for (const card of cards) {
-    const { faturaAtual, comprometidoFuturo, proximoVenc, prevVenc } = calcFaturaCardBot(card, txs, today);
+    const { faturaAtual, comprometidoFuturo, proximoVenc, ocorrencias } = calcFaturaCardApp(card, txs, today);
 
-    // Lançamentos reais na janela do ciclo atual
-    const cardTxsWindow = txs.filter(
-      t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
-        && t.dataInicio > prevVenc && t.dataInicio <= proximoVenc
-    );
-
-    // Se sem real, usa parcelas projetadas via expandRange
-    let items = [];
+    // Itens da fatura do ciclo: o que o app conta no vencimento (lançamento real ou parcelas projetadas)
+    const items = [];
     let isVirtual = false;
-    if (cardTxsWindow.length > 0) {
-      cardTxsWindow.forEach(tx => {
-        if (tx.itens?.length > 0) {
-          tx.itens.forEach(item => items.push(item));
-        } else {
-          items.push({ descricao: tx.descricao || 'Despesa Cartão', valor: tx.valor, dataCompra: tx.dataInicio });
-        }
-      });
-    } else {
-      isVirtual = true;
-      const occs = expandRange(
-        txs.filter(t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido && t.dataInicio <= prevVenc),
-        prevVenc, proximoVenc
-      ).filter(o => o.date > prevVenc && o.date <= proximoVenc);
-      occs.forEach(o => {
-        if (o.tx?.itens?.length > 0) {
-          o.tx.itens.forEach(item => items.push(item));
-        }
-      });
+    for (const o of ocorrencias) {
+      if (String(o.tx.id || '').includes('-proj-')) isVirtual = true;
+      if (o.tx.itens?.length > 0) o.tx.itens.forEach(item => items.push(item));
+      else items.push({ descricao: o.tx.descricao || 'Despesa Cartão', valor: o.valor, dataCompra: o.tx.dataInicio });
     }
 
     const [pvy, pvm, pvd] = proximoVenc.split('-');
@@ -4469,7 +4480,7 @@ exports.smsWebhook = onRequest(
 // Só para testes automatizados (vitest define VITEST); em produção nada extra é exportado.
 if (process.env.VITEST) {
   module.exports.__test = {
-    expandRange, calcSaldoSimples, calcFaturaCardBot, expandDespesasBot,
+    expandRange, calcSaldoSimples, calcFaturaCardBot, calcFaturaCardApp, expandDespesasBot,
     checkNotifications, filtrarAlertasRepetidos, estadoAposEnvio,
     calcSobraSeguraBot, sobraPorDataBot, resumirSobraBot,
     computeSpentByCategory, formatBRL,
