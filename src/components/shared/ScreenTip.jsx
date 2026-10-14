@@ -10,25 +10,28 @@ const TIPS = {
 };
 
 export default function ScreenTip({ view, toursVistas = [], onDismiss }) {
-  const [visible, setVisible] = useState(false);
+  const [fechadaEm, setFechadaEm] = useState(null);
 
   const tip = TIPS[view];
   const jaViu = toursVistas.includes(view);
+  const visible = !!tip && !jaViu && fechadaEm !== view;
+
+  const handleDismiss = () => {
+    setFechadaEm(view);
+    onDismiss(view);
+  };
 
   useEffect(() => {
     if (!tip || jaViu) return;
-    setVisible(true);
-    const timer = setTimeout(() => handleDismiss(), 6000);
+    const timer = setTimeout(() => {
+      setFechadaEm(view);
+      onDismiss(view);
+    }, 6000);
     return () => clearTimeout(timer);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
 
-  const handleDismiss = () => {
-    setVisible(false);
-    onDismiss(view);
-  };
-
-  if (!visible || !tip || jaViu) return null;
+  if (!visible) return null;
 
   return (
     <div style={{

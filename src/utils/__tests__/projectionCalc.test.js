@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 
 // Fixa "hoje" em 2026-06-17 para tornar todos os testes determinísticos
 vi.mock('../formatters', async (importOriginal) => {

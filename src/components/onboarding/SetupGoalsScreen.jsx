@@ -22,7 +22,6 @@ export default function SetupGoalsScreen({ onSave, onAfterSetup }) {
   const [step, setStep] = useState(0);
   const [renda, setRenda] = useState('');
   const [pcts, setPcts] = useState({ ...DEFAULT_BUDGET_PCTS });
-  const [wantsCard, setWantsCard] = useState(false);
 
   const rendaNum = parseBRLInput(renda);
   const totalPct = Object.values(pcts).reduce((s, v) => s + Number(v), 0);
@@ -315,7 +314,7 @@ export default function SetupGoalsScreen({ onSave, onAfterSetup }) {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
-                onClick={() => { setWantsCard(true); handleFinish(true); }}
+                onClick={() => { handleFinish(true); }}
                 style={BTN_PRIMARY}
               >
                 <CheckCircle size={16} /> Cadastrar cartão agora

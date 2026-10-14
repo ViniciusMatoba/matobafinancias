@@ -3880,14 +3880,18 @@ exports.telegramWebhook = onRequest(
     if (req.method !== 'POST') { res.sendStatus(405); return; }
 
     // Validação de token secreto para segurança do webhook (evita spoofing)
+    // Sem segredo configurado o webhook fica fechado (antes ficava aberto a qualquer chamada)
     const secretToken = process.env.TELEGRAM_SECRET_TOKEN;
-    if (secretToken) {
-      const headerToken = req.headers['x-telegram-bot-api-secret-token'];
-      if (headerToken !== secretToken) {
-        logger.warn('[TG webhook] Requisição não autorizada — secret token incorreto ou ausente.');
-        res.sendStatus(403);
-        return;
-      }
+    if (!secretToken) {
+      logger.error('[TG webhook] TELEGRAM_SECRET_TOKEN não configurado — requisição recusada.');
+      res.sendStatus(503);
+      return;
+    }
+    const headerToken = req.headers['x-telegram-bot-api-secret-token'];
+    if (headerToken !== secretToken) {
+      logger.warn('[TG webhook] Requisição não autorizada — secret token incorreto ou ausente.');
+      res.sendStatus(403);
+      return;
     }
 
     try {
@@ -3921,6 +3925,16 @@ function filtrarAlertasRepetidos(msgs, estadoAnterior, hojeStr) {
     }
   }
   return { enviar, estadoNovo };
+}
+
+// Aviso cujo envio falhou não pode ficar marcado como "já avisado": volta ao estado anterior.
+function estadoAposEnvio(estadoNovo, estadoAnterior, chavesFalhas) {
+  const out = { ...estadoNovo };
+  for (const chave of chavesFalhas) {
+    if (estadoAnterior && estadoAnterior[chave]) out[chave] = estadoAnterior[chave];
+    else delete out[chave];
+  }
+  return out;
 }
 
 function diffDaysStr(a, b) {
@@ -4007,11 +4021,13 @@ exports.dailyNotifications = onSchedule(
             const pushEstadoAnt = await lerEstadoAlertas(uid, 'push');
             const pushFiltro = filtrarAlertasRepetidos(pushBruto, pushEstadoAnt, hojeBr);
             const pushMsgs  = pushFiltro.enviar;
+            const pushFalhas = new Set();
             for (const msg of pushMsgs) {
               try {
                 const text = typeof msg === 'string' ? msg : msg.text;
                 await sendPushNotification(fcmToken, text);
               } catch (pushErr) {
+                if (msg && msg.estado) pushFalhas.add(msg.estado.chave);
                 logger.error(`[PUSH] Erro FCM uid=${uid}:`, pushErr);
                 const code = pushErr?.errorInfo?.code || pushErr?.code;
                 if (code === 'messaging/registration-token-not-registered' ||
@@ -4023,7 +4039,7 @@ exports.dailyNotifications = onSchedule(
                 }
               }
             }
-            await gravarEstadoAlertas(uid, 'push', pushFiltro.estadoNovo);
+            await gravarEstadoAlertas(uid, 'push', estadoAposEnvio(pushFiltro.estadoNovo, pushEstadoAnt, pushFalhas));
             if (pushMsgs.length > 0)
               logger.info(`[PUSH] uid=${uid}: ${pushMsgs.length} alerta(s) enviado(s)`);
           }
@@ -4037,6 +4053,7 @@ exports.dailyNotifications = onSchedule(
             const tgFiltro = filtrarAlertasRepetidos(tgBruto, tgEstadoAnt, hojeBr);
             const tgMsgs  = tgFiltro.enviar;
             let tgBlocked = false;
+            const tgFalhas = new Set();
             for (const msg of tgMsgs) {
               const msgObj = typeof msg === 'string' ? { text: msg } : msg;
               let extra = {};
@@ -4067,6 +4084,7 @@ exports.dailyNotifications = onSchedule(
               }
               const tgRes = await sendMessage(chatId, msgObj.text, extra);
               if (tgRes && tgRes.ok === false) {
+                if (msgObj.estado) tgFalhas.add(msgObj.estado.chave);
                 const isBlocked = tgRes.error_code === 403 || 
                   (tgRes.error_code === 400 && tgRes.description?.includes('chat not found'));
                 if (isBlocked) {
@@ -4078,7 +4096,7 @@ exports.dailyNotifications = onSchedule(
               }
               await new Promise(r => setTimeout(r, 100));
             }
-            if (!tgBlocked) await gravarEstadoAlertas(uid, 'telegram', tgFiltro.estadoNovo);
+            if (!tgBlocked) await gravarEstadoAlertas(uid, 'telegram', estadoAposEnvio(tgFiltro.estadoNovo, tgEstadoAnt, tgFalhas));
             if (tgMsgs.length > 0 && !tgBlocked)
               logger.info(`[TELEGRAM] uid=${uid}: ${tgMsgs.length} alerta(s) enviado(s)`);
           }

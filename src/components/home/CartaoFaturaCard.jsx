@@ -324,7 +324,7 @@ export default function CartaoFaturaCard({ cardsStats, transactions, onVerHistor
                       {card.parcelasFuturasDetalhadas?.length > 0 && (
                         <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)', opacity: 0.85, whiteSpace: 'pre-wrap', lineHeight: 1.2 }}>
                           {card.parcelasFuturasDetalhadas.map(p => {
-                            const [, m, d] = p.vencimento.split('-');
+                            const [, m] = p.vencimento.split('-');
                             const mesAbr = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m,10)-1];
                             return `${mesAbr}: ${fmtVal(p.valor)}`;
                           }).join(' · ')}

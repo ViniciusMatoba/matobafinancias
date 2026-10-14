@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks, getProximoVencimento } from '../../utils/formatters';
+import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks } from '../../utils/formatters';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 import { calcFaturaCard } from '../../utils/projectionCalc';
@@ -912,7 +912,7 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
         const selectedCard = cards.find(c => c.id === form.cartaoId) || null;
         // Exclui o lançamento sendo editado para não contar duas vezes
         const txsParaCalculo = transactions.filter(t => t.id !== initial?.id);
-        const { faturaAtual, comprometidoFuturo, limiteDisponivel, proximoVenc } = selectedCard
+        const { faturaAtual, comprometidoFuturo, limiteDisponivel } = selectedCard
           ? calcFaturaCard(selectedCard, txsParaCalculo, todayStr())
           : { faturaAtual: 0, comprometidoFuturo: 0, limiteDisponivel: 0, proximoVenc: null };
         const limiteTotal = selectedCard?.limite || 0;

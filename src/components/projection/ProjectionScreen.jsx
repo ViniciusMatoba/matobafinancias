@@ -1073,7 +1073,6 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
               <tbody>
                 {days.map(day => {
                   const hasItems = day.items.length > 0;
-                  const dNum = formatDayNum(day.date);
                   const dName = dayName(day.date);
                   const dataFmt = day.date.split('-').reverse().join('/');
                   

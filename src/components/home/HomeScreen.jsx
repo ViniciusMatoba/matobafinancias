@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, AlertCircle, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff, BarChart3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff, BarChart3 } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
@@ -56,7 +56,6 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   const selectedDate = dayOffset === 0 ? today : addDays(today, dayOffset);
   const isToday = dayOffset === 0;
   const isFuture = dayOffset > 0;
-  const currentMonth = selectedDate.slice(0, 7);
 
   // Saldo acumulado (transações + saldo inicial das carteiras)
   const saldoAcumulado = useMemo(() => {

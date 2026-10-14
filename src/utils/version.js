@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.149';
+export const APP_VERSION = '1.6.150';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.150',
+    date: '14/10/2026',
+    changes: [
+      'Telegram e push: se o envio de um aviso falhar, ele não fica mais marcado como "já avisado" e é tentado de novo no próximo horário',
+      'Segurança: o webhook do Telegram passa a recusar chamadas quando o segredo não estiver configurado; o perfil do usuário não aceita mais que o app altere o telegramChatId (só as Cloud Functions vinculam)',
+      'Dependências atualizadas (npm audit fix) — vulnerabilidade crítica do websocket-driver e as do vite/postcss removidas',
+      'Limpeza de código: erros de lint corrigidos (dica de tela, donut de alocação em Investir, imports e variáveis sem uso)',
+    ],
+  },
   {
     version: '1.6.149',
     date: '14/10/2026',

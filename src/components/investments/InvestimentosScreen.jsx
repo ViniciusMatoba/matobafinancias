@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ShieldCheck, TrendingUp, Info, ChevronDown, ChevronUp, Check, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, TrendingUp, Info, Check, AlertTriangle } from 'lucide-react';
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { calcularSobraSegura, SOBRA_MINIMA } from '../../utils/projectionCalc';
@@ -25,7 +25,7 @@ function MultiDonut({ segments, size = 96 }) {
   const r = (size / 2) - 8;
   const circ = 2 * Math.PI * r;
   const cx = size / 2, cy = size / 2;
-  let offset = 0;
+  const offsets = segments.map((_, i) => (segments.slice(0, i).reduce((t, x) => t + x.pct, 0) / 100) * circ);
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth="9" />
@@ -34,11 +34,10 @@ function MultiDonut({ segments, size = 96 }) {
         const el = (
           <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.cor} strokeWidth="9"
             strokeDasharray={`${dash} ${circ - dash}`}
-            strokeDashoffset={-offset}
+            strokeDashoffset={-offsets[i]}
             transform={`rotate(-90 ${cx} ${cy})`}
             strokeLinecap="butt" />
         );
-        offset += dash;
         return el;
       })}
     </svg>
@@ -74,14 +73,10 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
   const [despesasMens,  setDespesasMens] = useState(inv.despesasMens  || 0);
   const [reservaGoalId, setReservaGoalId]= useState(inv.reservaGoalId || '');
   const [saved, setSaved]                = useState(false);
-  const [showTip, setShowTip]            = useState(false);
 
   // ── Sugestão automática de despesas fixas mensais ────────────────────────────
   const despesasSugeridas = useMemo(() => {
     if (!transactions?.length) return 0;
-    const fixas = transactions.filter(t =>
-      t.tipo === 'fixo' && t.sinal === -1 || (t.tipo === 'fixo' && !t.sinal)
-    );
     // usa valor direto das recorrentes
     const recorrentes = transactions.filter(t =>
       (t.frequencia === 'mensal' || t.frequencia === 'quinzenal' || t.frequencia === 'semanal') &&
@@ -145,7 +140,6 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
     });
     const total = Object.values(totals).reduce((a, b) => a + b, 0);
     if (total <= 0) return { total: 0, segments: [] };
-    let acc = 0;
     const segments = Object.entries(totals)
       .filter(([, v]) => v > 0)
       .sort((a, b) => b[1] - a[1])
