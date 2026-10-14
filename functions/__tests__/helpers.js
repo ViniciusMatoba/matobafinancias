@@ -8,10 +8,10 @@ const require = createRequire(import.meta.url)
 process.env.VITEST = 'true'
 
 export const fake = criarFakeFirestore()
-const admin = require('firebase-admin')
-const firestoreFake = () => fake.db
-firestoreFake.FieldValue = FieldValue
-Object.defineProperty(admin, 'firestore', { value: firestoreFake, configurable: true, writable: true })
+// firebase-admin/firestore é substituído no cache do require antes de o bot ser carregado
+const caminho = require.resolve('firebase-admin/firestore')
+require('firebase-admin/firestore') // garante a entrada no cache
+require.cache[caminho].exports = { getFirestore: () => fake.db, FieldValue }
 
 export const botModule = require('../index.js')
 export const bot = botModule.__test

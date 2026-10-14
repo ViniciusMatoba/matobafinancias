@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.153';
+export const APP_VERSION = '1.6.154';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.154',
+    date: '14/10/2026',
+    changes: [
+      'Fix das Cloud Functions na atualização do Firebase: o firebase-admin 14 removeu admin.firestore()/admin.messaging(); o bot agora usa firebase-admin/firestore e firebase-admin/messaging (a v1.6.153 publicou o app, mas as functions não subiram)',
+      'Novo teste carrega as functions com as bibliotecas reais, como o deploy faz, para que erro desse tipo seja pego antes de publicar',
+    ],
+  },
   {
     version: '1.6.153',
     date: '14/10/2026',

@@ -19,9 +19,12 @@ const { onRequest, onCall, HttpsError } = require('firebase-functions/v2/https')
 const { onSchedule } = require('firebase-functions/v2/scheduler');
 const { logger }     = require('firebase-functions');
 const admin          = require('firebase-admin');
+// firebase-admin 13+: o namespace admin.firestore()/getMessaging() saiu; usa os submódulos
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getMessaging } = require('firebase-admin/messaging');
 
 admin.initializeApp();
-const db = admin.firestore();
+const db = getFirestore();
 
 // ─── Configuração ──────────────────────────────────────────────────────────────
 const BOT_TOKEN   = process.env.TELEGRAM_BOT_TOKEN || '';
@@ -65,7 +68,7 @@ function notificationParts(markdownText) {
 
 async function sendPushNotification(token, markdownText) {
   const { title, body } = notificationParts(markdownText);
-  return admin.messaging().send({
+  return getMessaging().send({
     token,
     // Campo notification obrigatório para iOS e para resolver conflito no SW
     notification: { title, body },
@@ -1194,7 +1197,7 @@ async function checkN24AportePerdido(uid, transactions, config, walletInitials, 
       }, { merge: true }).catch(() => {});
     } else if (tracking.sobraData) {
       await db.collection('config').doc(uid).set({
-        reservaTracking: admin.firestore.FieldValue.delete()
+        reservaTracking: FieldValue.delete()
       }, { merge: true }).catch(() => {});
     }
     return null;
@@ -1333,7 +1336,7 @@ async function handleVincular(chatId, code, fromUser) {
   await db.collection('users').doc(uid).set({
     telegramChatId:  String(chatId),
     telegramName:    fromUser?.first_name || '',
-    telegramLinkedAt: admin.firestore.FieldValue.serverTimestamp(),
+    telegramLinkedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
 
   await linkDoc.ref.delete();
@@ -3587,7 +3590,7 @@ async function sendOnboardingQuestion(chatId, stepId, data = {}) {
 // Exibe resumo e salva ao concluir todas as etapas
 async function completeOnboarding(chatId, uid, data) {
   await db.collection('users').doc(uid).update({
-    telegramOnboarding: admin.firestore.FieldValue.delete(),
+    telegramOnboarding: FieldValue.delete(),
   });
   await db.collection('config').doc(uid).set(
     { notificacoes: { telegramEnabled: true, ...data } },
@@ -3851,9 +3854,9 @@ async function processUpdate(update) {
 async function disableTelegramForUser(uid) {
   try {
     await db.collection('users').doc(uid).set({
-      telegramChatId: admin.firestore.FieldValue.delete(),
-      telegramName: admin.firestore.FieldValue.delete(),
-      telegramLinkedAt: admin.firestore.FieldValue.delete(),
+      telegramChatId: FieldValue.delete(),
+      telegramName: FieldValue.delete(),
+      telegramLinkedAt: FieldValue.delete(),
     }, { merge: true });
 
     const configDoc = await db.collection('config').doc(uid).get();
@@ -4033,8 +4036,8 @@ exports.dailyNotifications = onSchedule(
                 if (code === 'messaging/registration-token-not-registered' ||
                     code === 'messaging/invalid-registration-token') {
                   await userDoc.ref.set({
-                    fcmToken: admin.firestore.FieldValue.delete(),
-                    fcmUpdatedAt: admin.firestore.FieldValue.delete(),
+                    fcmToken: FieldValue.delete(),
+                    fcmUpdatedAt: FieldValue.delete(),
                   }, { merge: true });
                 }
               }
@@ -4219,7 +4222,7 @@ exports.sendTestPush = onCall(
           ok: true,
           messageId,
           tokenSuffix: String(fcmToken).slice(-12),
-          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+          sentAt: FieldValue.serverTimestamp(),
         },
       }, { merge: true });
 
@@ -4235,8 +4238,8 @@ exports.sendTestPush = onCall(
       if (code === 'messaging/registration-token-not-registered' ||
           code === 'messaging/invalid-registration-token') {
         await userRef.set({
-          fcmToken: admin.firestore.FieldValue.delete(),
-          fcmUpdatedAt: admin.firestore.FieldValue.delete(),
+          fcmToken: FieldValue.delete(),
+          fcmUpdatedAt: FieldValue.delete(),
         }, { merge: true });
         throw new HttpsError('failed-precondition', 'Token FCM inválido. Ative o push novamente.');
       }
@@ -4376,7 +4379,7 @@ exports.smsWebhook = onRequest(
         cartaoId: cartaoId,
         carteiraId: carteiraId,
         dataCompra: today,
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
+        createdAt: FieldValue.serverTimestamp()
       });
       
       const paymentLabel = isCredito ? 'Crédito' : 'Débito/Pix';
