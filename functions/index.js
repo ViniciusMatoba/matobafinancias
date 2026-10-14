@@ -4434,3 +4434,13 @@ exports.smsWebhook = onRequest(
     }
   }
 );
+
+// Só para testes automatizados (vitest define VITEST); em produção nada extra é exportado.
+if (process.env.VITEST) {
+  module.exports.__test = {
+    expandRange, calcSaldoSimples, calcFaturaCardBot, expandDespesasBot,
+    checkNotifications, filtrarAlertasRepetidos, estadoAposEnvio,
+    calcSobraSeguraBot, sobraPorDataBot, resumirSobraBot,
+    computeSpentByCategory, formatBRL,
+  };
+}

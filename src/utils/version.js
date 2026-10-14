@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.150';
+export const APP_VERSION = '1.6.151';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.151',
+    date: '14/10/2026',
+    changes: [
+      'Testes automatizados do bot do Telegram (functions/__tests__): paridade app × bot em caixa, competência, sobra segura e fatura do cartão; cenários dos alertas N4/N5/N6/N9/N11/N22 e do controle de repetição de avisos',
+      'Nenhuma mudança de comportamento no app ou no bot — só cobertura de testes',
+    ],
+  },
   {
     version: '1.6.150',
     date: '14/10/2026',
