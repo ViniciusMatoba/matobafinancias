@@ -1,9 +1,9 @@
 {
-  "version": "1.6.156",
+  "version": "1.6.157",
   "date": "14/10/2026",
   "notes": [
-    "Telegram: /fatura e o alerta de limite do cartão (N11) agora calculam a fatura exatamente como o app — contam as parcelas que uma fatura já paga ainda projeta nos meses seguintes e o comprometido futuro mês a mês. Antes o bot subestimava a fatura e o uso do limite depois de pagar uma fatura parcelada",
-    "O botão Pago do cartão não mudou; o app não foi alterado",
-    "Teste com 400 cenários gerados confirma zero diferenças entre o app e o bot no cálculo da fatura"
+    "Telegram /parcelados: agora calcula as parcelas ainda a pagar pelas ocorrências (mesma base do caixa e da Projeção). Uma fatura já paga continua mostrando as parcelas dos meses seguintes (antes a compra sumia da lista)",
+    "Telegram /parcelados: parcelados avulsos contam só as parcelas de hoje em diante (antes mostravam sempre a parcela do dia em que foram criados, inflando o total a pagar)",
+    "Parcela de fatura vencida e não paga continua contando como a pagar; o texto da mensagem não mudou. O app não foi alterado"
   ]
 }
