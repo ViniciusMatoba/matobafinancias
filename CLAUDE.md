@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.154
+- **Versão atual**: v1.6.155
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.154 — 14/10/2026
+**Versão**: v1.6.155 — 14/10/2026
 
 **Últimas features**:
+- v1.6.155 — Bot: `calcFaturaCardBot` espelha a regra de fatura em atraso do app (`calcCicloFaturaBot` + `vencimentoAnteriorBot`); `handlePayCardCallback` quita a fatura real do ciclo (não cria 2º pagamento). Divergência que RESTA (documentada em `paridade.test.js`): parcelas futuras de fatura já paga — o app conta na fatura do mês, o bot ignora lançamentos conferidos
 - v1.6.154 — Fix functions com firebase-admin 14 (`getFirestore`/`FieldValue`/`getMessaging` de `firebase-admin/*`; `admin.firestore()` não existe mais). `carga.test.js` carrega o `index.js` com as libs reais como o deploy; o fake de Firestore agora entra via `require.cache` de `firebase-admin/firestore`
 - v1.6.153 — Firebase atualizado: app `firebase` 13, functions `firebase-admin` 14 e `firebase-functions` 7. Resta 1 alerta do `npm audit` no app (`@grpc/grpc-js` dentro do `@firebase/firestore`; é código de Node, não vai no bundle do navegador)
 - v1.6.152 — Testes do bot de ponta a ponta: `functions/__tests__/fakeFirestore.js` (Firestore em memória, injetado no `firebase-admin` por `helpers.js`), `comandos.test.js` (comandos, Pago/Adiar), `webhooks.test.js` (telegramWebhook e smsWebhook). `firebase.json` ignora `__tests__` no deploy

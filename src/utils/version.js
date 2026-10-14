@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.154';
+export const APP_VERSION = '1.6.155';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.155',
+    date: '14/10/2026',
+    changes: [
+      'Telegram: fatura vencida e não paga agora aparece como a fatura atual (igual ao app) em /fatura e no alerta de limite do cartão (N11), em vez de pular para o próximo ciclo',
+      'Telegram: o botão Pago do cartão agora quita a fatura já lançada no ciclo em vez de criar um segundo pagamento por cima (que contava a fatura em dobro no caixa)',
+      'Testes de paridade app × bot para fatura vencida, paga e com ciclo aberto',
+    ],
+  },
   {
     version: '1.6.154',
     date: '14/10/2026',

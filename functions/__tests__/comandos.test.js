@@ -271,3 +271,26 @@ describe('botão Adiar', () => {
     expect(caixaAte('2027-03-31')).toBe(antes)
   })
 })
+
+describe('fatura vencida e não paga (cartão)', () => {
+  const cartao = { nome: 'Nubank', diaVencimento: 10, diaFechamento: 3, limite: 5000 }
+
+  it('/fatura mostra a vencida (como o app), não pula para a próxima', async () => {
+    criarUsuario()
+    fake.seed(`cards/${UID}/list/c1`, cartao)
+    lancamento('f', f1())
+    await enviarAoBot(mensagemTelegram('/fatura'))
+    const t = mensagensEnviadas().join('\n')
+    expect(t).toContain('10/10')
+    expect(t).toContain('R$ 300,00')
+  })
+
+  it('botão Pago do cartão quita a vencida sem contá-la duas vezes no caixa', async () => {
+    criarUsuario()
+    fake.seed(`cards/${UID}/list/c1`, cartao)
+    lancamento('f', f1())
+    const antes = caixaAte('2027-03-31')
+    await enviarAoBot(botaoTelegram('paycard:c1:2026-10-10'))
+    expect(caixaAte('2027-03-31')).toBe(antes)
+  })
+})

@@ -182,17 +182,34 @@ function getProximoVencimentoBot(card, today) {
  * Calcula faturaAtual e comprometidoFuturo de um cartão.
  * Espelha calcFaturaCard do frontend, incluindo projeção de parcelas virtuais.
  */
-function calcFaturaCardBot(card, transactions, today) {
-  const proximoVenc = getProximoVencimentoBot(card, today);
-  const [pvy, pvm, pvd] = proximoVenc.split('-').map(Number);
-  const pm = pvm === 1 ? 12 : pvm - 1;
-  const py = pvm === 1 ? pvy - 1 : pvy;
+// Vencimento do mês anterior ao de `venc` (mesmo dia, limitado ao último dia do mês)
+function vencimentoAnteriorBot(venc) {
+  const [y, m, d] = venc.split('-').map(Number);
+  const pm = m === 1 ? 12 : m - 1;
+  const py = m === 1 ? y - 1 : y;
   const plast = new Date(py, pm, 0).getDate();
-  const prevVencStr = `${py}-${String(pm).padStart(2,'0')}-${String(Math.min(pvd, plast)).padStart(2,'0')}`;
+  return `${py}-${String(pm).padStart(2,'0')}-${String(Math.min(d, plast)).padStart(2,'0')}`;
+}
 
+/**
+ * Fatura do cartão. Espelha calcFaturaCard do app, inclusive a regra de fatura em atraso:
+ * se o vencimento anterior já passou (ou é hoje) e ainda há valor pendente nele, a "fatura atual"
+ * é essa vencida (proximoVenc devolve a data dela) e o ciclo aberto entra no comprometido futuro.
+ */
+function calcFaturaCardBot(card, transactions, today) {
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
   );
+  const proximoVenc = getProximoVencimentoBot(card, today);
+  const prevVenc = vencimentoAnteriorBot(proximoVenc);
+  const pendenteNoPrev = prevVenc <= today
+    ? expandRange(cardTxs, prevVenc, prevVenc).filter(o => o.date === prevVenc).reduce((a, o) => a + o.valor, 0)
+    : 0;
+  return calcCicloFaturaBot(card, cardTxs, pendenteNoPrev > 0 ? prevVenc : proximoVenc);
+}
+
+function calcCicloFaturaBot(card, cardTxs, proximoVenc) {
+  const prevVencStr = vencimentoAnteriorBot(proximoVenc);
 
   const realInWindow = cardTxs.filter(
     t => t.dataInicio > prevVencStr && t.dataInicio <= proximoVenc
@@ -2515,6 +2532,17 @@ async function handlePayCardCallback(chatId, uid, cardId, occDate) {
   const cardTxs = transactions.filter(
     t => t.tipo === 'cartao' && t.cartaoId === card.id && !t.conferido
   );
+
+  // Fatura já lançada de verdade no ciclo (o mesmo critério do cálculo da fatura): quita ela mesma,
+  // como o botão Pago de um lançamento. Criar outro pagamento por cima contaria a fatura duas vezes no caixa.
+  const reaisNoCiclo = cardTxs.filter(t => t.dataInicio > prevVenc && t.dataInicio <= proximoVenc);
+  if (reaisNoCiclo.length > 0) {
+    for (const t of reaisNoCiclo) {
+      await db.collection('transactions').doc(uid).collection('entries').doc(t.id)
+        .update({ dataInicio: today, conferido: true });
+    }
+    return;
+  }
   
   const occs = expandRange(
     cardTxs.filter(t => t.dataInicio <= prevVenc),
