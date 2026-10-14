@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.167';
+export const APP_VERSION = '1.6.168';
 export const APP_VERSION_DATE = '14/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.168',
+    date: '14/10/2026',
+    changes: [
+      'Home, banner da reserva de emergência: agora usa a caixinha escolhida na tela Investir (antes só achava pelo nome "Reserva de Emergência" e podia dizer que você não tinha criado a reserva)',
+      'Home: o saldo da reserva é o mesmo da tela Metas — os aportes somam (antes apareciam negativos, o "falta" saía inflado e a reserva nunca era dada como concluída)',
+      'Home: a meta é a da própria caixinha (ou, sem ela, a do perfil da tela Investir); se não houver meta o banner pede para definir, em vez de mostrar "Falta R$ 0,00"',
+      'Só o texto e o botão do banner mudaram; nenhum dado foi alterado e as telas Metas e Investir continuam iguais',
+    ],
+  },
   {
     version: '1.6.167',
     date: '14/10/2026',

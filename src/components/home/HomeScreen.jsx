@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, Trending
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
+import { resumoReservaHome } from '../../utils/caixinha';
 import BudgetSummaryCard from './BudgetSummaryCard';
 import AdjustBalanceModal from './AdjustBalanceModal';
 import ProximasContasCard from './ProximasContasCard';
@@ -106,44 +107,12 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
 
 
 
-  const reserveGoal = useMemo(() => {
-    if (!goals) return null;
-    return goals.find(g => 
-      g.nome.toLowerCase().includes('reserva de emergência') || 
-      g.nome.toLowerCase().includes('reserva de emergencia')
-    );
-  }, [goals]);
-
-  const reserveStats = useMemo(() => {
-    const monthlyFixedCostBudget = config?.rendaMensal 
-      ? (config.rendaMensal * (Number(config.budgetPcts?.['custos_fixos']) || 30)) / 100 
-      : 1500;
-    const metaRecomendada = monthlyFixedCostBudget * 6;
-
-    if (!reserveGoal) {
-      return {
-        exists: false,
-        saldo: 0,
-        metaRecomendada,
-        completed: false
-      };
-    }
-
-    const vinculado = transactions.filter(t => t.metaId === reserveGoal.id);
-    const saldo = vinculado
-      .flatMap(t => expandOccurrences(t, FAR_PAST, todayStr(), { historical: true }))
-      .reduce((acc, occ) => acc + occ.sinal * occ.valor, 0);
-
-    const completed = reserveGoal.metaFinal > 0 && saldo >= reserveGoal.metaFinal;
-
-    return {
-      exists: true,
-      saldo,
-      metaFinal: reserveGoal.metaFinal,
-      metaRecomendada,
-      completed
-    };
-  }, [reserveGoal, transactions, config]);
+  // Reserva de emergência: caixinha escolhida na tela Investir (ou a de nome "Reserva de Emergência"), com o
+  // mesmo saldo da tela Metas. Regras em utils/caixinha.js.
+  const reserveStats = useMemo(
+    () => resumoReservaHome({ goals, transactions, config }),
+    [goals, transactions, config]
+  );
 
   const bannerContent = useMemo(() => {
     if (!sobraSegura) return null;
@@ -171,8 +140,18 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
           shadow: 'rgba(245,158,11,0.3)',
           color: '#f59e0b',
         };
+      } else if (reserveStats.semMeta) {
+        return {
+          title: 'Acelere sua Reserva de Emergência!',
+          desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}) — pode ir tudo para a reserva (resgate imediato), sobrando só os centavos na conta. Sua caixinha de reserva está com ${formatBRL(reserveStats.saldo)}, mas ainda não tem uma meta definida. Defina a meta (recomendamos ${formatBRL(reserveStats.metaRecomendada)}, 6 meses de custos fixos) para acompanhar o progresso!`,
+          minLabel,
+          buttonText: 'Definir a meta da reserva',
+          bg: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+          shadow: 'rgba(59,130,246,0.3)',
+          color: '#3b82f6',
+        };
       } else {
-        const falta = formatBRL(reserveStats.metaFinal - reserveStats.saldo);
+        const falta = formatBRL(Math.max(reserveStats.metaFinal - reserveStats.saldo, 0));
         return {
           title: 'Acelere sua Reserva de Emergência!',
           desc: `Identificamos uma sobra projetada segura de ${formatSobra} nos próximos 45 dias (até ${dataFim}) — pode ir tudo para a reserva (resgate imediato), sobrando só os centavos na conta. Recomendamos priorizar a conclusão da sua caixinha "Reserva de Emergência" (atualmente com ${formatBRL(reserveStats.saldo)} de ${formatBRL(reserveStats.metaFinal)}). Falta apenas ${falta} para garantir sua tranquilidade financeira!`,
