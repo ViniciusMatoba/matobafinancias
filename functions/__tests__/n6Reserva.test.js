@@ -24,7 +24,15 @@ describe('N6 com reserva', () => {
   it('reserva não cobre: mostra quanto falta', () => {
     const grande = { ...saida, valor: 9000 }
     const [t] = roda([grande, aporteReserva], { investimentos: { reservaGoalId: 'g1' } })
-    expect(t).toContain('Mesmo com a reserva (R$ 5.000,00) faltam')
+    expect(t).toContain('Mesmo com o que você tem guardado (R$ 5.000,00) faltam')
+  })
+
+  it('sem caixinha de reserva, o total investido cobre (caso real: negativo pequeno, R$ 3.000 investidos)', () => {
+    const salario = { id: 'e1', tipo: 'entrada', frequencia: 'unico', dataInicio: '2026-09-01', valor: 3300, descricao: 'Salário' }
+    const aporte = { id: 'a2', tipo: 'investimento', frequencia: 'unico', dataInicio: '2026-09-02', valor: 3000, descricao: 'Aporte' }
+    const [t] = roda([salario, aporte, { ...saida, valor: 600 }], {}) // saldo −300
+    expect(t).toContain('Saldo atual negativo')
+    expect(t).toContain('investido (R$ 3.000,00) cobre esse valor')
   })
 
   it('sem reserva configurada o texto não muda', () => {

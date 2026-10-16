@@ -158,8 +158,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
   }, [transactions, from, today]);
 
   const coberturas = useMemo(
-    () => classificarDiasNegativos({ days, reservaLiquida, hoje: today, aportesAntesDoPeriodo }),
-    [days, reservaLiquida, today, aportesAntesDoPeriodo]
+    () => classificarDiasNegativos({ days, reservaLiquida, totalInvestido, hoje: today, aportesAntesDoPeriodo }),
+    [days, reservaLiquida, totalInvestido, today, aportesAntesDoPeriodo]
   );
   const resumoCobertura = useMemo(() => {
     const lista = Object.values(coberturas);
@@ -427,7 +427,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                     <p style={{ margin: '2px 0 0', fontSize: 11, color: resumoCobertura.falta > 0 ? 'var(--saida)' : 'var(--text-secondary)' }}>
                       {resumoCobertura.falta > 0
                         ? `⚠️ ${resumoCobertura.falta} dia(s) com falta real (até ${formatBRL(resumoCobertura.faltaMax)} sem cobertura)`
-                        : '✅ Conta no negativo só em dias cobertos pela reserva ou por aporte planejado'}
+                        : '✅ Conta no negativo só em dias cobertos pelo que você tem guardado ou por aporte planejado'}
                     </p>
                   )}
                 </div>
@@ -613,10 +613,10 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                           {cob && (
                             <span style={{
                               fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
-                              color: cob.tipo === 'falta' ? 'var(--saida)' : cob.tipo === 'reserva' ? '#10b981' : '#f59e0b',
-                              background: cob.tipo === 'falta' ? 'rgba(239,68,68,0.12)' : cob.tipo === 'reserva' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
+                              color: cob.tipo === 'falta' ? 'var(--saida)' : cob.tipo === 'aporte' ? '#f59e0b' : '#10b981',
+                              background: cob.tipo === 'falta' ? 'rgba(239,68,68,0.12)' : cob.tipo === 'aporte' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)',
                             }}>
-                              {cob.tipo === 'falta' ? `falta ${formatBRL(cob.falta)}` : cob.tipo === 'reserva' ? '🛡️ reserva cobre' : 'por aporte'}
+                              {cob.tipo === 'falta' ? `falta ${formatBRL(cob.falta)}` : cob.tipo === 'reserva' ? '🛡️ reserva cobre' : cob.tipo === 'investido' ? '💰 investido cobre' : 'por aporte'}
                             </span>
                           )}
                           {hasItems && (
@@ -638,7 +638,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                             <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--text-secondary)' }}>
                               {cob.tipo === 'aporte' && 'Conta negativa por causa de aporte planejado: sem ele o saldo ficaria positivo. Dinheiro seu, é só adiar o aporte.'}
                               {cob.tipo === 'reserva' && `Conta negativa em ${formatBRL(cob.deficit)}, coberta pela reserva (${formatBRL(reservaLiquida)}). Resgate antes se for preciso.`}
-                              {cob.tipo === 'falta' && `Conta negativa em ${formatBRL(cob.deficit)}.${reservaLiquida > 0 ? ` Mesmo com a reserva (${formatBRL(reservaLiquida)}) faltam ${formatBRL(cob.falta)}.` : ' Sem reserva para cobrir.'}`}
+                              {cob.tipo === 'investido' && `Conta negativa em ${formatBRL(cob.deficit)}, coberta pelo que você tem investido (${formatBRL(totalInvestido)}). Resgate só o necessário e confira o prazo de resgate.`}
+                              {cob.tipo === 'falta' && `Conta negativa em ${formatBRL(cob.deficit)}. Mesmo com o que você tem guardado (${formatBRL(Math.max(reservaLiquida, totalInvestido))}) faltam ${formatBRL(cob.falta)}.`}
                             </p>
                           )}
                           {day.items.map((item, i) => {

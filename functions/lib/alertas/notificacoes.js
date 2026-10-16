@@ -131,11 +131,15 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     // Reserva de emergência (resgate imediato): se cobre o buraco, o aviso diz isso em vez de soar como falta de dinheiro
     const reservaId = config?.investimentos?.reservaGoalId;
     const reservaLiquida = reservaId ? reservaDaCaixinhaBot(transactions, goals, reservaId) : 0;
+    const totalInvestido = expandRange(transactions, '2020-01-01', todayStr, { historical: true })
+      .filter(o => o.tx?.tipo === 'investimento')
+      .reduce((s, o) => s + (Number(o.valor) || 0), 0);
     const linhaReserva = (negativo) => {
-      if (!(reservaLiquida > 0)) return '';
-      return reservaLiquida >= -negativo
-        ? `\n🛡️ _A reserva (${formatBRL(reservaLiquida)}) cobre esse valor — resgate só o necessário._`
-        : `\n🛡️ _Mesmo com a reserva (${formatBRL(reservaLiquida)}) faltam ${formatBRL(-negativo - reservaLiquida)}._`;
+      const guardado = Math.max(reservaLiquida, totalInvestido);
+      if (!(guardado > 0)) return '';
+      if (reservaLiquida >= -negativo) return `\n🛡️ _A reserva (${formatBRL(reservaLiquida)}) cobre esse valor — resgate só o necessário._`;
+      if (totalInvestido >= -negativo) return `\n💰 _O que você tem investido (${formatBRL(totalInvestido)}) cobre esse valor — confira o prazo de resgate._`;
+      return `\n🛡️ _Mesmo com o que você tem guardado (${formatBRL(guardado)}) faltam ${formatBRL(-negativo - guardado)}._`;
     };
     // Urgente: reavisa se a situação mudar, ou a cada 3 dias enquanto continuar
     if (saldoAtual < 0) {

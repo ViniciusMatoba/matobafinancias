@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.183';
+export const APP_VERSION = '1.6.184';
 export const APP_VERSION_DATE = '16/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.184',
+    date: '16/10/2026',
+    changes: [
+      'Projeção: o dinheiro investido agora cobre dias negativos mesmo sem uma caixinha de reserva configurada. A cobertura passa a ser o maior entre a reserva e o total investido: se a reserva basta aparece "🛡️ reserva cobre"; se só o investido basta, "💰 investido cobre"; "falta R$ X" só quando nem os dois juntos cobrem (e o valor da falta já desconta o que você tem guardado).',
+      'O aviso de saldo negativo (N6) do Telegram segue a mesma regra.',
+    ],
+  },
   {
     version: '1.6.183',
     date: '16/10/2026',

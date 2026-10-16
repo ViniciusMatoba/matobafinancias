@@ -29,6 +29,18 @@ describe('classificarDiasNegativos', () => {
     expect(classificarDiasNegativos({ days, reservaLiquida: 18000, hoje: HOJE })['2026-11-21']).toEqual({ tipo: 'reserva', deficit: 2300 })
   })
 
+  it('sem reserva, o total investido cobre: "investido" (caso real: −297,85 com R$ 3.000 investidos)', () => {
+    const days = [dia('2026-10-30', -297.85, [saida(300)])]
+    expect(classificarDiasNegativos({ days, reservaLiquida: 0, totalInvestido: 3000, hoje: HOJE })['2026-10-30']).toEqual({ tipo: 'investido', deficit: 297.85 })
+  })
+
+  it('a reserva tem prioridade sobre o investido; sem nenhum dos dois cobrir, "falta" desconta o maior', () => {
+    const days = [dia('2026-11-21', -2000, [saida(2000)])]
+    expect(classificarDiasNegativos({ days, reservaLiquida: 2500, totalInvestido: 9000, hoje: HOJE })['2026-11-21'].tipo).toBe('reserva')
+    const d2 = [dia('2026-11-21', -9500, [saida(9500)])]
+    expect(classificarDiasNegativos({ days: d2, reservaLiquida: 2500, totalInvestido: 9000, hoje: HOJE })['2026-11-21']).toEqual({ tipo: 'falta', deficit: 9500, falta: 500 })
+  })
+
   it('reserva exatamente igual ao buraco ainda cobre', () => {
     const days = [dia('2026-11-21', -1000, [saida(1000)])]
     expect(classificarDiasNegativos({ days, reservaLiquida: 1000, hoje: HOJE })['2026-11-21'].tipo).toBe('reserva')

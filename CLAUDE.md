@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.183
+- **Versão atual**: v1.6.184
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.183 — 16/10/2026
+**Versão**: v1.6.184 — 16/10/2026
 
 **Últimas features**:
+- v1.6.184 — Cobertura da Projeção = max(reserva da caixinha, total investido): selo `investido` ("💰 investido cobre") quando só o investido basta; `falta` desconta o maior dos dois. Causa do bug da v1.6.183: sem `reservaGoalId`/`metaId` a reserva valia 0 e mostrava "falta" mesmo com R$ 3.000+ investidos. N6 do bot idem (soma `investimento` até hoje via `expandRange`)
 - v1.6.183 — PROJEÇÃO: DIAS NEGATIVOS COM DINHEIRO GUARDADO. Investimento é saída da conta (Projeção mostra só a conta corrente), então aporte planejado e reserva faziam o saldo parecer negativo. `src/utils/coberturaProjecao.js` (`classificarDiasNegativos`): por dia negativo → `aporte` (sem os aportes planejados depois de hoje o saldo seria >= 0; tem prioridade), `reserva` (reserva da caixinha, valor de hoje, >= buraco) ou `falta` (valor descoberto). `ProjectionScreen` recebe `goals`/`config`; badge no lugar de "NEG", linha "Reserva · Investido" e resumo no card, frase ao expandir o dia. Só a reserva conta como cobertura; total investido é informativo. Bot: N6 diz se a reserva cobre. Testes: `coberturaProjecao.test.js`, `n6Reserva.test.js`
 - v1.6.182 — Item 2 do plano de melhorias: AVISO DE ASSINATURAS (N26), DESLIGADO por padrão. `functions/lib/alertas/assinaturas.js` (`alertasAssinaturasBot`) chamado em `checkNotifications` só quando `tipos.n26 === true` (ao contrário dos demais, que valem até serem desligados); `n26:false` em `DEFAULT_NOTIFICATION_TIPOS` e `DEFAULT_TG_TIPOS`. Regras sem estado próprio (dedupe pela memória de avisos, chave `assin:<chave do item>`, sig `r:<valor>` ou `n:<valor>`): REAJUSTE = assinatura com ≥3 meses e `ultimoReajuste` no mês atual/anterior (sobe ou baixa); NOVA = 2 meses seguidos, sem aparecer antes, e `contexto.historicoMeses ≥ 4`; tag "Assinaturas" avisa na 1ª aparição. Os motores (app e bot) ganharam `contexto {mesAtual, mesAnterior, historicoMeses}`. Limitação: 2 reajustes na janela de 6 meses viram "variável" e deixam de avisar. Plano de melhorias concluído (itens 1 a 5); o N26 só deve ser ligado depois da revisão da lista de assinaturas
 - v1.6.181 — Item 4 do plano de melhorias: DATA DE QUITAÇÃO DAS PARCELAS. `calcParceladosBot` agora devolve `ultimaData` (data do caixa da última parcela) por item e `cronogramaParcelasBot` agrupa por mês de término (libera = Σ parcela mensal; `livreAPartirDe` = mês seguinte à última parcela); seção "Quando você fica livre" no `/parcelados`. App: `src/utils/parcelas.js` (`calcParcelados` + `cronogramaParcelas`, cópia fiel do bot, paridade em 300 cenários) + aba "Parcelas" no Painel (`ParcelasTab.jsx`; `ReportsScreen` agora recebe `cards`). Datas = vencimento da fatura (caixa), não a da compra. Dados do demo ajustados: só a fatura de origem da TV é `isParcelado` e ela exclui as datas que já têm fatura real (faturas manuais duplicando parcelas distorciam o resultado — o mesmo caso que "Verificar duplicidades de fatura" aponta)
