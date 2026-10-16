@@ -1,9 +1,8 @@
 {
-  "version": "1.6.183",
+  "version": "1.6.184",
   "date": "16/10/2026",
   "notes": [
-    "Projeção: o saldo negativo de um dia deixa de parecer \"falta de dinheiro\" quando há dinheiro guardado. No lugar do aviso genérico \"NEG\", cada dia negativo mostra o motivo: \"por aporte\" (sem o aporte planejado o saldo seria positivo — basta adiar), \"🛡️ reserva cobre\" (a reserva de emergência cobre o buraco) ou \"falta R$ X\" (nem a reserva cobre — falta de verdade, em vermelho). Os dois primeiros ficam em cor neutra.",
-    "O card do topo virou \"Saldo em conta hoje (= Saldo Global)\" e ganhou a linha \"Reserva R$ X · Investido R$ Y\", mais um resumo dos dias negativos (cobertos ou com falta real). Ao abrir o dia, uma frase explica a situação. Só a reserva conta como cobertura (resgate imediato, valor de hoje); o total investido é informativo.",
-    "Telegram: o aviso de saldo negativo (N6) diz se a reserva cobre o valor ou quanto falta mesmo com ela."
+    "Projeção: o dinheiro investido agora cobre dias negativos mesmo sem uma caixinha de reserva configurada. A cobertura passa a ser o maior entre a reserva e o total investido: se a reserva basta aparece \"🛡️ reserva cobre\"; se só o investido basta, \"💰 investido cobre\"; \"falta R$ X\" só quando nem os dois juntos cobrem (e o valor da falta já desconta o que você tem guardado).",
+    "O aviso de saldo negativo (N6) do Telegram segue a mesma regra."
   ]
 }
