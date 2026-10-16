@@ -15,9 +15,19 @@ export const sinalNaCaixinha = (tx) => (tx.tipo === 'saida' || ehResgate(tx) ? -
  * `metaId`) até o que ela tem disponível; o restante vem do investimento geral (sem caixinha). Datas até hoje já nascem
  * conferidas (o dinheiro já voltou); futuras ficam pendentes.
  */
-export function docsResgate({ valor, data, hoje, reservaDisponivel = 0, reservaGoalId = null }) {
+export function docsResgate({ valor, data, hoje, reservaDisponivel = 0, reservaGoalId = null, origem = null }) {
   const total = Math.round((Number(valor) || 0) * 100) / 100;
   if (!(total > 0)) return [];
+  // Com `origem` ([{ id, valor, label }], da simulação da Projeção): um lançamento por origem. A reserva leva o `metaId`
+  // da caixinha; as demais levam `classeInvestimento`, para o resgate descontar da classe certa.
+  if (Array.isArray(origem) && origem.length > 0) {
+    const baseO = { tipo: 'entrada', resgate: true, frequencia: 'unico', dataInicio: data, categoria: null, dataFim: null, conferido: data <= hoje };
+    return origem
+      .filter(o => Number(o.valor) > 0)
+      .map(o => (o.id === 'reserva' && reservaGoalId
+        ? { ...baseO, valor: o.valor, descricao: 'Resgate da reserva', metaId: reservaGoalId }
+        : { ...baseO, valor: o.valor, descricao: `Resgate de ${o.label || 'investimento'}`, classeInvestimento: o.id === 'reserva' ? 'outro' : o.id }));
+  }
   const daReserva = reservaGoalId ? Math.min(total, Math.round(Math.max(reservaDisponivel, 0) * 100) / 100) : 0;
   const base = { tipo: 'entrada', resgate: true, frequencia: 'unico', dataInicio: data, categoria: null, dataFim: null, conferido: data <= hoje };
   const docs = [];

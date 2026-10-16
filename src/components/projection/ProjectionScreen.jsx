@@ -8,6 +8,7 @@ import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { acharCaixinhaReserva, reservaDaCaixinha } from '../../utils/caixinha';
 import { simularDias, resumirResgates } from '../../utils/coberturaProjecao';
 import { docsResgate, totalInvestidoAte } from '../../utils/investido';
+import { investidoPorOrigem, rotuloOrigem } from '../../utils/classesInvestimento';
 import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
@@ -36,6 +37,15 @@ function dayName(dateStr) {
 
 function formatDayNum(dateStr) {
   return dateStr.split('-')[2];
+}
+
+const PRAZO = { imediata: 'resgate imediato', prazo: 'pode ter prazo ou carência', mercado: 'venda no mercado, liquida em alguns dias' };
+
+/** "Origem sugerida: R$ 250 da Reserva (resgate imediato) + R$ 450 de Ações (venda no mercado…)". */
+function textoOrigem(origem) {
+  if (!origem?.length) return '';
+  const partes = origem.map(o => `${formatBRL(o.valor)} ${o.id === 'reserva' ? 'da' : 'de'} ${rotuloOrigem(o.id)} (${PRAZO[o.liquidez] || ''})`);
+  return ` Origem sugerida: ${partes.join(' + ')}.`;
 }
 
 export default function ProjectionScreen({ transactions, wallets, cards = [], tags = [], goals = [], config = null, onEdit, onClone, onDelete, onPay, onUpdate, onLancarResgate }) {
@@ -141,6 +151,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     return g ? reservaDaCaixinha(transactions, goals, g.id) : 0;
   }, [transactions, goals, config]);
 
+  const reservaGoalId = useMemo(() => acharCaixinhaReserva(goals, config)?.id || null, [goals, config]);
+
   const totalInvestido = useMemo(() => totalInvestidoAte(transactions, today), [transactions, today]);
 
   // Lista que começa no futuro: investido, aportes planejados e resgate necessário já acumulados até o dia anterior
@@ -148,7 +160,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     if (!days.length) return { investidoInicial: 0, aportesAntesDoPeriodo: 0, carryResgate: 0 };
     const dayBefore = addDays(from, -1);
     const investidoInicial = totalInvestidoAte(transactions, dayBefore);
-    if (from <= today) return { investidoInicial, aportesAntesDoPeriodo: 0, carryResgate: 0 };
+    const buckets = investidoPorOrigem(transactions, dayBefore, reservaGoalId);
+    if (from <= today) return { investidoInicial, aportesAntesDoPeriodo: 0, carryResgate: 0, buckets };
     let aportes = 0;
     transactions.filter(t => t.tipo === 'investimento').forEach(t => {
       expandOccurrences(t, addDays(today, 1), dayBefore).forEach(o => { aportes += Number(o.valor) || 0; });
@@ -156,12 +169,12 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
     const ate = buildDailyProjection(transactions, today, dayBefore, calcSaldo(transactions, FAR_PAST, addDays(today, -1)) + wInitials);
     const carryResgate = Math.max(0, ...ate.map(d => -d.saldo));
-    return { investidoInicial, aportesAntesDoPeriodo: aportes, carryResgate };
-  }, [days, from, today, transactions, wallets]);
+    return { investidoInicial, aportesAntesDoPeriodo: aportes, carryResgate, buckets };
+  }, [days, from, today, transactions, wallets, reservaGoalId]);
 
   const simulacao = useMemo(
-    () => simularDias({ days, hoje: today, ...baseSimulacao }),
-    [days, today, baseSimulacao]
+    () => simularDias({ days, hoje: today, reservaGoalId, ...baseSimulacao }),
+    [days, today, baseSimulacao, reservaGoalId]
   );
   const resumoResgate = useMemo(() => resumirResgates(simulacao), [simulacao]);
 
@@ -619,7 +632,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                           )}
                           {sim && sim.resgateNovo > 0 && (
                             <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: '#f59e0b', background: 'rgba(245,158,11,0.14)', whiteSpace: 'nowrap' }}>
-                              ⚠️ resgatar {formatBRL(sim.resgateNovo)}
+                              ⚠️ resgatar {formatBRL(sim.resgateNovo)}{sim.origem?.some(o => o.liquidez !== 'imediata') ? ' · prazo' : ''}
                             </span>
                           )}
                           {sim && sim.falta > 0 && (
@@ -644,7 +657,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                         }}>
                           {sim && (sim.resgateNovo > 0 || sim.falta > 0) && (
                             <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--text-secondary)' }}>
-                              {sim.resgateNovo > 0 && `A conta ficaria em ${formatBRL(sim.saldoReal)}. Para cobrir este dia é necessário resgatar ${formatBRL(sim.resgateNovo)} do investido (acumulado ${formatBRL(sim.resgateAcum)}${reservaLiquida > 0 ? `; prefira a reserva, ${formatBRL(reservaLiquida)} com resgate imediato` : ''}). O saldo exibido já considera esse resgate.`}
+                              {sim.resgateNovo > 0 && `A conta ficaria em ${formatBRL(sim.saldoReal)}. Para cobrir este dia é necessário resgatar ${formatBRL(sim.resgateNovo)} do investido (acumulado ${formatBRL(sim.resgateAcum)}). O saldo exibido já considera esse resgate.${textoOrigem(sim.origem)}`}
                               {sim.resgateNovo > 0 && sim.adiavel && ' Outra saída: adiar o aporte planejado.'}
                               {sim.falta > 0 && ` Mesmo resgatando todo o investido faltam ${formatBRL(sim.falta)}.`}
                             </p>
@@ -658,7 +671,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                                 const docs = docsResgate({
                                   valor: sim.resgateNovo, data: day.date, hoje: today,
                                   reservaDisponivel: reservaLiquida - (sim.resgateAcum - sim.resgateNovo),
-                                  reservaGoalId: acharCaixinhaReserva(goals, config)?.id || null,
+                                  reservaGoalId,
+                                  origem: sim.origem?.length ? sim.origem.map(o => ({ ...o, label: rotuloOrigem(o.id) })) : null,
                                 });
                                 await onLancarResgate(docs);
                                 setLancandoResgate(null);

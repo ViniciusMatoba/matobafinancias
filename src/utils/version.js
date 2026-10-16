@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.188';
+export const APP_VERSION = '1.6.189';
 export const APP_VERSION_DATE = '16/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.189',
+    date: '16/10/2026',
+    changes: [
+      'A Projeção agora usa a classe dos aportes para sugerir de onde resgatar: primeiro a Reserva, depois "Caixinha / resgate imediato", depois Renda Fixa e Outro (podem ter prazo ou carência) e por último o mercado (Ações, FIIs, Internacional, Cripto). Ao abrir o dia, a frase mostra a origem sugerida, por exemplo "R$ 250 da Reserva (resgate imediato) + R$ 150 de Renda Fixa (pode ter prazo)", e o aviso do dia ganha "· prazo" quando alguma parte não é de resgate imediato.',
+      'O botão "Lançar resgate" cria um lançamento por origem: o da Reserva fica ligado à caixinha e os demais levam a classe, então o resgate desconta da classe certa (o investido por classe e o saldo da caixinha). Aportes sem classe contam como "Outro".',
+    ],
+  },
   {
     version: '1.6.188',
     date: '16/10/2026',

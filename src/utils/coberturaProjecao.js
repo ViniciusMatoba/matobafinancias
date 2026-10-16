@@ -1,3 +1,5 @@
+import { origemDe, sacarDasOrigens } from './classesInvestimento';
+
 /**
  * Projeção dia a dia com o investido: total (conta + investido) e simulação do resgate.
  *
@@ -18,16 +20,21 @@
  * carryResgate (resgate necessário acumulado de hoje até o dia anterior ao início, quando a lista começa no futuro),
  * aportesAntesDoPeriodo (aportes planejados entre amanhã e o dia anterior ao início da lista).
  *
- * Retorna { [date]: { conta, investido, total, saldoReal, resgateNovo, resgateAcum, falta, adiavel } }.
+ * Retorna { [date]: { conta, investido, total, saldoReal, resgateNovo, resgateAcum, falta, adiavel, origem } }, onde `origem`
+ * ([{ id, valor, liquidez }]) diz de onde sai o resgate novo do dia (reserva → caixinha → renda fixa → outro → mercado),
+ * a partir de `buckets` (investidoPorOrigem no dia anterior ao início da lista).
  */
 const c2 = (n) => Math.round(n * 100) / 100;
 
-export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0, aportesAntesDoPeriodo = 0 }) {
+export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0, aportesAntesDoPeriodo = 0, buckets = null, reservaGoalId = null }) {
   const out = {};
   let inv = investidoInicial;
   let aportesPlanejados = aportesAntesDoPeriodo;
   let R = carryResgate;
   let efetivoAnterior = Math.min(R, Math.max(investidoInicial, 0));
+  // Investido por origem (reserva/classes): o resgate simulado sai na ordem de ORDEM_RESGATE e fica descontado dali em diante
+  const bk = buckets ? { ...buckets } : null;
+  if (bk && efetivoAnterior > 0) sacarDasOrigens(bk, efetivoAnterior);
 
   for (const d of days || []) {
     for (const it of d.items || []) {
@@ -35,9 +42,11 @@ export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0
       const valor = Number(it.valor) || 0;
       if (tipo === 'investimento') {
         inv += valor;
+        if (bk) { const o = origemDe(it.tx, reservaGoalId); bk[o] = (bk[o] || 0) + valor; }
         if (d.date > hoje) aportesPlanejados += valor;
       } else if (tipo === 'entrada' && it.tx?.resgate === true) {
         inv -= valor;
+        if (bk) { const o = origemDe(it.tx, reservaGoalId); bk[o] = (bk[o] || 0) - valor; }
       }
     }
 
@@ -50,6 +59,7 @@ export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0
     const efetivo = Math.min(R, Math.max(inv, 0));
     const resgateNovo = Math.max(0, efetivo - efetivoAnterior);
     efetivoAnterior = efetivo;
+    const origem = bk && resgateNovo > 0 ? sacarDasOrigens(bk, resgateNovo) : [];
     out[d.date] = {
       conta: c2(d.saldo + efetivo),
       investido: c2(inv - efetivo),
@@ -59,6 +69,7 @@ export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0
       resgateAcum: Math.round(efetivo * 100) / 100,
       falta: Math.round((R - efetivo) * 100) / 100,
       adiavel: resgateNovo > 0 && d.saldo + aportesPlanejados >= 0,
+      origem,
     };
   }
   return out;
