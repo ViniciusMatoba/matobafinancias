@@ -5,6 +5,8 @@ import TransactionsScreen from '../transactions/TransactionsScreen';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
+import { acharCaixinhaReserva, reservaDaCaixinha } from '../../utils/caixinha';
+import { classificarDiasNegativos } from '../../utils/coberturaProjecao';
 import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
@@ -35,7 +37,7 @@ function formatDayNum(dateStr) {
   return dateStr.split('-')[2];
 }
 
-export default function ProjectionScreen({ transactions, wallets, cards = [], tags = [], onEdit, onClone, onDelete, onPay, onUpdate }) {
+export default function ProjectionScreen({ transactions, wallets, cards = [], tags = [], goals = [], config = null, onEdit, onClone, onDelete, onPay, onUpdate }) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [viewTab, setViewTab] = useState('mensal'); // 'mensal' | 'resumo' | 'anual'
   const [monthOffset, setMonthOffset] = useState(0);
@@ -130,6 +132,43 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     const todayRow = days.find(d => d.date === today);
     return todayRow ? todayRow.saldo : null;
   }, [days, today, isAtCurrentMonth, viewTab]);
+
+  // Dinheiro guardado: a reserva (resgate imediato) cobre buracos da conta; o investido total é só informativo
+  const reservaLiquida = useMemo(() => {
+    const g = acharCaixinhaReserva(goals, config);
+    return g ? reservaDaCaixinha(transactions, goals, g.id) : 0;
+  }, [transactions, goals, config]);
+
+  const totalInvestido = useMemo(() => {
+    let total = 0;
+    transactions.filter(t => t.tipo === 'investimento').forEach(t => {
+      expandOccurrences(t, FAR_PAST, today).forEach(o => { total += Number(o.valor) || 0; });
+    });
+    return total;
+  }, [transactions, today]);
+
+  // Aportes planejados (depois de hoje) que ficam antes do início da lista: já estão descontados do saldo inicial
+  const aportesAntesDoPeriodo = useMemo(() => {
+    if (!from || from <= today) return 0;
+    let total = 0;
+    transactions.filter(t => t.tipo === 'investimento').forEach(t => {
+      expandOccurrences(t, addDays(today, 1), addDays(from, -1)).forEach(o => { total += Number(o.valor) || 0; });
+    });
+    return total;
+  }, [transactions, from, today]);
+
+  const coberturas = useMemo(
+    () => classificarDiasNegativos({ days, reservaLiquida, hoje: today, aportesAntesDoPeriodo }),
+    [days, reservaLiquida, today, aportesAntesDoPeriodo]
+  );
+  const resumoCobertura = useMemo(() => {
+    const lista = Object.values(coberturas);
+    return {
+      total: lista.length,
+      falta: lista.filter(c => c.tipo === 'falta').length,
+      faltaMax: lista.reduce((m, c) => Math.max(m, c.falta || 0), 0),
+    };
+  }, [coberturas]);
 
   // ── Cálculo do Planejamento Anual ──────────────────────────────────────────
   const annualData = useMemo(() => {
@@ -373,10 +412,24 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
             }}>
               {saldoHoje !== null ? (
                 <div style={{ gridColumn: '1 / -1', paddingBottom: 10, borderBottom: '1px solid rgba(99,102,241,0.2)', marginBottom: 2 }}>
-                  <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Saldo hoje (= Saldo Global)</p>
+                  <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Saldo em conta hoje (= Saldo Global)</p>
                   <p style={{ margin: 0, fontSize: 19, fontWeight: 800, color: saldoColor(saldoHoje) }}>
                     {formatBRL(saldoHoje)}
                   </p>
+                  {(reservaLiquida > 0 || totalInvestido > 0) && (
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-secondary)' }}>
+                      🛡️ {reservaLiquida > 0 ? `Reserva ${formatBRL(reservaLiquida)}` : ''}
+                      {reservaLiquida > 0 && totalInvestido > 0 ? ' · ' : ''}
+                      {totalInvestido > 0 ? `Investido ${formatBRL(totalInvestido)}` : ''}
+                    </p>
+                  )}
+                  {resumoCobertura.total > 0 && (
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: resumoCobertura.falta > 0 ? 'var(--saida)' : 'var(--text-secondary)' }}>
+                      {resumoCobertura.falta > 0
+                        ? `⚠️ ${resumoCobertura.falta} dia(s) com falta real (até ${formatBRL(resumoCobertura.faltaMax)} sem cobertura)`
+                        : '✅ Conta no negativo só em dias cobertos pela reserva ou por aporte planejado'}
+                    </p>
+                  )}
                 </div>
               ) : null}
               <div>
@@ -442,6 +495,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                   const isPast = day.date < today;
                   const hasItems = day.items.length > 0;
                   const isOpen = expanded[day.date];
+                  const cob = coberturas[day.date];
                   const dNum = formatDayNum(day.date);
                   const dName = dayName(day.date);
 
@@ -553,15 +607,16 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                           alignItems: 'flex-end', justifyContent: 'center',
                           minWidth: 96, flexShrink: 0, gap: 2,
                         }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: saldoColor(day.saldo) }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: cob && cob.tipo !== 'falta' ? 'var(--text-secondary)' : saldoColor(day.saldo) }}>
                             {formatBRL(day.saldo)}
                           </span>
-                          {day.saldo < 0 && (
+                          {cob && (
                             <span style={{
-                              fontSize: 9, fontWeight: 700, color: 'var(--saida)',
-                              background: 'rgba(239,68,68,0.12)', padding: '1px 5px', borderRadius: 4,
+                              fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                              color: cob.tipo === 'falta' ? 'var(--saida)' : cob.tipo === 'reserva' ? '#10b981' : '#f59e0b',
+                              background: cob.tipo === 'falta' ? 'rgba(239,68,68,0.12)' : cob.tipo === 'reserva' ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)',
                             }}>
-                              NEG
+                              {cob.tipo === 'falta' ? `falta ${formatBRL(cob.falta)}` : cob.tipo === 'reserva' ? '🛡️ reserva cobre' : 'por aporte'}
                             </span>
                           )}
                           {hasItems && (
@@ -579,6 +634,13 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                           background: 'rgba(0,0,0,0.15)',
                           padding: '8px 10px 10px',
                         }}>
+                          {cob && (
+                            <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--text-secondary)' }}>
+                              {cob.tipo === 'aporte' && 'Conta negativa por causa de aporte planejado: sem ele o saldo ficaria positivo. Dinheiro seu, é só adiar o aporte.'}
+                              {cob.tipo === 'reserva' && `Conta negativa em ${formatBRL(cob.deficit)}, coberta pela reserva (${formatBRL(reservaLiquida)}). Resgate antes se for preciso.`}
+                              {cob.tipo === 'falta' && `Conta negativa em ${formatBRL(cob.deficit)}.${reservaLiquida > 0 ? ` Mesmo com a reserva (${formatBRL(reservaLiquida)}) faltam ${formatBRL(cob.falta)}.` : ' Sem reserva para cobrir.'}`}
+                            </p>
+                          )}
                           {day.items.map((item, i) => {
                             const cfg = TYPE_CONFIG[item.tx.tipo];
                             const Icon = TIPO_ICONS[item.tx.tipo] || Zap;

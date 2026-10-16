@@ -159,6 +159,8 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             wallets={wallets}
             cards={cards}
             tags={config.tags}
+            goals={goals}
+            config={config}
             onEdit={handleEdit}
             onClone={handleClone}
             onDelete={handleDelete}

@@ -128,15 +128,24 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const d7 = new Date(hoje); d7.setDate(d7.getDate() + 7);
     const in7 = dateStrFromDate(d7);
     const saldoProjetado = calcSaldoSimples(transactions, in7, walletInitials);
+    // Reserva de emergência (resgate imediato): se cobre o buraco, o aviso diz isso em vez de soar como falta de dinheiro
+    const reservaId = config?.investimentos?.reservaGoalId;
+    const reservaLiquida = reservaId ? reservaDaCaixinhaBot(transactions, goals, reservaId) : 0;
+    const linhaReserva = (negativo) => {
+      if (!(reservaLiquida > 0)) return '';
+      return reservaLiquida >= -negativo
+        ? `\n🛡️ _A reserva (${formatBRL(reservaLiquida)}) cobre esse valor — resgate só o necessário._`
+        : `\n🛡️ _Mesmo com a reserva (${formatBRL(reservaLiquida)}) faltam ${formatBRL(-negativo - reservaLiquida)}._`;
+    };
     // Urgente: reavisa se a situação mudar, ou a cada 3 dias enquanto continuar
     if (saldoAtual < 0) {
       msgs.push({
-        text: `🚨 *Saldo atual negativo!*\nSeu saldo está em *${formatBRL(saldoAtual)}* agora. Revise seus lançamentos e evite novos gastos até regularizar.`,
+        text: `🚨 *Saldo atual negativo!*\nSeu saldo está em *${formatBRL(saldoAtual)}* agora. Revise seus lançamentos e evite novos gastos até regularizar.${linhaReserva(saldoAtual)}`,
         estado: { chave: 'saldo-negativo', sig: `atual:${Math.round(saldoAtual / 100)}`, repetirDias: 3 },
       });
     } else if (saldoProjetado < 0) {
       msgs.push({
-        text: `📉 *Alerta: saldo pode ficar negativo!*\nSaldo atual ${formatBRL(saldoAtual)} · Projeção *${formatBRL(saldoProjetado)}* em 7 dias.`,
+        text: `📉 *Alerta: saldo pode ficar negativo!*\nSaldo atual ${formatBRL(saldoAtual)} · Projeção *${formatBRL(saldoProjetado)}* em 7 dias.${linhaReserva(saldoProjetado)}`,
         estado: { chave: 'saldo-negativo', sig: `proj:${Math.round(saldoProjetado / 100)}`, repetirDias: 3 },
       });
     }
