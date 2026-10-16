@@ -41,7 +41,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
     monthRecapData,
     setView, ToastNode,
     handleNavigate, handleEdit, handleClone,
-    handleSave, handleDelete, handleAdjustBalance,
+    handleSave, handleDelete, handleAdjustBalance, handleLancarResgate,
     openPayModal, confirmPayment,
     confirmCartaoEditScope, confirmRecurrenceAction,
     handleCompleteTour,
@@ -166,6 +166,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             onDelete={handleDelete}
             onPay={openPayModal}
             onUpdate={update}
+            onLancarResgate={handleLancarResgate}
           />
         )}
         {view === 'reports' && (

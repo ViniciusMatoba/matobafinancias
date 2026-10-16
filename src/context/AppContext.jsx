@@ -295,6 +295,19 @@ export function AppProvider({ user, children }) {
     }
   };
 
+  // Lança o resgate sugerido pela Projeção (1 ou 2 entradas marcadas `resgate: true`)
+  const handleLancarResgate = async (docs) => {
+    try {
+      for (const d of docs) await add(d);
+      showToast('Resgate lançado!');
+      return true;
+    } catch (err) {
+      console.error('[handleLancarResgate]', err);
+      showToast('Erro ao lançar o resgate. Tente novamente.', 'error');
+      return false;
+    }
+  };
+
   const confirmCartaoEditScope = async (scope) => {
     const { cleanData, isVirtualProj, parentId, parentTx, editing: editingSnap, editingOccDate: occDate } = cartaoEditScope;
     setCartaoEditScope(null);
@@ -504,6 +517,7 @@ export function AppProvider({ user, children }) {
     // handlers
     handleNavigate, handleEdit, handleClone,
     handleSave, handleDelete, handleAdjustBalance,
+    handleLancarResgate,
     openPayModal, confirmPayment,
     confirmCartaoEditScope, confirmRecurrenceAction,
     handleCompleteTour,

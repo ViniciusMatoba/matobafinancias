@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.186';
+export const APP_VERSION = '1.6.187';
 export const APP_VERSION_DATE = '16/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.187',
+    date: '16/10/2026',
+    changes: [
+      'Botão "Lançar resgate" na Projeção (etapa 3 de 3): ao abrir um dia com "⚠️ resgatar R$ X", o botão cria o resgate daquele dia. Ele sai primeiro da caixinha de reserva (resgate imediato) até o que ela tem; o restante vem do investimento geral, em um segundo lançamento.',
+      'O resgate lançado entra na conta como entrada (não conta como receita), diminui o investido e o saldo da caixinha, e o aviso daquele dia some. Datas até hoje nascem conferidas; datas futuras ficam pendentes. Dias com resgate necessário agora podem ser abertos mesmo sem outros lançamentos.',
+    ],
+  },
   {
     version: '1.6.186',
     date: '16/10/2026',

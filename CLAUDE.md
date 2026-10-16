@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.186
+- **Versão atual**: v1.6.187
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.186 — 16/10/2026
+**Versão**: v1.6.187 — 16/10/2026
 
 **Últimas features**:
+- v1.6.187 — RESGATE, etapa 3/3 (plano de resgate concluído): botão "Lançar resgate" no dia expandido da Projeção (`onLancarResgate` = `handleLancarResgate` no AppContext). `docsResgate` (`src/utils/investido.js`) gera 1 ou 2 entradas `resgate:true`: primeiro da reserva (`metaId` da caixinha, até o disponível = reserva − resgate acumulado anterior), resto sem `metaId`; `conferido` só se a data <= hoje. Dias com `resgateNovo > 0` abrem mesmo sem itens (`podeAbrir`). Pendente/ideias: aviso N6 do bot ainda usa a regra "reserva/investido cobre" (não a simulação); sem opção de lançar resgate pelo formulário manual; classe de liquidez dos aportes (caixinha resgate imediato × ações) não existe
 - v1.6.186 — RESGATE, etapa 2/3: Projeção com investido e simulação. `src/utils/coberturaProjecao.js` agora tem `simularDias` (por dia: `conta` simulada, `investido`, `total`, `resgateNovo`, `resgateAcum`, `falta`, `adiavel`) e `resumirResgates`; substitui `classificarDiasNegativos` e os selos reserva/investido/aporte. Resgate necessário R(d) = maior déficit da conta desde hoje (acumulado; o dinheiro resgatado fica na conta); limitado ao investido, o excedente é `falta`; dias < hoje são reais; lista que começa no futuro herda investido e resgate acumulado (`baseSimulacao`). Total nunca muda com a simulação. Arquivo ProjectionScreen.jsx convertido para LF. Falta a etapa 3 (botão Lançar resgate, cria entrada com `resgate:true`)
 - v1.6.185 — RESGATE, etapa 1/3 (plano: 1 base, 2 Projeção com total + simulação "necessário resgate", 3 botão Lançar resgate). Resgate = ENTRADA com `resgate: true` (+ `metaId` se sai de caixinha): no caixa e na competência se comporta como entrada (nada muda nas regras travadas), mas `src/utils/investido.js` (e `functions/lib/motor/investido.js`): `ehResgate`, `sinalNaCaixinha` (resgate subtrai), `totalInvestidoAte` (aportes − resgates). Usados em saldo da caixinha (app/bot), reservaRitmo, GoalsScreen, Home/Investir/Projeção/N6/N23/investimentos. Resgate fica fora de "entradas" nos resumos de PERÍODO (Painel, Home do dia, N7, /resumo, /semana, planejamento); nas visões de caixa do dia (N8, lista) entra normal. Ainda sem tela para criar resgate (etapa 3)
 - v1.6.184 — Cobertura da Projeção = max(reserva da caixinha, total investido): selo `investido` ("💰 investido cobre") quando só o investido basta; `falta` desconta o maior dos dois. Causa do bug da v1.6.183: sem `reservaGoalId`/`metaId` a reserva valia 0 e mostrava "falta" mesmo com R$ 3.000+ investidos. N6 do bot idem (soma `investimento` até hoje via `expandRange`)

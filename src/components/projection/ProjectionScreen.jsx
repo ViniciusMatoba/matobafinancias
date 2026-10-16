@@ -7,7 +7,7 @@ import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { acharCaixinhaReserva, reservaDaCaixinha } from '../../utils/caixinha';
 import { simularDias, resumirResgates } from '../../utils/coberturaProjecao';
-import { totalInvestidoAte } from '../../utils/investido';
+import { docsResgate, totalInvestidoAte } from '../../utils/investido';
 import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
@@ -38,7 +38,8 @@ function formatDayNum(dateStr) {
   return dateStr.split('-')[2];
 }
 
-export default function ProjectionScreen({ transactions, wallets, cards = [], tags = [], goals = [], config = null, onEdit, onClone, onDelete, onPay, onUpdate }) {
+export default function ProjectionScreen({ transactions, wallets, cards = [], tags = [], goals = [], config = null, onEdit, onClone, onDelete, onPay, onUpdate, onLancarResgate }) {
+  const [lancandoResgate, setLancandoResgate] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [viewTab, setViewTab] = useState('mensal'); // 'mensal' | 'resumo' | 'anual'
   const [monthOffset, setMonthOffset] = useState(0);
@@ -491,6 +492,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                   const hasItems = day.items.length > 0;
                   const isOpen = expanded[day.date];
                   const sim = simulacao[day.date];
+                  const podeAbrir = hasItems || sim?.resgateNovo > 0;
                   const dNum = formatDayNum(day.date);
                   const dName = dayName(day.date);
 
@@ -511,10 +513,10 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                       }}
                     >
                       <button
-                        onClick={() => hasItems && toggle(day.date)}
+                        onClick={() => podeAbrir && toggle(day.date)}
                         style={{
                           width: '100%', display: 'flex', alignItems: 'stretch',
-                          background: 'none', border: 'none', padding: 0, cursor: hasItems ? 'pointer' : 'default',
+                          background: 'none', border: 'none', padding: 0, cursor: podeAbrir ? 'pointer' : 'default',
                         }}
                       >
                         {/* Esquerda: data + eventos */}
@@ -625,7 +627,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                               falta {formatBRL(sim.falta)}
                             </span>
                           )}
-                          {hasItems && (
+                          {podeAbrir && (
                             <span style={{ color: 'var(--text-muted)', display: 'flex' }}>
                               {isOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                             </span>
@@ -634,7 +636,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                       </button>
 
                       {/* Expansão: detalhes */}
-                      {isOpen && hasItems && (
+                      {isOpen && podeAbrir && (
                         <div style={{
                           borderTop: '1px solid var(--border)',
                           background: 'rgba(0,0,0,0.15)',
@@ -646,6 +648,29 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                               {sim.resgateNovo > 0 && sim.adiavel && ' Outra saída: adiar o aporte planejado.'}
                               {sim.falta > 0 && ` Mesmo resgatando todo o investido faltam ${formatBRL(sim.falta)}.`}
                             </p>
+                          )}
+                          {sim && sim.resgateNovo > 0 && onLancarResgate && (
+                            <button
+                              disabled={lancandoResgate === day.date}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                setLancandoResgate(day.date);
+                                const docs = docsResgate({
+                                  valor: sim.resgateNovo, data: day.date, hoje: today,
+                                  reservaDisponivel: reservaLiquida - (sim.resgateAcum - sim.resgateNovo),
+                                  reservaGoalId: acharCaixinhaReserva(goals, config)?.id || null,
+                                });
+                                await onLancarResgate(docs);
+                                setLancandoResgate(null);
+                              }}
+                              style={{
+                                width: '100%', marginBottom: 8, padding: '9px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                background: '#f59e0b', color: '#1f1300', border: 'none', cursor: 'pointer',
+                                opacity: lancandoResgate === day.date ? 0.6 : 1,
+                              }}
+                            >
+                              {lancandoResgate === day.date ? 'Lançando…' : `Lançar resgate de ${formatBRL(sim.resgateNovo)} em ${day.date.split('-').reverse().slice(0, 2).join('/')}`}
+                            </button>
                           )}
                           {day.items.map((item, i) => {
                             const cfg = TYPE_CONFIG[item.tx.tipo];
