@@ -9,6 +9,7 @@ import HelpModal from '../shared/HelpModal';
 import { tagsById, computeTagStats, SEM_TAG, limitesDoMes } from '../../utils/tags';
 import AssinaturasTab from './AssinaturasTab';
 import ParcelasTab from './ParcelasTab';
+import { ehResgate } from '../../utils/investido';
 
 const TABS = {
   RESUMO: 'resumo',
@@ -109,7 +110,9 @@ export default function ReportsScreen({ transactions, wallets = [], cards = [], 
     let saiuCaixa = 0;
 
     periodOccs.forEach(o => {
-      if (o.tx.tipo === 'entrada') {
+      if (ehResgate(o.tx)) {
+        // resgate é dinheiro seu voltando do investimento: não é receita nem gasto
+      } else if (o.tx.tipo === 'entrada') {
         entradas += o.valor;
       } else {
         saiuCaixa += o.valor;
@@ -185,7 +188,7 @@ export default function ReportsScreen({ transactions, wallets = [], cards = [], 
 
     const linhas = [];
     periodOccs.forEach(o => {
-      if (o.tx.tipo !== 'entrada') return;
+      if (o.tx.tipo !== 'entrada' || ehResgate(o.tx)) return;
       const tx = o.tx;
       linhas.push({ date: o.date, csv: `${o.date},Entrada,${catNome(tx.categoria)},${q(tx.descricao)},${o.valor.toFixed(2)},${q(walletsMap[tx.carteiraId])},${conferidoDe(tx, o.date)},,${q(tagNome(tx.tag))}` });
     });

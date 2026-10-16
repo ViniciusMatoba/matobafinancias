@@ -1,3 +1,5 @@
+import { sinalNaCaixinha } from './investido';
+
 /**
  * Saldo de uma caixinha (meta). Mesma regra da tela Metas e do comando /meta do bot:
  * soma o valor dos lançamentos ligados à meta por `metaId` — saída subtrai, qualquer outro tipo
@@ -11,8 +13,7 @@ export function saldoCaixinha(transactions, goalId) {
   return (transactions || [])
     .filter(t => t.metaId === goalId)
     .reduce((acc, t) => {
-      const valor = Number(t.valor) || 0;
-      return t.tipo === 'saida' ? acc - valor : acc + valor;
+      return acc + sinalNaCaixinha(t) * (Number(t.valor) || 0);
     }, 0);
 }
 

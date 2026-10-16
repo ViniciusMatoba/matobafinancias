@@ -5,6 +5,7 @@ import HelpModal from '../shared/HelpModal';
 import { formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, todayStr, addMonths, formatMonthYear } from '../../utils/formatters';
 import { getAutoCategory, PERCENTUAL_CATEGORIES, DEFAULT_BUDGET_PCTS } from '../../utils/categories';
 import { calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
+import { sinalNaCaixinha } from '../../utils/investido';
 
 const COLOR_OPTIONS = [
   '#3b82f6', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#22c55e', '#06b6d4',
@@ -498,10 +499,7 @@ export default function GoalsScreen({ goals, transactions, wallets = [], config,
     return goals.map(g => {
       // Somar todos os investimentos (ou transações vinculadas) a esta meta
       const vinculado = transactions.filter(t => t.metaId === g.id);
-      const saldo = vinculado.reduce((acc, t) => {
-        if (t.tipo === 'saida') return acc - t.valor;
-        return acc + t.valor;
-      }, 0);
+      const saldo = vinculado.reduce((acc, t) => acc + sinalNaCaixinha(t) * t.valor, 0);
 
       const progressoPct = g.metaFinal > 0 ? Math.min((saldo / g.metaFinal) * 100, 100) : (saldo > 0 ? 100 : 0);
       

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { ShieldCheck, TrendingUp, Info, Check, AlertTriangle } from 'lucide-react';
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
+import { totalInvestidoAte } from '../../utils/investido';
 import { calcularSobraSegura, SOBRA_MINIMA } from '../../utils/projectionCalc';
 import { reservaDaCaixinha } from '../../utils/caixinha';
 import { ritmoDaReserva, projecaoReserva, rotuloMes } from '../../utils/reservaRitmo';
@@ -122,11 +123,7 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
   const aporteInvest      = reservaCompleta ? aporteRecomendado : aporteRecomendado * 0.4;
 
   // ── Total investido (exceto reserva) ─────────────────────────────────────────
-  const totalInvestido = useMemo(() => {
-    const invTxs = (transactions || []).filter(t => t.tipo === 'investimento');
-    return invTxs.flatMap(t => expandOccurrences(t, FAR_PAST, today))
-      .reduce((acc, o) => acc + o.valor, 0);
-  }, [transactions, today]);
+  const totalInvestido = useMemo(() => totalInvestidoAte(transactions, today), [transactions, today]);
 
   // ── Alocação por classe de investimento ──────────────────────────────────────
   const alocacaoPorClasse = useMemo(() => {

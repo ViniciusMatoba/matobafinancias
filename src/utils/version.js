@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.184';
+export const APP_VERSION = '1.6.185';
 export const APP_VERSION_DATE = '16/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.185',
+    date: '16/10/2026',
+    changes: [
+      'Base do Resgate (etapa 1 de 3): o sistema passa a reconhecer o resgate de investimento — dinheiro que volta do investido para a conta. Ele é uma entrada marcada como resgate: no saldo da conta entra normalmente, mas não é receita nem gasto nos resumos e relatórios, e DIMINUI o total investido e o saldo da caixinha.',
+      'O "Total investido" da Home, da tela Investir, da Projeção e do Telegram (/investimentos, aviso de saldo negativo, relatório do dia 15/30) agora é aportes menos resgates, e o ritmo da reserva também desconta resgates. Ainda não há botão para lançar um resgate: ele chega na etapa 3, junto da Projeção com total e aviso de "necessário resgate".',
+    ],
+  },
   {
     version: '1.6.184',
     date: '16/10/2026',

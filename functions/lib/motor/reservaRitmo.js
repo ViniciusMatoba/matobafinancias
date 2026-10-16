@@ -2,6 +2,7 @@
 
 const { expandRange } = require('./caixa');
 const { addMonthsStr, todayStrBrasilia } = require('../util/datas');
+const { sinalNaCaixinhaBot } = require('./investido');
 
 /**
  * Projeção da reserva no ritmo real de aportes — cópia fiel de src/utils/reservaRitmo.js do app
@@ -39,7 +40,7 @@ function ritmoDaReservaBot({ transactions, goalId, hoje = todayStrBrasilia() }) 
   const porMes = Object.fromEntries(meses.map(m => [m, 0]));
   const comMovimento = new Set();
   for (const t of (transactions || []).filter(x => x.metaId === goalId)) {
-    const sinal = t.tipo === 'saida' ? -1 : 1;
+    const sinal = sinalNaCaixinhaBot(t);
     for (const o of expandRange([t], from, to)) {
       const m = o.date.slice(0, 7);
       if (m in porMes) { porMes[m] += sinal * o.valor; comMovimento.add(m); }

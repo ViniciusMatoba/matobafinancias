@@ -7,6 +7,7 @@ import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { acharCaixinhaReserva, reservaDaCaixinha } from '../../utils/caixinha';
 import { classificarDiasNegativos } from '../../utils/coberturaProjecao';
+import { totalInvestidoAte } from '../../utils/investido';
 import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
@@ -139,13 +140,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     return g ? reservaDaCaixinha(transactions, goals, g.id) : 0;
   }, [transactions, goals, config]);
 
-  const totalInvestido = useMemo(() => {
-    let total = 0;
-    transactions.filter(t => t.tipo === 'investimento').forEach(t => {
-      expandOccurrences(t, FAR_PAST, today).forEach(o => { total += Number(o.valor) || 0; });
-    });
-    return total;
-  }, [transactions, today]);
+  const totalInvestido = useMemo(() => totalInvestidoAte(transactions, today), [transactions, today]);
 
   // Aportes planejados (depois de hoje) que ficam antes do início da lista: já estão descontados do saldo inicial
   const aportesAntesDoPeriodo = useMemo(() => {

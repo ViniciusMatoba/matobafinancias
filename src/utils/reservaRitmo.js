@@ -1,5 +1,6 @@
 import { expandOccurrences } from './projectionCalc';
 import { addMonths, todayStr } from './formatters';
+import { sinalNaCaixinha } from './investido';
 
 /**
  * Projeção da reserva de emergência no ritmo REAL de aportes.
@@ -47,7 +48,7 @@ export function ritmoDaReserva({ transactions, goalId, hoje = todayStr() }) {
   const porMes = Object.fromEntries(meses.map(m => [m, 0]));
   const comMovimento = new Set();
   for (const t of (transactions || []).filter(x => x.metaId === goalId)) {
-    const sinal = t.tipo === 'saida' ? -1 : 1;
+    const sinal = sinalNaCaixinha(t);
     for (const o of expandOccurrences(t, from, to)) {
       const m = o.date.slice(0, 7);
       if (m in porMes) { porMes[m] += sinal * o.valor; comMovimento.add(m); }

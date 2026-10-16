@@ -5,6 +5,7 @@ const { db } = require('../infra/firebase');
 const { sendMessage } = require('../infra/telegram');
 const { expandRange } = require('../motor/caixa');
 const { reservaDaCaixinhaBot } = require('../motor/caixinha');
+const { totalInvestidoAteBot } = require('../motor/investido');
 const { linhaProjecaoReserva, projecaoReservaBot, ritmoDaReservaBot } = require('../motor/reservaRitmo');
 const { SOBRA_MINIMA_BOT, calcSobraSeguraBot } = require('../motor/sobra');
 const { dateStrFromDate, getNowBrasilia } = require('../util/datas');
@@ -75,9 +76,7 @@ async function handleInvestimentos(chatId, uid) {
   const config = configDoc.exists ? configDoc.data() : {};
   const inv = config.investimentos || {};
 
-  const totalInvestido = expandRange(
-    transactions.filter(t => t.tipo === 'investimento'), FAR_PAST, todayStr
-  ).reduce((acc, o) => acc + o.valor, 0);
+  const totalInvestido = totalInvestidoAteBot(transactions, todayStr);
 
   const sobraInfo = calcSobraSeguraBot(transactions, walletInitials, todayStr, agora);
   const sobra = sobraInfo.investivel; // 0 quando está abaixo de R$ 200

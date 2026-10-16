@@ -5,6 +5,7 @@ const { db } = require('../infra/firebase');
 const { APP_URL, sendMessage } = require('../infra/telegram');
 const { calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange, getProximoVencimentoBot } = require('../motor/caixa');
 const { CATEGORY_ORDER, collectMonthExpenses, computeSpentByCategory, getTopExpensesForCategory } = require('../motor/competencia');
+const { ehResgateBot } = require('../motor/investido');
 const { dateStrFromDate, getNowBrasilia, todayStrBrasilia } = require('../util/datas');
 const { MESES_CURTO, MESES_LONGO, barra, formatBRL, parseBRL } = require('../util/formato');
 
@@ -47,7 +48,7 @@ async function handleResumo(chatId, uid) {
   let entradas = 0, saidas = 0;
   for (const o of occs) {
     if (o.tx?.id?.includes('-proj-') && comFaturaReal.has(o.tx?.cartaoId)) continue;
-    if (o.tipo === 'entrada') entradas += o.valor;
+    if (ehResgateBot(o.tx)) { /* resgate: não é receita nem gasto */ } else if (o.tipo === 'entrada') entradas += o.valor;
     else                      saidas   += o.valor;
   }
 
@@ -129,7 +130,7 @@ async function handleHoje(chatId, uid) {
         : !!(o.tx?.conferidos && o.tx.conferidos.includes(o.date));
       const confTag = isConf ? ' ✔️' : ' ⏳';
       text += `${icon} ${desc}${freqTag}${confTag}: *${sign}${formatBRL(o.valor)}*\n`;
-      if (o.tipo === 'entrada') entradas += o.valor; else saidas += o.valor;
+      if (ehResgateBot(o.tx)) { /* resgate: não é receita nem gasto */ } else if (o.tipo === 'entrada') entradas += o.valor; else saidas += o.valor;
     }
     text += `\n─────────────────\n`;
     if (entradas > 0) text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
@@ -184,7 +185,7 @@ async function handleSemana(chatId, uid) {
   for (const o of occs) {
     if (o.tx?.id?.includes('-proj-') && comFaturaRealSem.has(o.tx?.cartaoId)) continue;
     if (!byDay[o.date]) byDay[o.date] = { e: 0, s: 0 };
-    if (o.tipo === 'entrada') { entradas += o.valor; byDay[o.date].e += o.valor; }
+    if (ehResgateBot(o.tx)) { /* resgate: não é receita nem gasto */ } else if (o.tipo === 'entrada') { entradas += o.valor; byDay[o.date].e += o.valor; }
     else                      { saidas   += o.valor; byDay[o.date].s += o.valor; }
   }
 
@@ -231,7 +232,7 @@ async function handleMes(chatId, uid, args) {
   let entradas = 0, saidas = 0;
   for (const o of occs) {
     if (o.tx?.id?.includes('-proj-') && comFaturaReal.has(o.tx?.cartaoId)) continue;
-    if (o.tipo === 'entrada') entradas += o.valor;
+    if (ehResgateBot(o.tx)) { /* resgate: não é receita nem gasto */ } else if (o.tipo === 'entrada') entradas += o.valor;
     else                      saidas   += o.valor;
   }
 

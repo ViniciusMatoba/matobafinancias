@@ -1,5 +1,7 @@
 'use strict';
 
+const { sinalNaCaixinhaBot } = require('./investido');
+
 /**
  * Saldo de uma caixinha — mesma regra da tela Metas do app e do /meta: lançamentos ligados por `metaId`
  * (o aporte pelo app é gravado assim); saída subtrai, o resto soma; cada lançamento conta uma vez.
@@ -10,8 +12,7 @@ function saldoCaixinhaBot(transactions, goalId) {
   return (transactions || [])
     .filter(t => t.metaId === goalId)
     .reduce((acc, t) => {
-      const valor = Number(t.valor) || 0;
-      return t.tipo === 'saida' ? acc - valor : acc + valor;
+      return acc + sinalNaCaixinhaBot(t) * (Number(t.valor) || 0);
     }, 0);
 }
 

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff, BarChart3 } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
+import { ehResgate, totalInvestidoAte } from '../../utils/investido';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { resumoReservaHome } from '../../utils/caixinha';
 import BudgetSummaryCard from './BudgetSummaryCard';
@@ -66,11 +67,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   }, [transactions, wallets, selectedDate]);
 
   // Total investido acumulado (todas as transações tipo 'investimento' até a data selecionada)
-  const totalInvestido = useMemo(() => {
-    const invTxs = transactions.filter(t => t.tipo === 'investimento');
-    return invTxs.flatMap(t => expandOccurrences(t, FAR_PAST, selectedDate))
-      .reduce((acc, o) => acc + o.valor, 0);
-  }, [transactions, selectedDate]);
+  const totalInvestido = useMemo(() => totalInvestidoAte(transactions, selectedDate), [transactions, selectedDate]);
 
   // Saldo individual das carteiras
   const walletsStats = useMemo(() => {
@@ -94,7 +91,7 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
   // Totais do dia
   const dayTotals = useMemo(() => {
     const t = { entrada: 0, saida: 0, diario: 0, cartao: 0, investimento: 0 };
-    dayOccs.forEach(o => { t[o.tx.tipo] = (t[o.tx.tipo] || 0) + o.valor; });
+    dayOccs.forEach(o => { if (ehResgate(o.tx)) return; t[o.tx.tipo] = (t[o.tx.tipo] || 0) + o.valor; });
     return t;
   }, [dayOccs]);
 

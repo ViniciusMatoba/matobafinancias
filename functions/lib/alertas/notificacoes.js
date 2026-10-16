@@ -1,6 +1,7 @@
 'use strict';
 
 const { calcFaturaCardApp, calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange } = require('../motor/caixa');
+const { ehResgateBot, sinalNaCaixinhaBot, totalInvestidoAteBot } = require('../motor/investido');
 const { alertasAssinaturasBot } = require('./assinaturas');
 const { reservaDaCaixinhaBot } = require('../motor/caixinha');
 const { linhaProjecaoReserva, projecaoReservaBot, ritmoDaReservaBot } = require('../motor/reservaRitmo');
@@ -131,9 +132,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     // Reserva de emergência (resgate imediato): se cobre o buraco, o aviso diz isso em vez de soar como falta de dinheiro
     const reservaId = config?.investimentos?.reservaGoalId;
     const reservaLiquida = reservaId ? reservaDaCaixinhaBot(transactions, goals, reservaId) : 0;
-    const totalInvestido = expandRange(transactions, '2020-01-01', todayStr, { historical: true })
-      .filter(o => o.tx?.tipo === 'investimento')
-      .reduce((s, o) => s + (Number(o.valor) || 0), 0);
+    const totalInvestido = totalInvestidoAteBot(transactions, todayStr);
     const linhaReserva = (negativo) => {
       const guardado = Math.max(reservaLiquida, totalInvestido);
       if (!(guardado > 0)) return '';
@@ -166,7 +165,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     let entradas = 0, saidas = 0;
     for (const o of occs7) {
       if (o.tx?.id?.includes('-proj-') && comFaturaReal7.has(o.tx?.cartaoId)) continue;
-      if (o.tipo === 'entrada') entradas += o.valor;
+      if (ehResgateBot(o.tx)) { /* resgate: não é receita nem gasto */ } else if (o.tipo === 'entrada') entradas += o.valor;
       else saidas += o.valor;
     }
 
@@ -226,7 +225,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
                         o.tx?.frequencia === 'parcelado' ? ` (${o.tx.parcelaAtual}/${o.tx.totalParcelas}x)` :
                         o.tx?.tipo === 'diario' ? ' (diário)' : '';
         msg += `${icon} ${desc}${freqTag}: *${sign}${formatBRL(v)}*\n`;
-        if (o.tipo === 'entrada') entH += v; else saiH += v;
+        if (o.tipo === 'entrada') entH += v; else saiH += v; // visão de caixa: o resgate entra na conta
       }
       if (occsHoje.length > 1) msg += `_Saldo do dia: ${formatBRL(entH - saiH)}_\n\n`;
       else msg += '\n';
@@ -477,7 +476,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
       for (const goal of metasComMeta) {
         const saldoMeta = transactions
           .filter(t => t.metaId === goal.id)
-          .reduce((acc, t) => t.tipo === 'saida' ? acc - (Number(t.valor)||0) : acc + (Number(t.valor)||0), 0);
+          .reduce((acc, t) => acc + sinalNaCaixinhaBot(t) * (Number(t.valor) || 0), 0);
         const pct = Math.min(Math.round((saldoMeta / goal.metaFinal) * 100), 100);
         const { bar } = barra(saldoMeta, goal.metaFinal);
         const status = pct >= 100 ? '✅ Concluída!' : pct >= 75 ? '🔥 Quase lá!' : pct >= 50 ? '💪 Na metade!' : '🌱 Em andamento';
@@ -544,7 +543,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
         // g.saldo não é persistido no Firestore — calcula a partir das transações vinculadas
         const saldoMeta = transactions
           .filter(t => t.metaId === g.id)
-          .reduce((acc, t) => t.tipo === 'saida' ? acc - (Number(t.valor) || 0) : acc + (Number(t.valor) || 0), 0);
+          .reduce((acc, t) => acc + sinalNaCaixinhaBot(t) * (Number(t.valor) || 0), 0);
         const pct = Math.min(100, Math.round((saldoMeta / g.metaFinal) * 100));
         const barF = Math.round(pct / 10);
         const barLine = '█'.repeat(barF) + '░'.repeat(10 - barF);
@@ -607,9 +606,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     }
 
     // Total investido
-    const totalInvestido = expandRange(
-      transactions.filter(t => t.tipo === 'investimento'), FAR_PAST, todayStr
-    ).reduce((acc, o) => acc + o.valor, 0);
+    const totalInvestido = totalInvestidoAteBot(transactions, todayStr);
 
     // Sobra segura (abaixo de R$ 200 não é tratada como valor para investir)
     const sobraInfoN23 = calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje);

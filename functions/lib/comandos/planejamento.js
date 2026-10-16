@@ -5,6 +5,7 @@ const { loadUserData } = require('../infra/dados');
 const { db } = require('../infra/firebase');
 const { sendMessage } = require('../infra/telegram');
 const { calcSaldoSimples, expandRange } = require('../motor/caixa');
+const { ehResgateBot } = require('../motor/investido');
 const { CATEGORY_ORDER, computeSpentByCategory, getTopExpensesForCategory } = require('../motor/competencia');
 const { addDaysFn, dateStrFromDate, getNowBrasilia, todayStrBrasilia } = require('../util/datas');
 const { MESES_CURTO, MESES_LONGO, barra, formatBRL } = require('../util/formato');
@@ -174,7 +175,7 @@ async function handlePrevisao(chatId, uid) {
   });
 
   occs.forEach(o => {
-    if (o.tipo === 'entrada') entradas += o.valor;
+    if (ehResgateBot(o.tx)) { /* resgate: não é receita nem gasto */ } else if (o.tipo === 'entrada') entradas += o.valor;
     else saidas += o.valor;
   });
 
