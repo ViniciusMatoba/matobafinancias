@@ -186,6 +186,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             goals={goals}
             config={config}
             onSaveConfig={saveConfig}
+            onUpdateMany={updateMany}
           />
         )}
         {view === 'settings' && (

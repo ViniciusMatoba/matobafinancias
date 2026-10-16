@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { TYPE_CONFIG, FREQ_LABELS, todayStr, formatBRL, formatBRLInput, normalizeBRLInput, parseBRLInput, numberToBRLInput, addMonths, addDays, addWeeks } from '../../utils/formatters';
+import { CLASSES_INVESTIMENTO } from '../../utils/classesInvestimento';
 import { PERCENTUAL_CATEGORIES, CATEGORY_OPTIONS, TIPOS_COM_CATEGORIA, getAutoCategory } from '../../utils/categories';
 import { AlertCircle, History, Trash2, Plus, Pencil } from 'lucide-react';
 import { calcFaturaCard } from '../../utils/projectionCalc';
@@ -52,14 +53,6 @@ const EMPTY = {
   tag: '',
 };
 
-const CLASSES_INVESTIMENTO = [
-  { id: 'renda_fixa',      label: 'Renda Fixa' },
-  { id: 'acoes',           label: 'Ações' },
-  { id: 'fiis',            label: 'FIIs' },
-  { id: 'cripto',          label: 'Cripto' },
-  { id: 'internacional',   label: 'Internacional' },
-  { id: 'outro',           label: 'Outro' },
-];
 
 const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', tag: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '', conferido: false };
 

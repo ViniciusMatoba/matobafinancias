@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.187';
+export const APP_VERSION = '1.6.188';
 export const APP_VERSION_DATE = '16/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.188',
+    date: '16/10/2026',
+    changes: [
+      'Reclassificar investimentos já lançados: na tela Investir, o card "Classificar meus aportes" agrupa os aportes pela descrição (ex.: "Tesouro Selic", "PETR4") e um seletor grava a classe em todos os aportes do grupo, com opção de mostrar só os sem classe. Só altera o campo de classe, nada mais.',
+      'Nova classe "Caixinha / resgate imediato" (além de Renda Fixa, Ações, FIIs, Cripto, Internacional e Outro), disponível no formulário de lançamento e no gráfico de alocação. As classes agora vêm de uma lista única.',
+    ],
+  },
   {
     version: '1.6.187',
     date: '16/10/2026',

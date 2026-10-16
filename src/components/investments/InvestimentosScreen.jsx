@@ -3,20 +3,15 @@ import { ShieldCheck, TrendingUp, Info, Check, AlertTriangle } from 'lucide-reac
 import { formatBRL } from '../../utils/formatters';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { totalInvestidoAte } from '../../utils/investido';
+import { CLASSE_POR_ID } from '../../utils/classesInvestimento';
+import AportesClassifier from './AportesClassifier';
 import { calcularSobraSegura, SOBRA_MINIMA } from '../../utils/projectionCalc';
 import { reservaDaCaixinha } from '../../utils/caixinha';
 import { ritmoDaReserva, projecaoReserva, rotuloMes } from '../../utils/reservaRitmo';
 
 const FAR_PAST = '2020-01-01';
 
-const CLASSES_LABELS = {
-  renda_fixa:    { label: 'Renda Fixa',    cor: '#3b82f6' },
-  acoes:         { label: 'Ações',         cor: '#10b981' },
-  fiis:          { label: 'FIIs',          cor: '#f59e0b' },
-  cripto:        { label: 'Cripto',        cor: '#f97316' },
-  internacional: { label: 'Internacional', cor: '#8b5cf6' },
-  outro:         { label: 'Outro',         cor: '#6b7280' },
-};
+const CLASSES_LABELS = CLASSE_POR_ID;
 
 const PERFIS = [
   { id: 'concursado', label: 'Concursado/Servidor', mesesMin: 3, mesesMax: 3, rec: 3, desc: 'Alta estabilidade — 3 meses recomendados' },
@@ -66,7 +61,7 @@ function DonutProgress({ pct, cor, size = 72 }) {
   );
 }
 
-export default function InvestimentosScreen({ transactions, wallets, goals, config, onSaveConfig }) {
+export default function InvestimentosScreen({ transactions, wallets, goals, config, onSaveConfig, onUpdateMany }) {
   const today = new Date().toISOString().slice(0, 10);
 
   // ── Config persistida ────────────────────────────────────────────────────────
@@ -428,6 +423,8 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
             </p>
           </div>
         )}
+
+        <AportesClassifier transactions={transactions} onUpdateMany={onUpdateMany} />
 
         {/* ── Aviso quando não configurado ─────────────────────────────────── */}
         {!hasSetup && (
