@@ -1,100 +1,105 @@
 import { describe, it, expect } from 'vitest'
-import { classificarDiasNegativos } from '../coberturaProjecao'
+import { simularDias, resumirResgates } from '../coberturaProjecao'
 import { buildDailyProjection } from '../projectionCalc'
+import { totalInvestidoAte } from '../investido'
 
-/** Dias negativos da Projeção: por aporte, reserva cobre, ou falta de verdade. Hoje = 10/11/2026. */
-const HOJE = '2026-11-10'
+/** Projeção com investido: total, simulação do resgate e aviso. Hoje = 19/11/2026. */
+const HOJE = '2026-11-19'
+const tx = (id, tipo, valor, dataInicio, extra = {}) => ({ id, tipo, valor, dataInicio, frequencia: 'unico', descricao: id, ...extra })
 
-const dia = (date, saldo, itens = []) => ({ date, saldo, items: itens })
-const aporte = (valor) => ({ valor, tx: { tipo: 'investimento' } })
-const saida = (valor) => ({ valor, tx: { tipo: 'saida' } })
+/** Caso do exemplo combinado: conta 1.200, investido 6.000; aporte 1.500 (20), luz 400 (21), salário 5.000 (25). */
+const cenario = (extra = []) => {
+  const txs = [
+    tx('ap0', 'investimento', 6000, '2026-10-01'),
+    tx('ap', 'investimento', 1500, '2026-11-20'),
+    tx('luz', 'saida', 400, '2026-11-21'),
+    tx('sal', 'entrada', 5000, '2026-11-25'),
+    ...extra,
+  ]
+  const days = buildDailyProjection(txs, '2026-11-19', '2026-11-30', 1200)
+  const sim = simularDias({ days, hoje: HOJE, investidoInicial: totalInvestidoAte(txs, '2026-11-18') })
+  return { txs, days, sim }
+}
 
-describe('classificarDiasNegativos', () => {
-  it('dias com saldo positivo ou zero não recebem classificação', () => {
-    expect(classificarDiasNegativos({ days: [dia('2026-11-12', 500), dia('2026-11-13', 0)], reservaLiquida: 999, hoje: HOJE })).toEqual({})
+describe('simularDias — exemplo combinado', () => {
+  it('dia 19: nada a resgatar, total = conta + investido', () => {
+    const { sim } = cenario()
+    expect(sim['2026-11-19']).toMatchObject({ conta: 1200, investido: 6000, total: 7200, resgateNovo: 0, falta: 0 })
   })
 
-  it('negativo causado só por aporte planejado: "aporte"', () => {
-    const days = [dia('2026-11-20', -1200, [aporte(1500), saida(300)])] // sem o aporte: +300
-    expect(classificarDiasNegativos({ days, reservaLiquida: 0, hoje: HOJE })['2026-11-20']).toEqual({ tipo: 'aporte', deficit: 1200 })
+  it('dia 20: o aporte deixa a conta em −300: simula resgate de 300 e a conta zera', () => {
+    const { sim } = cenario()
+    expect(sim['2026-11-20']).toMatchObject({ saldoReal: -300, conta: 0, investido: 6000 + 1500 - 300, total: 7200, resgateNovo: 300, resgateAcum: 300, falta: 0 })
+    expect(sim['2026-11-20'].adiavel).toBe(true) // só é preciso por causa do aporte planejado
   })
 
-  it('o aporte tem prioridade sobre a reserva (o dinheiro é seu e dá para adiar)', () => {
-    const days = [dia('2026-11-20', -1200, [aporte(1500)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 50000, hoje: HOJE })['2026-11-20'].tipo).toBe('aporte')
+  it('dia 21: a conta de luz exige mais 400 (acumulado 700) e o total cai 400', () => {
+    const { sim } = cenario()
+    expect(sim['2026-11-21']).toMatchObject({ conta: 0, investido: 6800, total: 6800, resgateNovo: 400, resgateAcum: 700 })
+    expect(sim['2026-11-21'].adiavel).toBe(true) // sem o aporte (1.500) o saldo seria +800
   })
 
-  it('negativo que a reserva cobre: "reserva"', () => {
-    const days = [dia('2026-11-21', -2300, [saida(3300)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 18000, hoje: HOJE })['2026-11-21']).toEqual({ tipo: 'reserva', deficit: 2300 })
+  it('dia 25: o salário volta a conta ao positivo; o dinheiro resgatado ficou na conta e o investido continua reduzido', () => {
+    const { sim } = cenario()
+    expect(sim['2026-11-25']).toMatchObject({ saldoReal: 4300, conta: 5000, investido: 6800, total: 11800, resgateNovo: 0, resgateAcum: 700 })
   })
 
-  it('sem reserva, o total investido cobre: "investido" (caso real: −297,85 com R$ 3.000 investidos)', () => {
-    const days = [dia('2026-10-30', -297.85, [saida(300)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 0, totalInvestido: 3000, hoje: HOJE })['2026-10-30']).toEqual({ tipo: 'investido', deficit: 297.85 })
+  it('o total nunca é alterado pela simulação (total = saldo real + investido real)', () => {
+    const { days, sim } = cenario()
+    for (const d of days) expect(sim[d.date].conta + sim[d.date].investido).toBeCloseTo(sim[d.date].total, 6)
   })
 
-  it('a reserva tem prioridade sobre o investido; sem nenhum dos dois cobrir, "falta" desconta o maior', () => {
-    const days = [dia('2026-11-21', -2000, [saida(2000)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 2500, totalInvestido: 9000, hoje: HOJE })['2026-11-21'].tipo).toBe('reserva')
-    const d2 = [dia('2026-11-21', -9500, [saida(9500)])]
-    expect(classificarDiasNegativos({ days: d2, reservaLiquida: 2500, totalInvestido: 9000, hoje: HOJE })['2026-11-21']).toEqual({ tipo: 'falta', deficit: 9500, falta: 500 })
+  it('resumo do período', () => {
+    const { sim } = cenario()
+    expect(resumirResgates(sim)).toEqual({ primeiroDia: '2026-11-20', acumulado: 700, faltaMax: 0 })
+  })
+})
+
+describe('simularDias — regras', () => {
+  it('sem investido: o negativo vira "falta" e a conta continua negativa', () => {
+    const txs = [tx('luz', 'saida', 900, '2026-11-21')]
+    const days = buildDailyProjection(txs, '2026-11-19', '2026-11-22', 500)
+    const sim = simularDias({ days, hoje: HOJE, investidoInicial: 0 })
+    expect(sim['2026-11-21']).toMatchObject({ conta: -400, resgateAcum: 0, falta: 400, resgateNovo: 0 })
   })
 
-  it('reserva exatamente igual ao buraco ainda cobre', () => {
-    const days = [dia('2026-11-21', -1000, [saida(1000)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 1000, hoje: HOJE })['2026-11-21'].tipo).toBe('reserva')
+  it('investido insuficiente: resgata o que tem e o resto é falta (caso −297,85 com investido de 100)', () => {
+    const txs = [tx('luz', 'saida', 797.85, '2026-11-21')]
+    const days = buildDailyProjection(txs, '2026-11-19', '2026-11-22', 500)
+    const sim = simularDias({ days, hoje: HOJE, investidoInicial: 100 })
+    expect(sim['2026-11-21']).toMatchObject({ conta: -197.85, investido: 0, resgateNovo: 100, resgateAcum: 100, falta: 197.85 })
   })
 
-  it('nem a reserva cobre: "falta" com o valor que sobra descoberto', () => {
-    const days = [dia('2026-11-24', -19100, [saida(20000)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 18000, hoje: HOJE })['2026-11-24']).toEqual({ tipo: 'falta', deficit: 19100, falta: 1100 })
+  it('o caso do relato: −297,85 com R$ 3.000 investidos vira resgate de 297,85 e a conta zera', () => {
+    const txs = [tx('c', 'saida', 797.85, '2026-11-21')]
+    const days = buildDailyProjection(txs, '2026-11-19', '2026-11-22', 500)
+    const sim = simularDias({ days, hoje: HOJE, investidoInicial: 3000 })
+    expect(sim['2026-11-21']).toMatchObject({ conta: 0, investido: 3000 - 297.85, resgateNovo: 297.85, falta: 0 })
+    expect(sim['2026-11-21'].adiavel).toBe(false) // não há aporte planejado: o resgate é a saída
   })
 
-  it('sem reserva nenhuma, qualquer negativo sem aporte é "falta" do valor inteiro', () => {
-    const days = [dia('2026-11-21', -400, [saida(400)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 0, hoje: HOJE })['2026-11-21']).toEqual({ tipo: 'falta', deficit: 400, falta: 400 })
+  it('dias antes de hoje são reais (sem simulação), mas já mostram o investido', () => {
+    const txs = [tx('ap', 'investimento', 700, '2026-11-17'), tx('luz', 'saida', 900, '2026-11-18')]
+    const days = buildDailyProjection(txs, '2026-11-17', '2026-11-19', 500)
+    const sim = simularDias({ days, hoje: HOJE, investidoInicial: 2000 })
+    expect(sim['2026-11-18']).toMatchObject({ saldoReal: -1100, conta: -1100, resgateNovo: 0, resgateAcum: 0 })
+    expect(sim['2026-11-17'].investido).toBe(2700)
   })
 
-  it('aportes acumulam dia a dia: aporte de um dia anterior também conta nos dias seguintes', () => {
-    const days = [
-      dia('2026-11-15', 200, [aporte(1000)]),
-      dia('2026-11-16', -300, [saida(500)]),       // sem os 1000 de aporte: +700 → "aporte"
-    ]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 0, hoje: HOJE })['2026-11-16'].tipo).toBe('aporte')
+  it('resgate JÁ lançado entra no saldo e no investido: a necessidade some', () => {
+    const { sim } = cenario([tx('rg', 'entrada', 300, '2026-11-20', { resgate: true })])
+    expect(sim['2026-11-20']).toMatchObject({ saldoReal: 0, resgateNovo: 0, resgateAcum: 0, investido: 6000 + 1500 - 300 })
   })
 
-  it('aporte de antes de hoje já aconteceu e não conta como "adiável"', () => {
-    const days = [dia('2026-11-05', -500, [aporte(1000)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 0, hoje: HOJE })['2026-11-05'].tipo).toBe('falta')
+  it('lista que começa no futuro herda o resgate acumulado e o investido', () => {
+    const txs = [tx('luz', 'saida', 100, '2026-12-02')]
+    const days = buildDailyProjection(txs, '2026-12-01', '2026-12-03', 1000)
+    const sim = simularDias({ days, hoje: HOJE, investidoInicial: 5000, carryResgate: 700 })
+    expect(sim['2026-12-02']).toMatchObject({ saldoReal: 900, conta: 1600, investido: 4300, total: 5900, resgateNovo: 0, resgateAcum: 700 })
   })
 
-  it('aportes planejados entre hoje e o início da lista entram pelo parâmetro', () => {
-    const days = [dia('2026-12-02', -800, [saida(800)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 0, hoje: HOJE })['2026-12-02'].tipo).toBe('falta')
-    expect(classificarDiasNegativos({ days, reservaLiquida: 0, hoje: HOJE, aportesAntesDoPeriodo: 1000 })['2026-12-02'].tipo).toBe('aporte')
-  })
-
-  it('só aporte conta como "aporte" (outro tipo de saída não)', () => {
-    const days = [dia('2026-11-20', -300, [saida(1500)])]
-    expect(classificarDiasNegativos({ days, reservaLiquida: 0, hoje: HOJE })['2026-11-20'].tipo).toBe('falta')
-  })
-
-  it('entradas indefinidas não quebram', () => {
-    expect(classificarDiasNegativos({ days: undefined, hoje: HOJE })).toEqual({})
-    expect(classificarDiasNegativos({ days: [dia('2026-11-20', -10)], hoje: HOJE })['2026-11-20'].tipo).toBe('falta')
-  })
-
-  it('integrado com a projeção real: salário atrasado + aporte recorrente + reserva', () => {
-    const txs = [
-      { id: 'a', tipo: 'investimento', frequencia: 'unico', dataInicio: '2026-11-20', valor: 1500, descricao: 'Aporte' },
-      { id: 'c', tipo: 'saida', frequencia: 'unico', dataInicio: '2026-11-21', valor: 600, descricao: 'Conta' },
-      { id: 's', tipo: 'entrada', frequencia: 'unico', dataInicio: '2026-11-25', valor: 5000, descricao: 'Salário' },
-    ]
-    const days = buildDailyProjection(txs, '2026-11-10', '2026-11-30', 1000)
-    const r = classificarDiasNegativos({ days, reservaLiquida: 3000, hoje: HOJE })
-    expect(r['2026-11-20']).toMatchObject({ tipo: 'aporte', deficit: 500 })   // 1000 − 1500
-    expect(r['2026-11-21']).toMatchObject({ tipo: 'aporte', deficit: 1100 })  // sem o aporte: +400
-    expect(r['2026-11-25']).toBeUndefined()                                   // salário voltou ao positivo
+  it('sem entrada não quebra', () => {
+    expect(simularDias({ days: undefined, hoje: HOJE })).toEqual({})
+    expect(resumirResgates({})).toEqual({ primeiroDia: null, acumulado: 0, faltaMax: 0 })
   })
 })

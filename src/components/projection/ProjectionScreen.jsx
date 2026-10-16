@@ -6,7 +6,7 @@ import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatter
 import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { acharCaixinhaReserva, reservaDaCaixinha } from '../../utils/caixinha';
-import { classificarDiasNegativos } from '../../utils/coberturaProjecao';
+import { simularDias, resumirResgates } from '../../utils/coberturaProjecao';
 import { totalInvestidoAte } from '../../utils/investido';
 import ProjectionCharts from './ProjectionCharts';
 
@@ -134,7 +134,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     return todayRow ? todayRow.saldo : null;
   }, [days, today, isAtCurrentMonth, viewTab]);
 
-  // Dinheiro guardado: a reserva (resgate imediato) cobre buracos da conta; o investido total é só informativo
+  // Investido (aportes − resgates) e simulação do resgate: dia a dia mostra total, conta e investido
   const reservaLiquida = useMemo(() => {
     const g = acharCaixinhaReserva(goals, config);
     return g ? reservaDaCaixinha(transactions, goals, g.id) : 0;
@@ -142,28 +142,27 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
 
   const totalInvestido = useMemo(() => totalInvestidoAte(transactions, today), [transactions, today]);
 
-  // Aportes planejados (depois de hoje) que ficam antes do início da lista: já estão descontados do saldo inicial
-  const aportesAntesDoPeriodo = useMemo(() => {
-    if (!from || from <= today) return 0;
-    let total = 0;
+  // Lista que começa no futuro: investido, aportes planejados e resgate necessário já acumulados até o dia anterior
+  const baseSimulacao = useMemo(() => {
+    if (!days.length) return { investidoInicial: 0, aportesAntesDoPeriodo: 0, carryResgate: 0 };
+    const dayBefore = addDays(from, -1);
+    const investidoInicial = totalInvestidoAte(transactions, dayBefore);
+    if (from <= today) return { investidoInicial, aportesAntesDoPeriodo: 0, carryResgate: 0 };
+    let aportes = 0;
     transactions.filter(t => t.tipo === 'investimento').forEach(t => {
-      expandOccurrences(t, addDays(today, 1), addDays(from, -1)).forEach(o => { total += Number(o.valor) || 0; });
+      expandOccurrences(t, addDays(today, 1), dayBefore).forEach(o => { aportes += Number(o.valor) || 0; });
     });
-    return total;
-  }, [transactions, from, today]);
+    const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
+    const ate = buildDailyProjection(transactions, today, dayBefore, calcSaldo(transactions, FAR_PAST, addDays(today, -1)) + wInitials);
+    const carryResgate = Math.max(0, ...ate.map(d => -d.saldo));
+    return { investidoInicial, aportesAntesDoPeriodo: aportes, carryResgate };
+  }, [days, from, today, transactions, wallets]);
 
-  const coberturas = useMemo(
-    () => classificarDiasNegativos({ days, reservaLiquida, totalInvestido, hoje: today, aportesAntesDoPeriodo }),
-    [days, reservaLiquida, totalInvestido, today, aportesAntesDoPeriodo]
+  const simulacao = useMemo(
+    () => simularDias({ days, hoje: today, ...baseSimulacao }),
+    [days, today, baseSimulacao]
   );
-  const resumoCobertura = useMemo(() => {
-    const lista = Object.values(coberturas);
-    return {
-      total: lista.length,
-      falta: lista.filter(c => c.tipo === 'falta').length,
-      faltaMax: lista.reduce((m, c) => Math.max(m, c.falta || 0), 0),
-    };
-  }, [coberturas]);
+  const resumoResgate = useMemo(() => resumirResgates(simulacao), [simulacao]);
 
   // ── Cálculo do Planejamento Anual ──────────────────────────────────────────
   const annualData = useMemo(() => {
@@ -411,18 +410,19 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                   <p style={{ margin: 0, fontSize: 19, fontWeight: 800, color: saldoColor(saldoHoje) }}>
                     {formatBRL(saldoHoje)}
                   </p>
-                  {(reservaLiquida > 0 || totalInvestido > 0) && (
+                  {totalInvestido > 0 && (
                     <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-secondary)' }}>
-                      🛡️ {reservaLiquida > 0 ? `Reserva ${formatBRL(reservaLiquida)}` : ''}
-                      {reservaLiquida > 0 && totalInvestido > 0 ? ' · ' : ''}
-                      {totalInvestido > 0 ? `Investido ${formatBRL(totalInvestido)}` : ''}
+                      💰 Investido {formatBRL(totalInvestido)}{reservaLiquida > 0 ? ` (reserva ${formatBRL(reservaLiquida)})` : ''} · Total {formatBRL(saldoHoje + totalInvestido)}
                     </p>
                   )}
-                  {resumoCobertura.total > 0 && (
-                    <p style={{ margin: '2px 0 0', fontSize: 11, color: resumoCobertura.falta > 0 ? 'var(--saida)' : 'var(--text-secondary)' }}>
-                      {resumoCobertura.falta > 0
-                        ? `⚠️ ${resumoCobertura.falta} dia(s) com falta real (até ${formatBRL(resumoCobertura.faltaMax)} sem cobertura)`
-                        : '✅ Conta no negativo só em dias cobertos pelo que você tem guardado ou por aporte planejado'}
+                  {resumoResgate.acumulado > 0 && (
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>
+                      ⚠️ Necessário resgate de {formatBRL(resumoResgate.acumulado)} do investido a partir de {resumoResgate.primeiroDia ? resumoResgate.primeiroDia.split('-').reverse().slice(0, 2).join('/') : '—'}
+                    </p>
+                  )}
+                  {resumoResgate.faltaMax > 0 && (
+                    <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--saida)', fontWeight: 600 }}>
+                      ⛔ Mesmo resgatando tudo faltam até {formatBRL(resumoResgate.faltaMax)}
                     </p>
                   )}
                 </div>
@@ -490,7 +490,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                   const isPast = day.date < today;
                   const hasItems = day.items.length > 0;
                   const isOpen = expanded[day.date];
-                  const cob = coberturas[day.date];
+                  const sim = simulacao[day.date];
                   const dNum = formatDayNum(day.date);
                   const dName = dayName(day.date);
 
@@ -602,16 +602,27 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                           alignItems: 'flex-end', justifyContent: 'center',
                           minWidth: 96, flexShrink: 0, gap: 2,
                         }}>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: cob && cob.tipo !== 'falta' ? 'var(--text-secondary)' : saldoColor(day.saldo) }}>
-                            {formatBRL(day.saldo)}
+                          <span style={{ fontSize: 13, fontWeight: 700, color: saldoColor(sim ? sim.total : day.saldo) }}>
+                            {formatBRL(sim ? sim.total : day.saldo)}
                           </span>
-                          {cob && (
-                            <span style={{
-                              fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
-                              color: cob.tipo === 'falta' ? 'var(--saida)' : cob.tipo === 'aporte' ? '#f59e0b' : '#10b981',
-                              background: cob.tipo === 'falta' ? 'rgba(239,68,68,0.12)' : cob.tipo === 'aporte' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)',
-                            }}>
-                              {cob.tipo === 'falta' ? `falta ${formatBRL(cob.falta)}` : cob.tipo === 'reserva' ? '🛡️ reserva cobre' : cob.tipo === 'investido' ? '💰 investido cobre' : 'por aporte'}
+                          {sim && sim.investido !== 0 && (
+                            <span style={{ fontSize: 10, color: sim.conta < 0 ? 'var(--saida)' : 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                              Conta {formatBRL(sim.conta)}
+                            </span>
+                          )}
+                          {sim && sim.investido !== 0 && (
+                            <span style={{ fontSize: 10, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                              💰 {formatBRL(sim.investido)}
+                            </span>
+                          )}
+                          {sim && sim.resgateNovo > 0 && (
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: '#f59e0b', background: 'rgba(245,158,11,0.14)', whiteSpace: 'nowrap' }}>
+                              ⚠️ resgatar {formatBRL(sim.resgateNovo)}
+                            </span>
+                          )}
+                          {sim && sim.falta > 0 && (
+                            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: 'var(--saida)', background: 'rgba(239,68,68,0.12)', whiteSpace: 'nowrap' }}>
+                              falta {formatBRL(sim.falta)}
                             </span>
                           )}
                           {hasItems && (
@@ -629,12 +640,11 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                           background: 'rgba(0,0,0,0.15)',
                           padding: '8px 10px 10px',
                         }}>
-                          {cob && (
+                          {sim && (sim.resgateNovo > 0 || sim.falta > 0) && (
                             <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--text-secondary)' }}>
-                              {cob.tipo === 'aporte' && 'Conta negativa por causa de aporte planejado: sem ele o saldo ficaria positivo. Dinheiro seu, é só adiar o aporte.'}
-                              {cob.tipo === 'reserva' && `Conta negativa em ${formatBRL(cob.deficit)}, coberta pela reserva (${formatBRL(reservaLiquida)}). Resgate antes se for preciso.`}
-                              {cob.tipo === 'investido' && `Conta negativa em ${formatBRL(cob.deficit)}, coberta pelo que você tem investido (${formatBRL(totalInvestido)}). Resgate só o necessário e confira o prazo de resgate.`}
-                              {cob.tipo === 'falta' && `Conta negativa em ${formatBRL(cob.deficit)}. Mesmo com o que você tem guardado (${formatBRL(Math.max(reservaLiquida, totalInvestido))}) faltam ${formatBRL(cob.falta)}.`}
+                              {sim.resgateNovo > 0 && `A conta ficaria em ${formatBRL(sim.saldoReal)}. Para cobrir este dia é necessário resgatar ${formatBRL(sim.resgateNovo)} do investido (acumulado ${formatBRL(sim.resgateAcum)}${reservaLiquida > 0 ? `; prefira a reserva, ${formatBRL(reservaLiquida)} com resgate imediato` : ''}). O saldo exibido já considera esse resgate.`}
+                              {sim.resgateNovo > 0 && sim.adiavel && ' Outra saída: adiar o aporte planejado.'}
+                              {sim.falta > 0 && ` Mesmo resgatando todo o investido faltam ${formatBRL(sim.falta)}.`}
                             </p>
                           )}
                           {day.items.map((item, i) => {

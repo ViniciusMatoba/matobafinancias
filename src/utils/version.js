@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.185';
+export const APP_VERSION = '1.6.186';
 export const APP_VERSION_DATE = '16/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.186',
+    date: '16/10/2026',
+    changes: [
+      'Projeção com o investido (etapa 2 de 3): cada dia mostra o TOTAL (conta + investido) em destaque, com a "Conta" e o "💰 investido" logo abaixo. Dias antes de hoje são reais.',
+      'Quando a conta ficaria negativa, a Projeção simula o resgate do investido só do valor que falta para zerar a conta e avisa "⚠️ resgatar R$ X" no dia. O saldo exibido já considera esse resgate; o resgate necessário é acumulado e o dinheiro resgatado fica na conta. Se nem todo o investido cobrir, aparece "falta R$ X" em vermelho. Ao abrir o dia, uma frase explica (e, se o negativo vem de um aporte planejado, lembra que dá para adiar o aporte).',
+      'O card do topo mostra "Investido (reserva) · Total" e o resumo "Necessário resgate de R$ X a partir de DD/MM". Os selos "reserva cobre / investido cobre / por aporte" saíram. O botão para lançar o resgate chega na etapa 3.',
+    ],
+  },
   {
     version: '1.6.185',
     date: '16/10/2026',
