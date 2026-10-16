@@ -1,8 +1,8 @@
 {
-  "version": "1.6.187",
+  "version": "1.6.188",
   "date": "16/10/2026",
   "notes": [
-    "Botão \"Lançar resgate\" na Projeção (etapa 3 de 3): ao abrir um dia com \"⚠️ resgatar R$ X\", o botão cria o resgate daquele dia. Ele sai primeiro da caixinha de reserva (resgate imediato) até o que ela tem; o restante vem do investimento geral, em um segundo lançamento.",
-    "O resgate lançado entra na conta como entrada (não conta como receita), diminui o investido e o saldo da caixinha, e o aviso daquele dia some. Datas até hoje nascem conferidas; datas futuras ficam pendentes. Dias com resgate necessário agora podem ser abertos mesmo sem outros lançamentos."
+    "Reclassificar investimentos já lançados: na tela Investir, o card \"Classificar meus aportes\" agrupa os aportes pela descrição (ex.: \"Tesouro Selic\", \"PETR4\") e um seletor grava a classe em todos os aportes do grupo, com opção de mostrar só os sem classe. Só altera o campo de classe, nada mais.",
+    "Nova classe \"Caixinha / resgate imediato\" (além de Renda Fixa, Ações, FIIs, Cripto, Internacional e Outro), disponível no formulário de lançamento e no gráfico de alocação. As classes agora vêm de uma lista única."
   ]
 }
