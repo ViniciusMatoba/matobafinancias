@@ -1,8 +1,8 @@
 {
-  "version": "1.6.184",
+  "version": "1.6.185",
   "date": "16/10/2026",
   "notes": [
-    "Projeção: o dinheiro investido agora cobre dias negativos mesmo sem uma caixinha de reserva configurada. A cobertura passa a ser o maior entre a reserva e o total investido: se a reserva basta aparece \"🛡️ reserva cobre\"; se só o investido basta, \"💰 investido cobre\"; \"falta R$ X\" só quando nem os dois juntos cobrem (e o valor da falta já desconta o que você tem guardado).",
-    "O aviso de saldo negativo (N6) do Telegram segue a mesma regra."
+    "Base do Resgate (etapa 1 de 3): o sistema passa a reconhecer o resgate de investimento — dinheiro que volta do investido para a conta. Ele é uma entrada marcada como resgate: no saldo da conta entra normalmente, mas não é receita nem gasto nos resumos e relatórios, e DIMINUI o total investido e o saldo da caixinha.",
+    "O \"Total investido\" da Home, da tela Investir, da Projeção e do Telegram (/investimentos, aviso de saldo negativo, relatório do dia 15/30) agora é aportes menos resgates, e o ritmo da reserva também desconta resgates. Ainda não há botão para lançar um resgate: ele chega na etapa 3, junto da Projeção com total e aviso de \"necessário resgate\"."
   ]
 }
