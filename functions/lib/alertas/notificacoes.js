@@ -555,29 +555,46 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
   }
 
   // ── N22 — Sobra projetada segura (só avisa quando muda; abaixo de R$ 200 não é valor para investir) ───
+  // A sobra é do saldo da CONTA (o que já está investido não é sobra para investir de novo); o guardado entra só
+  // para dizer se cobre um eventual buraco, e a mensagem nunca mostra saldo com sinal de menos.
   if (tipos.n22 !== false) {
     const s = calcSobraSeguraBot(transactions, walletInitials, todayStr, hoje);
     const fmtDia = (iso) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+    const reservaId22 = config?.investimentos?.reservaGoalId;
+    const reserva22 = reservaId22 ? reservaDaCaixinhaBot(transactions, goals, reservaId22) : 0;
+    const investido22 = Math.max(totalInvestidoAteBot(transactions, todayStr), 0);
+    const guardado22 = Math.max(reserva22, investido22);
+    const guardadoTxt = guardado22 > 0
+      ? `🛡️ _Guardado: ${[reserva22 > 0 ? `reserva ${formatBRL(reserva22)}` : '', investido22 > 0 ? `investido ${formatBRL(investido22)}` : ''].filter(Boolean).join(' · ')}_`
+      : '';
     const proxTxt = s.proxima
       ? `📈 *A partir de ${fmtDia(s.proxima.data)}* a sobra segura sobe para *${formatBRL(s.proxima.valor)}* (+${formatBRL(s.proxima.aumento)}).`
       : '';
-    const menorTxt = `_Menor saldo nos próximos 45 dias: ${formatBRL(s.minSaldo)}${s.minDate === todayStr ? ' (hoje)' : ` em ${fmtDia(s.minDate)}`}_`;
+    let menorTxt;
+    if (s.minSaldo >= 0) {
+      menorTxt = `_Menor saldo nos próximos 45 dias: ${formatBRL(s.minSaldo)}${s.minDate === todayStr ? ' (hoje)' : ` em ${fmtDia(s.minDate)}`}_`;
+    } else {
+      const precisa = -s.minSaldo;
+      const quando = s.minDate === todayStr ? 'hoje' : `em ${fmtDia(s.minDate)}`;
+      menorTxt = guardado22 >= precisa
+        ? `_A conta vai precisar de ${formatBRL(precisa)} ${quando}; o que você tem guardado cobre — resgate só o necessário._`
+        : guardado22 > 0
+          ? `_A conta vai precisar de ${formatBRL(precisa)} ${quando}; mesmo resgatando tudo o que está guardado faltam ${formatBRL(precisa - guardado22)}._`
+          : `_A conta vai precisar de ${formatBRL(precisa)} ${quando} e não há valor guardado para cobrir._`;
+    }
 
-    let text = null;
-    if (s.investivel > 0) {
-      text = `💡 *Sobra Projetada Segura*\n\nVocê pode guardar ou investir *${formatBRL(s.investivel)}* hoje sem faltar dinheiro nos próximos 45 dias — pode ir tudo para a reserva (resgate imediato), sobrando só os centavos na conta.\n\n${menorTxt}${proxTxt ? `\n${proxTxt}` : ''}`;
-    } else if (s.proxima) {
-      text = `💡 *Sobra Projetada Segura*\n\nHoje não há valor seguro para investir (menos de ${formatBRL(SOBRA_MINIMA_BOT)} livres).\n\n${menorTxt}\n${proxTxt}`;
-    }
-    if (text) {
-      msgs.push({
-        text,
-        estado: {
-          chave: 'sobra-segura',
-          sig: `${Math.floor(s.investivel / 100)}|${s.proxima ? s.proxima.data : ''}|${s.proxima ? Math.floor(s.proxima.valor / 100) : ''}`,
-        },
-      });
-    }
+    const abertura = s.investivel > 0
+      ? `Você pode guardar ou investir *${formatBRL(s.investivel)}* hoje sem faltar dinheiro nos próximos 45 dias — pode ir tudo para a reserva (resgate imediato), sobrando só os centavos na conta.`
+      : `Hoje não há valor disponível para guardar ou investir (menos de ${formatBRL(SOBRA_MINIMA_BOT)} livres na conta nos próximos 45 dias).`;
+    const linhas = [menorTxt, guardadoTxt, proxTxt].filter(Boolean).join('\n');
+    msgs.push({
+      text: `💡 *Sobra Projetada Segura*\n\n${abertura}\n\n${linhas}`,
+      estado: {
+        chave: 'sobra-segura',
+        // sem valor e sem janela: assinatura estável ("0||") — avisa uma vez e só volta a avisar se a situação mudar
+        sig: `${Math.floor(s.investivel / 100)}|${s.proxima ? s.proxima.data : ''}|${s.proxima ? Math.floor(s.proxima.valor / 100) : ''}`,
+      },
+    });
   }
 
   // ── N23 — Lembrete de investimento e reserva (dia 15 e fim do mês) ──────────────

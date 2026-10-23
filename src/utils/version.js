@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.190';
+export const APP_VERSION = '1.6.191';
 export const APP_VERSION_DATE = '23/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.191',
+    date: '23/10/2026',
+    changes: [
+      'Telegram, aviso "Sobra Projetada Segura": nunca mostra saldo com sinal de menos. Quando a conta vai precisar de dinheiro em alguma data, a mensagem diz "A conta vai precisar de R$ X em DD/MM" e se o que você tem guardado (reserva ou investido) cobre, ou quanto falta mesmo resgatando tudo. Também ganhou a linha "Guardado: reserva R$ X · investido R$ Y".',
+      'Quando não há valor para guardar ou investir (menos de R$ 200 livres na conta), o bot agora avisa "Hoje não há valor disponível para guardar ou investir" uma vez, mesmo sem uma data futura com sobra, e só volta a avisar se a situação mudar. O cálculo da sobra continua só com o saldo da conta: o que já está investido não conta como sobra para investir de novo.',
+    ],
+  },
   {
     version: '1.6.190',
     date: '23/10/2026',

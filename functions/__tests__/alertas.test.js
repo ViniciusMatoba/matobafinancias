@@ -118,11 +118,70 @@ describe('N22 — sobra projetada segura', () => {
     const txs = [entrada(150), entrada(5000, { dataInicio: '2026-10-25' })]
     const m = roda(['n22'], { txs })
     expect(m).toHaveLength(1)
-    expect(m[0].text).toContain('Hoje não há valor seguro para investir')
+    expect(m[0].text).toContain('Hoje não há valor disponível para guardar ou investir')
     expect(m[0].text).toContain('A partir de 25/10')
   })
-  it('sem sobra hoje e sem janela futura: não manda nada', () => {
-    expect(roda(['n22'], { txs: [entrada(100)] })).toHaveLength(0)
+  it('sem sobra hoje e sem janela futura: avisa que não há valor disponível (uma vez)', () => {
+    const m = roda(['n22'], { txs: [entrada(100)] })
+    expect(m).toHaveLength(1)
+    expect(m[0].text).toContain('Hoje não há valor disponível para guardar ou investir')
+    expect(m[0].estado).toEqual({ chave: 'sobra-segura', sig: '0||' })
+    // no dia seguinte, com a mesma situação, não repete
+    const d1 = bot.filtrarAlertasRepetidos(m, {}, '2026-10-14')
+    const d2 = bot.filtrarAlertasRepetidos(roda(['n22'], { txs: [entrada(100)] }), d1.estadoNovo, '2026-10-15')
+    expect(d1.enviar).toHaveLength(1)
+    expect(d2.enviar).toHaveLength(0)
+  })
+})
+
+describe('N22 — saldo negativo previsto e dinheiro guardado', () => {
+  const reservaGoal = [{ id: 'g1', nome: 'Reserva de emergência' }]
+  const aporte = (valor, extra = {}) => ({
+    id: `a${++seq}`, tipo: 'investimento', frequencia: 'unico', dataInicio: '2026-09-02', descricao: 'Aporte', valor, ...extra,
+  })
+  const conta = (valor) => saida(valor, 'custos_fixos', { dataInicio: '2026-10-30' })
+  const texto = (m) => String(m[0].text).replace(/[  ]/g, ' ')
+
+  it('buraco coberto pela reserva: diz que cobre e não mostra valor negativo', () => {
+    const txs = [entrada(3500), aporte(3000, { metaId: 'g1' }), conta(800)] // a conta fica com 500; em 30/10: 500 − 800 = −300
+    const m = roda(['n22'], { txs, config: { investimentos: { reservaGoalId: 'g1' } }, goals: reservaGoal })
+    expect(m).toHaveLength(1)
+    const t = texto(m)
+    expect(t).toContain('Hoje não há valor disponível')
+    expect(t).toContain('A conta vai precisar de R$ 300,00 em 30/10; o que você tem guardado cobre')
+    expect(t).toContain('Guardado: reserva R$ 3.000,00 · investido R$ 3.000,00')
+    expect(t).not.toMatch(/-R$|−R$|R$ -/)
+  })
+
+  it('sem reserva configurada o investido cobre', () => {
+    const txs = [entrada(3500), aporte(3000), conta(800)]
+    const t = texto(roda(['n22'], { txs }))
+    expect(t).toContain('o que você tem guardado cobre')
+    expect(t).toContain('Guardado: investido R$ 3.000,00')
+  })
+
+  it('guardado insuficiente: diz quanto falta mesmo resgatando tudo', () => {
+    const txs = [entrada(1200), aporte(1000), conta(2000)] // a conta fica com 200; em 30/10: 200 − 2000 = −1.800; guardado 1.000 → faltam 800
+    const t = texto(roda(['n22'], { txs }))
+    expect(t).toContain('A conta vai precisar de R$ 1.800,00 em 30/10; mesmo resgatando tudo o que está guardado faltam R$ 800,00')
+    expect(t).not.toMatch(/-R$|−R$|R$ -/)
+  })
+
+  it('sem nada guardado: diz que não há valor guardado para cobrir', () => {
+    const t = texto(roda(['n22'], { txs: [entrada(200), conta(800)] }))
+    expect(t).toContain('A conta vai precisar de R$ 600,00 em 30/10 e não há valor guardado para cobrir')
+  })
+
+  it('saldo positivo continua mostrando o menor saldo e a sobra investível não soma o guardado', () => {
+    const t = texto(roda(['n22'], { txs: [entrada(3000)] }))
+    expect(t).toContain('pode guardar ou investir')
+    expect(t).toContain('Menor saldo nos próximos 45 dias: R$ 3.000,00')
+  })
+
+  it('o investido não vira "sobra para investir": conta zerada + R$ 3.000 investidos = sem valor disponível', () => {
+    const t = texto(roda(['n22'], { txs: [entrada(3000), aporte(3000)] }))
+    expect(t).toContain('Hoje não há valor disponível')
+    expect(t).toContain('Guardado: investido R$ 3.000,00')
   })
 })
 

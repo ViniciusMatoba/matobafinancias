@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.190
+- **Versão atual**: v1.6.191
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.190 — 23/10/2026
+**Versão**: v1.6.191 — 23/10/2026
 
 **Últimas features**:
+- v1.6.191 — N22 (bot) SEM NEGATIVO: a mensagem nunca mostra saldo com sinal de menos; menor saldo < 0 vira "A conta vai precisar de R$ X em DD/MM" + cobertura pelo guardado (`max(reserva, investido)`, via `reservaDaCaixinhaBot`/`totalInvestidoAteBot`) ou "faltam R$ Z"; linha "Guardado: reserva · investido"; sem valor (< R$ 200) agora SEMPRE avisa "Hoje não há valor disponível…" (sig `0||` estável → uma vez só, volta se mudar). O cálculo da sobra (`calcSobraSeguraBot`) segue só pela conta. Tela Investir/Home NÃO foram alteradas (app ainda diz "Sem sobra segura…" sem a linha do guardado)
 - v1.6.190 — MOVER UMA OCORRÊNCIA: `src/utils/ocorrencia.js` (`datasDoEscopo`, `validarNovaData`, `ocorrenciaAnterior`) + campo "Data desta ocorrência" no `TransactionForm` (prop `occDate`, só semanal/mensal/parcelado; manda `_novaData`) + `handleSave`/`confirmRecurrenceAction` (single: exclusão + lançamento único na data nova; future: `dataFim` da série antiga = dia anterior à ocorrência e nova série na data nova; all: ignora). Dia 29-31 já era tratado pelo motor de recorrência (clamp no último dia do mês, app `expandOccurrences` e bot `expandRange`); o teste `ocorrencia.test.js` trava fevereiro (28/29) e volta ao 30 em março. Caveat: se o usuário escolher o último dia de um mês curto (ex.: 28/02) a série fica no dia 28
 - v1.6.189 — RESGATE POR CLASSE: `ORDEM_RESGATE` (reserva → caixinha → renda_fixa → outro → acoes/fiis/internacional/cripto), `origemDe`, `investidoPorOrigem`, `sacarDasOrigens` em `classesInvestimento.js`; `simularDias` recebe `buckets` + `reservaGoalId` e devolve `origem` [{id,valor,liquidez}] por dia (a sacada persiste nos buckets). `docsResgate({origem})` gera 1 lançamento por origem (reserva com `metaId`, demais com `classeInvestimento`). Reserva = aportes com `metaId` da caixinha escolhida; aportes sem classe = `outro`; resgates antigos (v1.6.187, sem classe) caem em `outro`. Texto na expansão do dia (`textoOrigem`) e "· prazo" no selo
 - v1.6.188 — RECLASSIFICAR APORTES: `src/utils/classesInvestimento.js` (lista única `CLASSES_INVESTIMENTO` com `liquidez` imediata/prazo/mercado, `agruparAportes` por descrição normalizada, `atualizacoesDeClasse`) + `investments/AportesClassifier.jsx` no fim da tela Investir (usa `updateMany`; grava só `classeInvestimento`, vazio = null). Nova classe `caixinha` ("Caixinha / resgate imediato"). Formulário e gráfico de alocação usam a mesma lista. Ainda NÃO usado: a `liquidez` da classe não alimenta a Projeção (o resgate sai da reserva e depois do investimento geral)
