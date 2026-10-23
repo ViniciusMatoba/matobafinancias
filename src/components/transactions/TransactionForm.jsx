@@ -56,7 +56,7 @@ const EMPTY = {
 
 const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', tag: '', dataCompra: todayStr(), isParcelado: false, parcelaAtual: '', totalParcelas: '', conferido: false };
 
-export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [], config, onSaveConfig }) {
+export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [], config, onSaveConfig, occDate = null }) {
   const [form, setForm] = useState(initial ? {
     ...EMPTY, ...initial,
     // diário: stored value is valor/30, so reconstitute the monthly amount for editing
@@ -78,6 +78,10 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
   );
   const [novoItem, setNovoItem] = useState({ ...EMPTY_ITEM });
   const [editItemIdx, setEditItemIdx] = useState(null);
+
+  // Edição de UMA ocorrência de um lançamento recorrente: permite mover só essa ocorrência para outra data
+  const ehOcorrencia = !!occDate && !!initial?.id && ['semanal', 'mensal', 'parcelado'].includes(initial.frequencia);
+  const [dataOcorrencia, setDataOcorrencia] = useState(occDate || '');
 
   // Toggle do campo "Até quando": 'data' = date picker | 'qtde' = quantidade de repetições
   const [dataFimMode, setDataFimMode] = useState('data');
@@ -391,6 +395,8 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
       data._overwriteId = overwriteTarget.id;
     }
 
+    if (ehOcorrencia && dataOcorrencia && dataOcorrencia !== occDate) data._novaData = dataOcorrencia;
+
     onSave(data);
   };
 
@@ -651,10 +657,23 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
         )}
       </div>
 
+      {/* Data desta ocorrência (só ao editar uma ocorrência de lançamento recorrente) */}
+      {ehOcorrencia && (
+        <div style={{ padding: 12, borderRadius: 12, border: '1px solid var(--primary)', background: 'rgba(99,102,241,0.08)' }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6, display: 'block' }}>
+            Data desta ocorrência ({occDate.split('-').reverse().join('/')})
+          </label>
+          <input type="date" value={dataOcorrencia} onChange={e => setDataOcorrencia(e.target.value)} style={{ colorScheme: 'dark' }} />
+          <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Muda o dia só desta ocorrência ("apenas nesta") ou o dia fixo dela em diante ("nesta e nas futuras"). Dia 29 a 31 vai para o último dia dos meses mais curtos.
+          </p>
+        </div>
+      )}
+
       {/* Data de início */}
       <div>
         <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>
-          {form.tipo === 'diario' ? 'A partir de' : form.frequencia === 'unico' ? 'Data' : 'Data de início'}
+          {form.tipo === 'diario' ? 'A partir de' : form.frequencia === 'unico' ? 'Data' : ehOcorrencia ? 'Início da série (vale só para "em todas as ocorrências")' : 'Data de início'}
         </label>
         <input type="date" value={form.dataInicio}
           onChange={e => {

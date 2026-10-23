@@ -11,6 +11,7 @@ import { expandOccurrences } from '../utils/projectionCalc';
 import { expandDespesas } from '../utils/despesas';
 import { docPagamentoFaturaProjetada } from '../utils/faturaProjetada';
 import { PERCENTUAL_CATEGORIES } from '../utils/categories';
+import { datasDoEscopo, validarNovaData } from '../utils/ocorrencia';
 
 const AppContext = createContext(null);
 
@@ -215,7 +216,7 @@ export function AppProvider({ user, children }) {
   };
 
   const handleSave = async (data) => {
-    const { _overwriteId, ...cleanData } = data;
+    const { _overwriteId, _novaData, ...cleanData } = data;
 
     if (cleanData.tipo === 'cartao' && hasParceladoRestante(cleanData.itens) && editing && isVirtualTxId(editing.id)) {
       const isVirtualProj = true;
@@ -256,7 +257,7 @@ export function AppProvider({ user, children }) {
     }
 
     if (editing && ['diario','semanal','mensal','parcelado'].includes(editing.frequencia) && editingOccDate) {
-      setRecurrenceAction({ tx: editing, occDate: editingOccDate, newData: cleanData, action: 'edit' });
+      setRecurrenceAction({ tx: editing, occDate: editingOccDate, newData: cleanData, novaData: _novaData || null, action: 'edit' });
       setFormOpen(false);
       setEditing(null);
       setEditingOccDate(null);
@@ -448,7 +449,7 @@ export function AppProvider({ user, children }) {
   };
 
   const confirmRecurrenceAction = async (scope) => {
-    const { tx, occDate, newData, action } = recurrenceAction;
+    const { tx, occDate, newData, novaData, action } = recurrenceAction;
     setRecurrenceAction(null);
 
     try {
@@ -469,18 +470,20 @@ export function AppProvider({ user, children }) {
         }
       } else if (action === 'edit') {
         if (scope === 'single') {
+          const { dataOcorrencia } = datasDoEscopo({ scope, occDate, novaData });
           const exclusoes = tx.exclusoes || [];
           if (!exclusoes.includes(occDate)) exclusoes.push(occDate);
           await update(tx.id, { exclusoes });
           const eraConferido = tx.conferidos?.includes(occDate) ?? false;
-          await add({ ...newData, frequencia: 'unico', dataInicio: occDate, dataFim: null, conferido: eraConferido });
-          showToast('Ocorrência editada separadamente!');
+          await add({ ...newData, frequencia: 'unico', dataInicio: dataOcorrencia, dataFim: null, conferido: eraConferido });
+          showToast(dataOcorrencia !== occDate ? 'Ocorrência movida de data!' : 'Ocorrência editada separadamente!');
         } else if (scope === 'future') {
-          const d = new Date(`${occDate}T12:00:00`);
-          d.setDate(d.getDate() - 1);
-          await update(tx.id, { dataFim: d.toISOString().slice(0, 10) });
-          await add({ ...newData, dataInicio: occDate });
-          showToast('Ocorrências futuras alteradas!');
+          const erro = validarNovaData({ scope, tx, occDate, novaData });
+          if (erro) { showToast(erro, 'error'); return; }
+          const { dataOcorrencia, dataFimSerieAntiga } = datasDoEscopo({ scope, occDate, novaData });
+          await update(tx.id, { dataFim: dataFimSerieAntiga });
+          await add({ ...newData, dataInicio: dataOcorrencia });
+          showToast(dataOcorrencia !== occDate ? 'Data alterada para esta e as futuras!' : 'Ocorrências futuras alteradas!');
         } else {
           await update(tx.id, newData);
           showToast('Série completa atualizada!');

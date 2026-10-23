@@ -21,6 +21,7 @@ import Modal from './components/shared/Modal';
 import TransactionForm from './components/transactions/TransactionForm';
 import { DollarSign } from 'lucide-react';
 import PaymentModal from './components/projection/PaymentModal';
+import { validarNovaData } from './utils/ocorrencia';
 
 // ── Shell interno — renderiza as telas usando o contexto ──────────────────────
 function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, loginWithGoogle, logout, redirectError }) {
@@ -32,7 +33,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
     isUpdating, handleUpdate,
     view,
     formOpen, setFormOpen,
-    editing, setEditing, setEditingOccDate,
+    editing, setEditing, editingOccDate, setEditingOccDate,
     recurrenceAction, setRecurrenceAction,
     cartaoEditScope, setCartaoEditScope,
     payingItem, setPayingItem,
@@ -48,6 +49,10 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
     getParceladoEndDate,
     update, updateMany,
   } = useAppState();
+
+  const erroFuturas = recurrenceAction?.action === 'edit' && recurrenceAction?.novaData
+    ? validarNovaData({ scope: 'future', tx: recurrenceAction.tx, occDate: recurrenceAction.occDate, novaData: recurrenceAction.novaData })
+    : null;
 
   const renderScreen = () => {
     if (!isConfigured) return <SetupScreen />;
@@ -223,6 +228,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
         >
           <TransactionForm
             initial={editing}
+            occDate={editingOccDate}
             cards={cards}
             wallets={wallets}
             goals={goals}
@@ -292,14 +298,26 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
               Este é um lançamento que se repete ({recurrenceAction?.tx?.frequencia}).<br />
               Você deseja aplicar essa alteração apenas nesta ocorrência, ou nas futuras também?
             </p>
+            {recurrenceAction?.action === 'edit' && recurrenceAction?.novaData && (
+              <p style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 10, background: 'rgba(99,102,241,0.1)', color: 'var(--text-primary)', fontSize: 13, fontWeight: 600 }}>
+                Mover {recurrenceAction.occDate.split('-').reverse().join('/')} para {recurrenceAction.novaData.split('-').reverse().join('/')}
+              </p>
+            )}
+            {erroFuturas && (
+              <p style={{ marginBottom: 12, fontSize: 12, color: 'var(--saida)' }}>{erroFuturas} Em "nesta e nas futuras" esta data não é possível.</p>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button onClick={() => confirmRecurrenceAction('single')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}>
                 Apenas nesta ocorrência
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>As outras ocorrências não serão afetadas.</span>
               </button>
-              <button onClick={() => confirmRecurrenceAction('future')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}>
+              <button disabled={!!erroFuturas} onClick={() => confirmRecurrenceAction('future')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left', opacity: erroFuturas ? 0.45 : 1 }}>
                 Nesta e nas futuras
-                <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>Ocorrências passadas continuarão com o valor antigo.</span>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 400, color: 'var(--text-muted)', marginTop: 2 }}>
+                  {recurrenceAction?.action === 'edit' && recurrenceAction?.novaData
+                    ? 'A nova data vira o dia fixo dos meses seguintes (dia 29 a 31 vai para o último dia nos meses curtos).'
+                    : 'Ocorrências passadas continuarão com o valor antigo.'}
+                </span>
               </button>
               <button onClick={() => confirmRecurrenceAction('all')} style={{ padding: '14px', borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)', textAlign: 'left' }}>
                 Em todas as ocorrências

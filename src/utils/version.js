@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.189';
-export const APP_VERSION_DATE = '16/10/2026';
+export const APP_VERSION = '1.6.190';
+export const APP_VERSION_DATE = '23/10/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.190',
+    date: '23/10/2026',
+    changes: [
+      'Editar uma ocorrência de lançamento recorrente agora permite mudar a data só daquele mês: o formulário ganhou o campo "Data desta ocorrência" (já preenchido com a data clicada). Antes, a data digitada era descartada em "apenas nesta" e em "nesta e nas futuras" e só dava para mexer no início e no fim da série.',
+      '"Apenas nesta ocorrência": a ocorrência sai da série e vira um lançamento único na data nova (pode ser em outro mês; continua conferida se estava). "Nesta e nas futuras": a série antiga termina no dia anterior e a nova começa na data nova, que passa a ser o dia fixo dos meses seguintes — dia 29 a 31 vai para o último dia dos meses curtos (fevereiro) e volta ao dia no mês seguinte. A data nova não pode ficar antes da ocorrência anterior da série; o aviso mostra "Mover DD/MM para DD/MM".',
+      'O campo "Início da série" continua visível, com a legenda de que vale só para "em todas as ocorrências".',
+    ],
+  },
   {
     version: '1.6.189',
     date: '16/10/2026',
