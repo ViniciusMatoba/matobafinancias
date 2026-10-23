@@ -1,9 +1,8 @@
 {
-  "version": "1.6.190",
+  "version": "1.6.191",
   "date": "23/10/2026",
   "notes": [
-    "Editar uma ocorrência de lançamento recorrente agora permite mudar a data só daquele mês: o formulário ganhou o campo \"Data desta ocorrência\" (já preenchido com a data clicada). Antes, a data digitada era descartada em \"apenas nesta\" e em \"nesta e nas futuras\" e só dava para mexer no início e no fim da série.",
-    "\"Apenas nesta ocorrência\": a ocorrência sai da série e vira um lançamento único na data nova (pode ser em outro mês; continua conferida se estava). \"Nesta e nas futuras\": a série antiga termina no dia anterior e a nova começa na data nova, que passa a ser o dia fixo dos meses seguintes — dia 29 a 31 vai para o último dia dos meses curtos (fevereiro) e volta ao dia no mês seguinte. A data nova não pode ficar antes da ocorrência anterior da série; o aviso mostra \"Mover DD/MM para DD/MM\".",
-    "O campo \"Início da série\" continua visível, com a legenda de que vale só para \"em todas as ocorrências\"."
+    "Telegram, aviso \"Sobra Projetada Segura\": nunca mostra saldo com sinal de menos. Quando a conta vai precisar de dinheiro em alguma data, a mensagem diz \"A conta vai precisar de R$ X em DD/MM\" e se o que você tem guardado (reserva ou investido) cobre, ou quanto falta mesmo resgatando tudo. Também ganhou a linha \"Guardado: reserva R$ X · investido R$ Y\".",
+    "Quando não há valor para guardar ou investir (menos de R$ 200 livres na conta), o bot agora avisa \"Hoje não há valor disponível para guardar ou investir\" uma vez, mesmo sem uma data futura com sobra, e só volta a avisar se a situação mudar. O cálculo da sobra continua só com o saldo da conta: o que já está investido não conta como sobra para investir de novo."
   ]
 }
