@@ -1,15 +1,14 @@
 import { useState, useMemo } from 'react';
 import { ShieldCheck, TrendingUp, Info, Check, AlertTriangle } from 'lucide-react';
 import { formatBRL } from '../../utils/formatters';
-import { expandOccurrences } from '../../utils/projectionCalc';
 import { totalInvestidoAte } from '../../utils/investido';
-import { CLASSE_POR_ID } from '../../utils/classesInvestimento';
+import { CLASSE_POR_ID, investidoPorOrigem, rotuloOrigem } from '../../utils/classesInvestimento';
 import AportesClassifier from './AportesClassifier';
+import InvestidoCard from './InvestidoCard';
 import { calcularSobraSegura, SOBRA_MINIMA } from '../../utils/projectionCalc';
 import { reservaDaCaixinha } from '../../utils/caixinha';
 import { ritmoDaReserva, projecaoReserva, rotuloMes } from '../../utils/reservaRitmo';
 
-const FAR_PAST = '2020-01-01';
 
 const CLASSES_LABELS = CLASSE_POR_ID;
 
@@ -61,7 +60,7 @@ function DonutProgress({ pct, cor, size = 72 }) {
   );
 }
 
-export default function InvestimentosScreen({ transactions, wallets, goals, config, onSaveConfig, onUpdateMany }) {
+export default function InvestimentosScreen({ transactions, wallets, goals, config, onSaveConfig, onUpdateMany, onAdd, onRemove }) {
   const today = new Date().toISOString().slice(0, 10);
 
   // ── Config persistida ────────────────────────────────────────────────────────
@@ -121,15 +120,9 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
   const totalInvestido = useMemo(() => totalInvestidoAte(transactions, today), [transactions, today]);
 
   // ── Alocação por classe de investimento ──────────────────────────────────────
+  // Por origem: a reserva e as demais caixinhas aparecem como tal (antes caíam em "Outro"); já inclui resgates e rendimentos
   const alocacaoPorClasse = useMemo(() => {
-    const invTxs = (transactions || []).filter(t => t.tipo === 'investimento');
-    const totals = {};
-    invTxs.forEach(tx => {
-      const classe = tx.classeInvestimento || 'outro';
-      const occs = expandOccurrences(tx, FAR_PAST, today);
-      const soma = occs.reduce((acc, o) => acc + o.valor, 0);
-      totals[classe] = (totals[classe] || 0) + soma;
-    });
+    const totals = investidoPorOrigem(transactions || [], today, reservaGoalId || null);
     const total = Object.values(totals).reduce((a, b) => a + b, 0);
     if (total <= 0) return { total: 0, segments: [] };
     const segments = Object.entries(totals)
@@ -137,11 +130,11 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
       .sort((a, b) => b[1] - a[1])
       .map(([classe, valor]) => {
         const pct = (valor / total) * 100;
-        const seg = { classe, valor, pct, cor: CLASSES_LABELS[classe]?.cor || '#6b7280', label: CLASSES_LABELS[classe]?.label || classe };
+        const seg = { classe, valor, pct, cor: classe === 'reserva' ? '#22c55e' : (CLASSES_LABELS[classe]?.cor || '#6b7280'), label: rotuloOrigem(classe) };
         return seg;
       });
     return { total, segments };
-  }, [transactions, today]);
+  }, [transactions, today, reservaGoalId]);
 
   const handleSave = () => {
     const despVal = despesasMens || despesasSugeridas;
@@ -395,7 +388,7 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
               {formatBRL(totalInvestido)}
             </p>
             <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
-              Acumulado em todos os lançamentos de investimento
+              Aportes menos resgates, mais os rendimentos que você atualizou
             </p>
           </div>
         )}
@@ -419,10 +412,12 @@ export default function InvestimentosScreen({ transactions, wallets, goals, conf
               </div>
             </div>
             <p style={{ margin: '12px 0 0', fontSize: 11, color: 'var(--text-muted)', textAlign: 'center' }}>
-              Baseado na classe informada em cada lançamento de investimento
+              Reserva e caixinhas à parte; o restante pela classe informada em cada aporte
             </p>
           </div>
         )}
+
+        <InvestidoCard transactions={transactions} goals={goals} reservaGoalId={reservaGoalId || null} onAdd={onAdd} onRemove={onRemove} />
 
         <AportesClassifier transactions={transactions} onUpdateMany={onUpdateMany} />
 

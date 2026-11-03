@@ -21,6 +21,8 @@ export function getClosingDate(card, vencStr) {
  * Retorna array de { date, valor, sinal, tx }
  */
 export function expandOccurrences(tx, from, to, { historical = false } = {}) {
+  // Ajuste de valor do investido (rendimento): não é movimento da conta nem aporte — só entra nos totais de investido
+  if (tx.ajuste === true) return [];
   const sign = TYPE_CONFIG[tx.tipo]?.sign ?? -1;
   const occurrences = [];
 

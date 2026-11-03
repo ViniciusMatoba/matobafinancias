@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.193';
+export const APP_VERSION = '1.6.194';
 export const APP_VERSION_DATE = '03/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.194',
+    date: '03/11/2026',
+    changes: [
+      'Tela Investir: novo card "Minhas caixinhas e investimentos" com cada caixinha (a reserva marcada com 🛡️, no mesmo saldo da tela Metas) e cada classe de investimento sem caixinha, mais o total investido. O dinheiro das caixinhas agora aparece como caixinha; antes ele caía em "Outro" na alocação por classe, que agora mostra a Reserva e as Caixinhas à parte.',
+      'Atualizar valor (rendimento): em cada linha do card, "Atualizar valor" pede quanto vale hoje e grava a diferença como rendimento (ou perda, se for menor). Isso atualiza o total investido, o saldo da caixinha na tela Metas, a Home, a Projeção e o Telegram, sem mexer na conta corrente, nos gastos nem nos aportes. As atualizações ficam num histórico com "Desfazer".',
+    ],
+  },
   {
     version: '1.6.193',
     date: '03/11/2026',

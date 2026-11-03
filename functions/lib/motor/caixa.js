@@ -61,6 +61,7 @@ function expandRange(transactions, from, to, { historical = false } = {}) {
   const occs = [];
   for (const tx of transactions) {
     if (!tx.dataInicio || tx.dataInicio > to) continue;
+    if (tx.ajuste === true) continue; // ajuste de valor do investido: fora do caixa
     const v       = Number(tx.valor) || 0;
     if (!v) continue;
     const excl    = Array.isArray(tx.exclusoes) ? tx.exclusoes : [];

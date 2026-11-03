@@ -19,6 +19,7 @@ import { origemDe, sacarDasOrigens } from './classesInvestimento';
  * Entrada: days (buildDailyProjection), investidoInicial (investido no dia anterior ao primeiro dia da lista),
  * carryResgate (resgate necessário acumulado de hoje até o dia anterior ao início, quando a lista começa no futuro),
  * aportesAntesDoPeriodo (aportes planejados entre amanhã e o dia anterior ao início da lista).
+ * ajustes: [{ date, valor (com sinal), origem }] — rendimentos que mudam o investido sem passar pela conta.
  *
  * Retorna { [date]: { conta, investido, total, saldoReal, resgateNovo, resgateAcum, falta, adiavel, origem } }, onde `origem`
  * ([{ id, valor, liquidez }]) diz de onde sai o resgate novo do dia (reserva → caixinha → renda fixa → outro → mercado),
@@ -26,7 +27,7 @@ import { origemDe, sacarDasOrigens } from './classesInvestimento';
  */
 const c2 = (n) => Math.round(n * 100) / 100;
 
-export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0, aportesAntesDoPeriodo = 0, buckets = null, reservaGoalId = null }) {
+export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0, aportesAntesDoPeriodo = 0, buckets = null, reservaGoalId = null, ajustes = [] }) {
   const out = {};
   let inv = investidoInicial;
   let aportesPlanejados = aportesAntesDoPeriodo;
@@ -37,6 +38,12 @@ export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0
   if (bk && efetivoAnterior > 0) sacarDasOrigens(bk, efetivoAnterior);
 
   for (const d of days || []) {
+    // ajustes de valor do investido (rendimento) datados neste dia: não vêm nos itens porque não movem a conta
+    for (const a of ajustes) {
+      if (a.date !== d.date) continue;
+      inv += a.valor;
+      if (bk) bk[a.origem] = (bk[a.origem] || 0) + a.valor;
+    }
     for (const it of d.items || []) {
       const tipo = it.tx?.tipo;
       const valor = Number(it.valor) || 0;

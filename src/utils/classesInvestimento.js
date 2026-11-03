@@ -1,4 +1,5 @@
-import { ehResgate } from './investido';
+import { ehAjuste, ehResgate, totalInvestidoAte } from './investido';
+import { saldoCaixinha } from './caixinha';
 import { expandOccurrences } from './projectionCalc';
 
 /**
@@ -27,7 +28,7 @@ const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-
 export function agruparAportes(transactions, hoje, { soSemClasse = false } = {}) {
   const mapa = new Map();
   for (const t of transactions || []) {
-    if (t.tipo !== 'investimento') continue;
+    if (t.tipo !== 'investimento' || ehAjuste(t)) continue;
     const chave = norm(t.descricao) || '(sem descrição)';
     const g = mapa.get(chave) || { chave, descricao: t.descricao || '(sem descrição)', ids: [], quantidade: 0, total: 0, classes: new Set() };
     g.ids.push(t.id);
@@ -57,7 +58,7 @@ export const ORDEM_RESGATE = ['reserva', 'caixinha', 'renda_fixa', 'outro', 'aco
 
 /** Onde um aporte/resgate "mora": a reserva (por metaId) ou a sua classe (sem classe = 'outro'). */
 export const origemDe = (tx, reservaGoalId) =>
-  reservaGoalId && tx.metaId === reservaGoalId ? 'reserva' : (tx.classeInvestimento || 'outro');
+  reservaGoalId && tx.metaId === reservaGoalId ? 'reserva' : (tx.classeInvestimento || (tx.metaId ? 'caixinha' : 'outro'));
 
 export const liquidezDeOrigem = (id) => (id === 'reserva' ? 'imediata' : (CLASSE_POR_ID[id]?.liquidez || 'prazo'));
 
@@ -67,9 +68,10 @@ export const rotuloOrigem = (id) => (id === 'reserva' ? 'Reserva' : (CLASSE_POR_
 export function investidoPorOrigem(transactions, ate, reservaGoalId = null) {
   const b = {};
   for (const t of transactions || []) {
+    const id = origemDe(t, reservaGoalId);
+    if (ehAjuste(t)) { if (t.dataInicio && t.dataInicio <= ate) b[id] = (b[id] || 0) + (Number(t.valor) || 0); continue; }
     const sinal = t.tipo === 'investimento' ? 1 : ehResgate(t) ? -1 : 0;
     if (!sinal) continue;
-    const id = origemDe(t, reservaGoalId);
     for (const o of expandOccurrences(t, '2020-01-01', ate)) b[id] = (b[id] || 0) + sinal * (Number(o.valor) || 0);
   }
   return b;
@@ -131,5 +133,50 @@ export function docDeResgate({ valor, data, hoje, origem, reservaGoalId = null, 
     conferido: typeof conferido === 'boolean' ? conferido : data <= hoje,
     metaId: ehReserva ? reservaGoalId : null,
     classeInvestimento: ehReserva ? null : (origem === 'reserva' ? 'outro' : origem),
+  };
+}
+
+// ── Valores por caixinha/classe e atualização de valor (rendimento) ───────────────
+
+/**
+ * O que está investido, separado em CAIXINHAS (cada meta, com o mesmo saldo da tela Metas) e CLASSES (aportes que não
+ * estão ligados a nenhuma caixinha). Ajustes de valor (rendimento) já estão dentro dos dois. `total` é o investido geral.
+ */
+export function valoresDoInvestido({ transactions, goals = [], hoje, reservaGoalId = null }) {
+  const metas = new Set((goals || []).map(g => g.id));
+  const caixinhas = (goals || []).map(g => ({
+    id: g.id, nome: g.nome || 'Caixinha', reserva: g.id === reservaGoalId, valor: saldoCaixinha(transactions, g.id),
+  }));
+  const porClasse = {};
+  for (const t of transactions || []) {
+    if (t.metaId && metas.has(t.metaId)) continue; // já está no saldo da caixinha
+    const id = t.classeInvestimento || 'outro';
+    if (ehAjuste(t)) {
+      if (t.dataInicio && t.dataInicio <= hoje) porClasse[id] = (porClasse[id] || 0) + (Number(t.valor) || 0);
+      continue;
+    }
+    const sinal = t.tipo === 'investimento' ? 1 : ehResgate(t) ? -1 : 0;
+    if (!sinal) continue;
+    for (const o of expandOccurrences(t, '2020-01-01', hoje)) porClasse[id] = (porClasse[id] || 0) + sinal * (Number(o.valor) || 0);
+  }
+  const classes = ORDEM_RESGATE.filter(id => id !== 'reserva')
+    .map(id => ({ id, label: rotuloOrigem(id), valor: Math.round((porClasse[id] || 0) * 100) / 100 }))
+    .filter(c => Math.abs(c.valor) > 0.004);
+  return { caixinhas, classes, total: totalInvestidoAte(transactions, hoje) };
+}
+
+/**
+ * Lançamento de "Atualizar valor": você informa quanto vale HOJE e o app grava a diferença (rendimento, ou perda se
+ * negativa) como ajuste do investido. `alvo` = { tipo: 'caixinha', id } ou { tipo: 'classe', id }. Sem diferença, null.
+ */
+export function docAjusteValor({ alvo, nome, atual, real, data }) {
+  const delta = Math.round(((Number(real) || 0) - (Number(atual) || 0)) * 100) / 100;
+  if (Math.abs(delta) < 0.005) return null;
+  return {
+    tipo: 'investimento', ajuste: true, frequencia: 'unico', dataFim: null, categoria: null, conferido: true,
+    dataInicio: data, valor: delta,
+    descricao: `Atualização de valor — ${nome}`,
+    metaId: alvo.tipo === 'caixinha' ? alvo.id : null,
+    classeInvestimento: alvo.tipo === 'classe' ? alvo.id : null,
   };
 }

@@ -47,7 +47,7 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
     confirmCartaoEditScope, confirmRecurrenceAction,
     handleCompleteTour,
     getParceladoEndDate,
-    update, updateMany,
+    update, updateMany, add, remove,
   } = useAppState();
 
   const erroFuturas = recurrenceAction?.action === 'edit' && recurrenceAction?.novaData
@@ -192,6 +192,8 @@ function AppShell({ user, authConfirmed, setAuthConfirmed, login, register, logi
             config={config}
             onSaveConfig={saveConfig}
             onUpdateMany={updateMany}
+            onAdd={add}
+            onRemove={remove}
           />
         )}
         {view === 'settings' && (

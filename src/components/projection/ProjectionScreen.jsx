@@ -7,8 +7,8 @@ import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { acharCaixinhaReserva, reservaDaCaixinha } from '../../utils/caixinha';
 import { simularDias, resumirResgates } from '../../utils/coberturaProjecao';
-import { docsResgate, tipoDoTx, totalInvestidoAte } from '../../utils/investido';
-import { investidoPorOrigem, rotuloOrigem } from '../../utils/classesInvestimento';
+import { docsResgate, ehAjuste, tipoDoTx, totalInvestidoAte } from '../../utils/investido';
+import { investidoPorOrigem, origemDe, rotuloOrigem } from '../../utils/classesInvestimento';
 import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
@@ -155,6 +155,12 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
 
   const totalInvestido = useMemo(() => totalInvestidoAte(transactions, today), [transactions, today]);
 
+  // Rendimentos lançados em Investir > Atualizar valor: mudam o investido sem passar pela conta
+  const ajustesInvestido = useMemo(
+    () => transactions.filter(ehAjuste).map(t => ({ date: t.dataInicio, valor: Number(t.valor) || 0, origem: origemDe(t, reservaGoalId) })),
+    [transactions, reservaGoalId]
+  );
+
   // Lista que começa no futuro: investido, aportes planejados e resgate necessário já acumulados até o dia anterior
   const baseSimulacao = useMemo(() => {
     if (!days.length) return { investidoInicial: 0, aportesAntesDoPeriodo: 0, carryResgate: 0 };
@@ -173,8 +179,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
   }, [days, from, today, transactions, wallets, reservaGoalId]);
 
   const simulacao = useMemo(
-    () => simularDias({ days, hoje: today, reservaGoalId, ...baseSimulacao }),
-    [days, today, baseSimulacao, reservaGoalId]
+    () => simularDias({ days, hoje: today, reservaGoalId, ajustes: ajustesInvestido, ...baseSimulacao }),
+    [days, today, baseSimulacao, reservaGoalId, ajustesInvestido]
   );
   const resumoResgate = useMemo(() => resumirResgates(simulacao), [simulacao]);
 

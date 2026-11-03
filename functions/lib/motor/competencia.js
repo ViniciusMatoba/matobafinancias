@@ -70,7 +70,7 @@ function expandDespesasBot(transactions, from, to, { historical = false } = {}) 
   };
 
   for (const tx of transactions || []) {
-    if (!tx || tx.tipo === 'entrada') continue;
+    if (!tx || tx.tipo === 'entrada' || tx.ajuste === true) continue;
 
     const itens = tx.tipo === 'cartao' && Array.isArray(tx.itens) && tx.itens.length > 0 ? tx.itens : null;
     if (itens && tx.frequencia === 'unico') {

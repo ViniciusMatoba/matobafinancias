@@ -7,6 +7,13 @@ import { expandOccurrences } from './projectionCalc';
  */
 export const ehResgate = (tx) => !!tx && tx.tipo === 'entrada' && tx.resgate === true;
 
+/**
+ * Ajuste de valor do investido (rendimento ou perda): lançamento tipo 'investimento' com `ajuste: true`, `valor` COM SINAL,
+ * ligado a uma caixinha (`metaId`) ou a uma classe. Não mexe na conta, não é aporte e não aparece nas listas de lançamentos
+ * (as expansões de ocorrências o ignoram); só os totais de investido e o saldo da caixinha o somam.
+ */
+export const ehAjuste = (tx) => !!tx && tx.tipo === 'investimento' && tx.ajuste === true;
+
 /** Tipo para EXIBIR (rótulo, cor, ícone, filtro): 'resgate' para o resgate, o próprio tipo nos demais. */
 export const tipoDoTx = (tx) => (ehResgate(tx) ? 'resgate' : tx?.tipo);
 
@@ -46,6 +53,7 @@ const FAR_PAST = '2020-01-01';
 export function totalInvestidoAte(transactions, ate) {
   let total = 0;
   for (const t of transactions || []) {
+    if (ehAjuste(t)) { if (t.dataInicio && t.dataInicio <= ate) total += Number(t.valor) || 0; continue; }
     const sinal = t.tipo === 'investimento' ? 1 : ehResgate(t) ? -1 : 0;
     if (!sinal) continue;
     for (const o of expandOccurrences(t, FAR_PAST, ate)) total += sinal * (Number(o.valor) || 0);
