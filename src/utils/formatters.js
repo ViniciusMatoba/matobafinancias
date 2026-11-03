@@ -77,6 +77,8 @@ export const TYPE_CONFIG = {
   diario:       { label: 'Gasto Diário',  color: '#f59e0b', bg: 'rgba(245,158,11,0.15)',  sign: -1 },
   cartao:       { label: 'Cartão',        color: '#3b82f6', bg: 'rgba(59,130,246,0.15)',  sign: -1 },
   investimento: { label: 'Investimento',  color: '#a855f7', bg: 'rgba(168,85,247,0.15)',  sign: -1 },
+  // Resgate não é um tipo gravado: é uma ENTRADA com `resgate: true` (veja tipoDoTx em investido.js).
+  resgate:      { label: 'Resgate',       color: '#14b8a6', bg: 'rgba(20,184,166,0.15)',  sign: +1 },
 };
 
 /**

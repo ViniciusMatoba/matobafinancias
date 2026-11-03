@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff, BarChart3 } from 'lucide-react';
+import { ArrowDownToLine, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Target, Copy, X, SlidersHorizontal, HelpCircle, Eye, EyeOff, BarChart3 } from 'lucide-react';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
 import { expandOccurrences, calcSaldo, calcularSobraSegura } from '../../utils/projectionCalc';
-import { ehResgate, totalInvestidoAte } from '../../utils/investido';
+import { ehResgate, tipoDoTx, totalInvestidoAte } from '../../utils/investido';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { resumoReservaHome } from '../../utils/caixinha';
 import BudgetSummaryCard from './BudgetSummaryCard';
@@ -11,7 +11,7 @@ import ProximasContasCard from './ProximasContasCard';
 import HelpModal from '../shared/HelpModal';
 
 const TIPO_ICONS = {
-  entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
+  entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank, resgate: ArrowDownToLine,
 };
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -535,8 +535,8 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
             )}
           </div>
         ) : dayOccs.map((occ, idx) => {
-          const Icon = TIPO_ICONS[occ.tx.tipo] || Zap;
-          const cfg = TYPE_CONFIG[occ.tx.tipo];
+          const Icon = TIPO_ICONS[tipoDoTx(occ.tx)] || Zap;
+          const cfg = TYPE_CONFIG[tipoDoTx(occ.tx)];
           const hasItens = occ.tx.tipo === 'cartao' && (occ.tx.itens?.length ?? 0) > 0;
           const isExpanded = expandedIds.has(occ.tx.id);
           return (

@@ -7,6 +7,9 @@ import { expandOccurrences } from './projectionCalc';
  */
 export const ehResgate = (tx) => !!tx && tx.tipo === 'entrada' && tx.resgate === true;
 
+/** Tipo para EXIBIR (rótulo, cor, ícone, filtro): 'resgate' para o resgate, o próprio tipo nos demais. */
+export const tipoDoTx = (tx) => (ehResgate(tx) ? 'resgate' : tx?.tipo);
+
 /** Sinal de um lançamento ligado a uma caixinha: saída e resgate tiram, o resto (aporte, entrada) soma. */
 export const sinalNaCaixinha = (tx) => (tx.tipo === 'saida' || ehResgate(tx) ? -1 : 1);
 

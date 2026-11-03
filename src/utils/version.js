@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.191';
-export const APP_VERSION_DATE = '23/10/2026';
+export const APP_VERSION = '1.6.192';
+export const APP_VERSION_DATE = '03/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.192',
+    date: '03/11/2026',
+    changes: [
+      'Novo tipo "Resgate" nos lançamentos: registre o dinheiro que voltou do investimento para a conta. Escolha a origem (Reserva, Caixinha / resgate imediato, Renda Fixa, Ações, FIIs, Internacional, Cripto ou Outro — cada uma mostra quanto há investido ali), o valor, a data e se já caiu na conta. O formulário não pede categoria, tag nem frequência.',
+      'O resgate entra no saldo da conta, diminui o total investido e o saldo da caixinha da reserva (ou da classe escolhida) e não conta como receita. Ele aparece nas listas com o selo "Resgate" (cor e ícone próprios) e tem filtro próprio na lista de lançamentos. Dá para editar e excluir como qualquer lançamento.',
+      'Se o valor passar do que há investido na origem, o formulário só avisa (você pode salvar assim mesmo, por exemplo quando o aporte antigo nunca foi lançado).',
+    ],
+  },
   {
     version: '1.6.191',
     date: '23/10/2026',

@@ -99,3 +99,37 @@ export function sacarDasOrigens(buckets, valor) {
   }
   return saidas;
 }
+
+// ── Lançamento de resgate (tipo "Resgate" do formulário) ─────────────────────────
+
+/**
+ * Opções de origem para o formulário: Reserva (só se houver caixinha de reserva escolhida) e as classes, na ordem de
+ * resgate, cada uma com o quanto há investido ali até `ate`. `ignorarId` tira o próprio resgate que está sendo editado.
+ */
+export function opcoesDeOrigem({ transactions, ate, reservaGoalId = null, goals = [], ignorarId = null }) {
+  const b = investidoPorOrigem((transactions || []).filter(t => t.id !== ignorarId), ate, reservaGoalId);
+  const temReserva = !!reservaGoalId && (goals || []).some(g => g.id === reservaGoalId);
+  return ORDEM_RESGATE
+    .filter(id => id !== 'reserva' || temReserva)
+    .map(id => ({ id, label: rotuloOrigem(id), disponivel: Math.max(Math.round((b[id] || 0) * 100) / 100, 0) }));
+}
+
+/** Primeira origem com saldo (na ordem de resgate); sem saldo em nenhuma, 'outro'. */
+export const origemInicial = (opcoes) => (opcoes.find(o => o.disponivel > 0) || opcoes.find(o => o.id === 'outro') || opcoes[0])?.id || 'outro';
+
+/**
+ * Lançamento gravado por um resgate: ENTRADA com `resgate: true`. A reserva leva o `metaId` da caixinha; as demais, a
+ * `classeInvestimento`. Os dois campos são sempre gravados (um deles null) para a edição trocar de origem sem sobras.
+ */
+export function docDeResgate({ valor, data, hoje, origem, reservaGoalId = null, descricao = '', conferido }) {
+  const ehReserva = origem === 'reserva' && !!reservaGoalId;
+  return {
+    tipo: 'entrada', resgate: true, frequencia: 'unico', dataFim: null, categoria: null,
+    descricao: (descricao || '').trim() || `Resgate de ${rotuloOrigem(ehReserva ? 'reserva' : origem)}`,
+    valor: Math.round((Number(valor) || 0) * 100) / 100,
+    dataInicio: data,
+    conferido: typeof conferido === 'boolean' ? conferido : data <= hoje,
+    metaId: ehReserva ? reservaGoalId : null,
+    classeInvestimento: ehReserva ? null : (origem === 'reserva' ? 'outro' : origem),
+  };
+}

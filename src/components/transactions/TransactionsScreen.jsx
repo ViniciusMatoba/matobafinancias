@@ -1,13 +1,14 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp, Copy, X, RefreshCw, CheckCheck, HelpCircle } from 'lucide-react';
+import { ArrowDownToLine, Search, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, Pencil, Trash2, Filter, ChevronDown, ChevronUp, Copy, X, RefreshCw, CheckCheck, HelpCircle } from 'lucide-react';
 import HelpModal from '../shared/HelpModal';
 import { formatBRL, formatDateShort, TYPE_CONFIG, todayStr } from '../../utils/formatters';
+import { tipoDoTx } from '../../utils/investido';
 import { expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES, CATEGORY_ORDER } from '../../utils/categories';
 import { tagsById } from '../../utils/tags';
 
 const TIPO_ICONS = {
-  entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
+  entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank, resgate: ArrowDownToLine,
 };
 
 function monthStr(offset) {
@@ -112,7 +113,7 @@ export default function TransactionsScreen({ transactions, wallets = [], tags = 
       .flatMap(tx => expandOccurrences(tx, from, to).map(o => ({ ...o, tx })))
       .filter(o => {
         // 1. Filtro Tipo
-        if (filterTipo && o.tx.tipo !== filterTipo) return false;
+        if (filterTipo && tipoDoTx(o.tx) !== filterTipo) return false;
 
         // 2. Busca textual (usa debouncedSearch para não recalcular a cada tecla)
         if (debouncedSearch) {
@@ -685,8 +686,8 @@ export default function TransactionsScreen({ transactions, wallets = [], tags = 
                   {formatDateShort(date)}
                 </p>
                 {items.map((occ, idx) => {
-                  const Icon = TIPO_ICONS[occ.tx.tipo] || Zap;
-                  const cfg = TYPE_CONFIG[occ.tx.tipo];
+                  const Icon = TIPO_ICONS[tipoDoTx(occ.tx)] || Zap;
+                  const cfg = TYPE_CONFIG[tipoDoTx(occ.tx)];
                   const hasItens = occ.tx.tipo === 'cartao' && (occ.tx.itens?.length ?? 0) > 0;
                   const isExpanded = expandedIds.has(occ.tx.id);
                   const isConferido = isOccConferido(occ);

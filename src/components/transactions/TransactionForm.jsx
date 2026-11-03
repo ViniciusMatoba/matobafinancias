@@ -7,6 +7,8 @@ import { calcFaturaCard } from '../../utils/projectionCalc';
 import { expandDespesas } from '../../utils/despesas';
 import { addTagToList, tagIdSet, tagsById, isSimilarDesc, normalizeText as normTag } from '../../utils/tags';
 import TagPicker from '../shared/TagPicker';
+import ResgateFields from './ResgateFields';
+import { ehResgate } from '../../utils/investido';
 
 const TIPOS = Object.entries(TYPE_CONFIG).map(([id, cfg]) => ({ id, ...cfg }));
 const FREQS = Object.entries(FREQ_LABELS).map(([id, label]) => ({ id, label }));
@@ -59,6 +61,8 @@ const EMPTY_ITEM = { descricao: '', valor: '', categoria: '', tag: '', dataCompr
 export default function TransactionForm({ onSave, onCancel, initial, cards, wallets, goals, transactions = [], config, onSaveConfig, occDate = null }) {
   const [form, setForm] = useState(initial ? {
     ...EMPTY, ...initial,
+    // um resgate é gravado como entrada marcada; no formulário ele volta a ser o tipo "Resgate"
+    tipo: ehResgate(initial) ? 'resgate' : initial.tipo,
     // diário: stored value is valor/30, so reconstitute the monthly amount for editing
     valor: initial.tipo === 'diario'
       ? numberToBRLInput(parseFloat((initial.valor * 30).toFixed(2)))
@@ -496,26 +500,49 @@ export default function TransactionForm({ onSave, onCancel, initial, cards, wall
     return warnings;
   }, [config, form.tipo, form.valor, form.dataInicio, form.categoria, form.cartaoId, itens, transactions, initial]);
 
+  // Seletor de tipo (compartilhado com o formulário de resgate)
+  const seletorTipo = (
+    <div>
+      <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, display: 'block' }}>Tipo</label>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        {TIPOS.map(t => (
+          <button key={t.id} type="button" onClick={() => setTipo(t.id)} style={{
+            padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 500,
+            border: `1px solid ${form.tipo === t.id ? t.color : 'var(--border)'}`,
+            background: form.tipo === t.id ? t.bg : 'transparent',
+            color: form.tipo === t.id ? t.color : 'var(--text-secondary)',
+            transition: 'all 0.15s',
+          }}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Resgate tem formulário próprio (sem categoria, tag nem frequência)
+  if (form.tipo === 'resgate') {
+    return (
+      <ResgateFields
+        seletorTipo={seletorTipo}
+        initial={initial}
+        transactions={transactions}
+        goals={goals}
+        config={config}
+        valorInicial={form.valor}
+        dataInicial={form.dataInicio}
+        onSave={onSave}
+        onCancel={onCancel}
+        cor={tipoConfig.color}
+        corFundo={tipoConfig.bg}
+      />
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
-      {/* Seletor de tipo */}
-      <div>
-        <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8, display: 'block' }}>Tipo</label>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {TIPOS.map(t => (
-            <button key={t.id} type="button" onClick={() => setTipo(t.id)} style={{
-              padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 500,
-              border: `1px solid ${form.tipo === t.id ? t.color : 'var(--border)'}`,
-              background: form.tipo === t.id ? t.bg : 'transparent',
-              color: form.tipo === t.id ? t.color : 'var(--text-secondary)',
-              transition: 'all 0.15s',
-            }}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      {seletorTipo}
 
       {/* Descrição */}
       <div>

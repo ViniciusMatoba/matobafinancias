@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Pencil, Trash2, BarChart2, Copy, List, HelpCircle } from 'lucide-react';
+import { ArrowDownToLine, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, TrendingUp, TrendingDown, CreditCard, PiggyBank, Zap, ListFilter, Pencil, Trash2, BarChart2, Copy, List, HelpCircle } from 'lucide-react';
 import HelpModal from '../shared/HelpModal';
 import TransactionsScreen from '../transactions/TransactionsScreen';
 import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatters';
@@ -7,12 +7,12 @@ import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { acharCaixinhaReserva, reservaDaCaixinha } from '../../utils/caixinha';
 import { simularDias, resumirResgates } from '../../utils/coberturaProjecao';
-import { docsResgate, totalInvestidoAte } from '../../utils/investido';
+import { docsResgate, tipoDoTx, totalInvestidoAte } from '../../utils/investido';
 import { investidoPorOrigem, rotuloOrigem } from '../../utils/classesInvestimento';
 import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
-  entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank,
+  entrada: TrendingUp, saida: TrendingDown, diario: Zap, cartao: CreditCard, investimento: PiggyBank, resgate: ArrowDownToLine,
 };
 
 // Vermelho só para saldo negativo; de 0 a 500 gradiente amarelo → verde; verde a partir de 500
@@ -585,8 +585,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                           {hasItems && !isOpen && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                               {day.items.slice(0, 2).map((item, i) => {
-                                const cfg = TYPE_CONFIG[item.tx.tipo];
-                                const Icon = TIPO_ICONS[item.tx.tipo] || Zap;
+                                const cfg = TYPE_CONFIG[tipoDoTx(item.tx)];
+                                const Icon = TIPO_ICONS[tipoDoTx(item.tx)] || Zap;
                                 return (
                                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                     <Icon size={10} color={cfg.color} />
@@ -687,8 +687,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                             </button>
                           )}
                           {day.items.map((item, i) => {
-                            const cfg = TYPE_CONFIG[item.tx.tipo];
-                            const Icon = TIPO_ICONS[item.tx.tipo] || Zap;
+                            const cfg = TYPE_CONFIG[tipoDoTx(item.tx)];
+                            const Icon = TIPO_ICONS[tipoDoTx(item.tx)] || Zap;
                             const hasSubItens = item.tx.tipo === 'cartao' && (item.tx.itens?.length ?? 0) > 0;
                             return (
                               <div key={i} style={{
