@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.192';
+export const APP_VERSION = '1.6.193';
 export const APP_VERSION_DATE = '03/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.193',
+    date: '03/11/2026',
+    changes: [
+      'Fix no tipo Resgate: o campo de valor atrapalhava a digitação (cada tecla forçava ",00" e os números seguintes entravam depois dos centavos). Agora digita normalmente (1 → 15 → 150 → 1.500) e só completa os centavos ao sair do campo, igual aos outros lançamentos.',
+    ],
+  },
   {
     version: '1.6.192',
     date: '03/11/2026',

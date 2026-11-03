@@ -1,9 +1,7 @@
 {
-  "version": "1.6.192",
+  "version": "1.6.193",
   "date": "03/11/2026",
   "notes": [
-    "Novo tipo \"Resgate\" nos lançamentos: registre o dinheiro que voltou do investimento para a conta. Escolha a origem (Reserva, Caixinha / resgate imediato, Renda Fixa, Ações, FIIs, Internacional, Cripto ou Outro — cada uma mostra quanto há investido ali), o valor, a data e se já caiu na conta. O formulário não pede categoria, tag nem frequência.",
-    "O resgate entra no saldo da conta, diminui o total investido e o saldo da caixinha da reserva (ou da classe escolhida) e não conta como receita. Ele aparece nas listas com o selo \"Resgate\" (cor e ícone próprios) e tem filtro próprio na lista de lançamentos. Dá para editar e excluir como qualquer lançamento.",
-    "Se o valor passar do que há investido na origem, o formulário só avisa (você pode salvar assim mesmo, por exemplo quando o aporte antigo nunca foi lançado)."
+    "Fix no tipo Resgate: o campo de valor atrapalhava a digitação (cada tecla forçava \",00\" e os números seguintes entravam depois dos centavos). Agora digita normalmente (1 → 15 → 150 → 1.500) e só completa os centavos ao sair do campo, igual aos outros lançamentos."
   ]
 }

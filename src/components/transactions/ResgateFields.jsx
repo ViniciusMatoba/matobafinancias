@@ -60,7 +60,9 @@ export default function ResgateFields({ seletorTipo, initial, transactions, goal
         <label style={rotulo}>Valor</label>
         <input
           type="text" inputMode="decimal" placeholder="0,00" value={valor}
-          onChange={e => setValor(formatBRLInput(normalizeBRLInput(e.target.value)))}
+          onChange={e => setValor(formatBRLInput(e.target.value))}
+          onBlur={e => setValor(normalizeBRLInput(e.target.value))}
+          required style={{ fontSize: 22, fontWeight: 600, color: cor, letterSpacing: 0.5 }}
         />
         {excede && (
           <p style={{ margin: '6px 0 0', fontSize: 11, color: '#f59e0b' }}>
