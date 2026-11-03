@@ -1,8 +1,9 @@
 {
-  "version": "1.6.191",
-  "date": "23/10/2026",
+  "version": "1.6.192",
+  "date": "03/11/2026",
   "notes": [
-    "Telegram, aviso \"Sobra Projetada Segura\": nunca mostra saldo com sinal de menos. Quando a conta vai precisar de dinheiro em alguma data, a mensagem diz \"A conta vai precisar de R$ X em DD/MM\" e se o que você tem guardado (reserva ou investido) cobre, ou quanto falta mesmo resgatando tudo. Também ganhou a linha \"Guardado: reserva R$ X · investido R$ Y\".",
-    "Quando não há valor para guardar ou investir (menos de R$ 200 livres na conta), o bot agora avisa \"Hoje não há valor disponível para guardar ou investir\" uma vez, mesmo sem uma data futura com sobra, e só volta a avisar se a situação mudar. O cálculo da sobra continua só com o saldo da conta: o que já está investido não conta como sobra para investir de novo."
+    "Novo tipo \"Resgate\" nos lançamentos: registre o dinheiro que voltou do investimento para a conta. Escolha a origem (Reserva, Caixinha / resgate imediato, Renda Fixa, Ações, FIIs, Internacional, Cripto ou Outro — cada uma mostra quanto há investido ali), o valor, a data e se já caiu na conta. O formulário não pede categoria, tag nem frequência.",
+    "O resgate entra no saldo da conta, diminui o total investido e o saldo da caixinha da reserva (ou da classe escolhida) e não conta como receita. Ele aparece nas listas com o selo \"Resgate\" (cor e ícone próprios) e tem filtro próprio na lista de lançamentos. Dá para editar e excluir como qualquer lançamento.",
+    "Se o valor passar do que há investido na origem, o formulário só avisa (você pode salvar assim mesmo, por exemplo quando o aporte antigo nunca foi lançado)."
   ]
 }
