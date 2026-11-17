@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.197';
+export const APP_VERSION = '1.6.198';
 export const APP_VERSION_DATE = '17/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.198',
+    date: '17/11/2026',
+    changes: [
+      'Telegram: o /previsao (30 dias) e o alerta de saldo baixo (N15) seguem o mesmo ajuste do /projecao e do resumo semanal. Quando a conta fica abaixo de zero, não mostram mais valor negativo: dizem "a conta vai precisar de R$ X" (ou "precisa de R$ X para voltar ao mínimo") e se o que você tem investido cobre, ou quanto falta mesmo resgatando tudo. No alerta de saldo baixo com conta ainda positiva, a mensagem ganhou a linha "Você tem R$ X investidos".',
+    ],
+  },
   {
     version: '1.6.197',
     date: '17/11/2026',

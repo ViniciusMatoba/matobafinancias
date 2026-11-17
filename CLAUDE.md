@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.197
+- **Versão atual**: v1.6.198
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.197 — 17/11/2026
+**Versão**: v1.6.198 — 17/11/2026
 
 **Últimas features**:
+- v1.6.198 — `/previsao` e N15 (bot) SEM NEGATIVO: `/previsao` com saldo em 30 dias < 0 mostra "Em 30 dias a conta vai precisar de R$ X" + `fraseCobertura` (guardado = `totalInvestidoAteBot`); N15 com conta < 0 mostra "A conta precisa de R$ (mínimo − saldo) para voltar ao mínimo" + cobertura, e com conta positiva abaixo do mínimo acrescenta "Você tem R$ X investidos" (estado `saldo-baixo` inalterado). Com isso N6, N7, N15, N22, `/projecao` e `/previsao` já seguem a regra "buraco da conta = resgate necessário". Pendente conhecido: `/saldo`, `/hoje`, `/semana` e N8 mostram o saldo REAL da conta (negativo real continua negativo)
 - v1.6.197 — CARD DA PROJEÇÃO TODO EM TOTAL (conta + investido): `resumirPeriodo` agora devolve `inicioTotal`/`fimTotal`/`minimoTotal`/`maximoTotal` (+ `fimConta`/`fimInvestido` para a linha "conta · 💰") além dos valores só de conta (`inicio`/`fim`/`minimo`/`maximo`, usados pelo gráfico). Início total = saldo bruto + investido do dia anterior (NÃO soma o resgate acumulado: ele só move dinheiro). Impressão e planejamento anual no mesmo critério (anual: `saldoFim` = `simAno[...].total`, início do ano = bruto + `baseAno.investidoInicial`; "Total Acumulado"/"Total Final Previsto"; `resgateNoMes` continua como aviso)
 - v1.6.196 — "Mínimo projetado" do card/impressão da Projeção = `resumo.minimoTotal` (menor TOTAL = conta + investido, via `sim[d].total`; inclui caixinhas, rendimentos/ajustes e não depende do resgate simulado). Início/Fim/Máximo seguem sendo a conta com resgate (`inicio`/`fim`/`maximo`); `resumo.minimo` (conta com resgate) continua no objeto mas não aparece no card
 - v1.6.195 — PROJEÇÃO SEM "NEGATIVO FALSO" NO RESUMO: o card (Início/Fim/Mínimo/Máximo), a impressão, o gráfico e o anual usam a CONTA COM RESGATE SIMULADO (`resumirPeriodo` em `coberturaProjecao.js`; `baseDaSimulacao` é a base única da simulação — mês/período e ano). Mínimo só fica negativo quando há falta real (nem o investido cobre); mostra "(com resgate)". O aviso "Necessário resgate…" saiu do bloco do mês atual e aparece em qualquer período ("já necessário antes deste período" quando o resgate vem de meses anteriores). Gráfico recebe `simulacao` (linha da conta com resgate + linha tracejada do Total). Anual: `saldoFim` = conta simulada, `resgateNoMes` no card e na impressão (resultado = entradas − saídas continua de caixa, por isso não fecha com fim − início quando há resgate simulado). Bot: `functions/lib/util/cobertura.js` (`fraseCobertura`) usada no N7 (fim do mês) e no `/projecao` — "a conta vai precisar de R$ X", sem sinal de menos; guardado = total investido (`totalInvestidoAteBot`). Ainda NÃO feito: `/previsao` (30 dias) e N15 (saldo baixo) seguem com o saldo bruto

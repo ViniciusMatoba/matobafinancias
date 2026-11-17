@@ -202,7 +202,10 @@ async function handlePrevisao(chatId, uid) {
     `📈 Entradas previstas: *${formatBRL(entradas)}*\n` +
     `📉 Saídas previstas: *${formatBRL(saidas)}*\n` +
     `─────────────────\n` +
-    `🏁 Saldo em 30 dias: *${formatBRL(saldoFim)}*` +
+    (saldoFim >= 0
+      ? `🏁 Saldo em 30 dias: *${formatBRL(saldoFim)}*`
+      // o buraco da conta é um resgate necessário, não um saldo negativo: diz se o investido cobre
+      : `🏁 Em 30 dias a conta vai precisar de *${formatBRL(-saldoFim)}*\n${fraseCobertura({ precisa: -saldoFim, guardado: totalInvestidoAteBot(transactions, hoje) })}`) +
     diaCriticoStr + `\n` +
     `${tendencia}`
   );

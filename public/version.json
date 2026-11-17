@@ -1,8 +1,7 @@
 {
-  "version": "1.6.197",
+  "version": "1.6.198",
   "date": "17/11/2026",
   "notes": [
-    "Projeção: o card do topo inteiro agora mostra o TOTAL do dinheiro (saldo em conta + tudo o que está investido, caixinhas incluídas): \"Total no início do mês\", \"Total no fim do mês\", \"Mínimo projetado (total)\" e \"Máximo projetado (total)\". Abaixo do total do fim aparece a divisão \"conta R$ X · 💰 R$ Y\". Como o resgate só move dinheiro entre conta e investido, nenhum desses valores depende dele.",
-    "O planejamento anual segue o mesmo critério (\"Total Acumulado\" por mês e \"Total Final Previsto\"), e a impressão também. O aviso de resgate continua indicando quando a conta precisa de resgate."
+    "Telegram: o /previsao (30 dias) e o alerta de saldo baixo (N15) seguem o mesmo ajuste do /projecao e do resumo semanal. Quando a conta fica abaixo de zero, não mostram mais valor negativo: dizem \"a conta vai precisar de R$ X\" (ou \"precisa de R$ X para voltar ao mínimo\") e se o que você tem investido cobre, ou quanto falta mesmo resgatando tudo. No alerta de saldo baixo com conta ainda positiva, a mensagem ganhou a linha \"Você tem R$ X investidos\"."
   ]
 }

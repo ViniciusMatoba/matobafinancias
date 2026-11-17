@@ -464,8 +464,15 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     if (saldoMinimo > 0) {
       const saldoAtual = calcSaldoSimples(transactions, todayStr, walletInitials);
       if (saldoAtual < saldoMinimo) {
+        // Conta abaixo de zero não é "saldo negativo" para quem tem dinheiro investido: é um resgate necessário
+        const investidoN15 = Math.max(totalInvestidoAteBot(transactions, todayStr), 0);
+        const textoN15 = saldoAtual >= 0
+          ? `🚨 *Saldo baixo!*\nSeu saldo atual é *${formatBRL(saldoAtual)}* — abaixo do mínimo de *${formatBRL(saldoMinimo)}*. Atenção ao caixa!` +
+            (investidoN15 > 0 ? `\n💰 _Você tem ${formatBRL(investidoN15)} investidos._` : '')
+          : `🚨 *Saldo baixo!*\nA conta precisa de *${formatBRL(saldoMinimo - saldoAtual)}* para voltar ao mínimo de *${formatBRL(saldoMinimo)}*. Atenção ao caixa!\n` +
+            fraseCobertura({ precisa: saldoMinimo - saldoAtual, guardado: investidoN15 });
         msgs.push({
-          text: `🚨 *Saldo baixo!*\nSeu saldo atual é *${formatBRL(saldoAtual)}* — abaixo do mínimo de *${formatBRL(saldoMinimo)}*. Atenção ao caixa!`,
+          text: textoN15,
           estado: { chave: 'saldo-baixo', sig: `${Math.round(saldoAtual / 100)}`, repetirDias: 3 },
         });
       }
