@@ -123,15 +123,15 @@ export function baseDaSimulacao({ transactions, wallets, from, today, reservaGoa
 
 /**
  * Números de resumo de um período com o resgate simulado (conta já com o resgate): início, fim, mínimo e máximo.
- * `minimoTotal` = menor TOTAL do período (conta + tudo o que está investido, caixinhas incluídas): o resgate só move dinheiro
- * de lugar, então o total não muda com ele. O mínimo
+ * `inicioTotal`/`fimTotal`/`minimoTotal`/`maximoTotal` = TOTAL (conta + tudo o que está investido, caixinhas incluídas): o
+ * resgate só move dinheiro de lugar, então o total não muda com ele. `inicio`/`fim`/`minimo`/`maximo` são só a conta. O mínimo
  * só fica negativo quando há FALTA real (nem o investido cobre). `jaNecessarioAntes` = há resgate acumulado, mas ele
  * começou antes deste período (sem dia de resgate novo dentro dele). Sem dias, devolve o saldo inicial bruto.
  */
 export function resumirPeriodo({ days, sim, saldoInicial, base }) {
   const r = resumirResgates(sim);
   if (!days?.length) {
-    return { inicio: saldoInicial, fim: saldoInicial, minimo: saldoInicial, minimoTotal: saldoInicial, maximo: saldoInicial, resgateAcum: 0, primeiroDia: null, faltaMax: 0, jaNecessarioAntes: false };
+    return { inicio: saldoInicial, fim: saldoInicial, minimo: saldoInicial, maximo: saldoInicial, inicioTotal: saldoInicial, fimTotal: saldoInicial, minimoTotal: saldoInicial, maximoTotal: saldoInicial, fimConta: saldoInicial, fimInvestido: 0, resgateAcum: 0, primeiroDia: null, faltaMax: 0, jaNecessarioAntes: false };
   }
   const efetivoCarry = Math.min(base?.carryResgate || 0, Math.max(base?.investidoInicial || 0, 0));
   const contas = days.map(d => sim?.[d.date]?.conta ?? d.saldo);
@@ -140,7 +140,13 @@ export function resumirPeriodo({ days, sim, saldoInicial, base }) {
     inicio: c2(saldoInicial + efetivoCarry),
     fim: contas[contas.length - 1],
     minimo: Math.min(...contas),
+    // TOTAL (conta + investido): o resgate só move dinheiro de lugar, então estes valores não dependem dele
+    inicioTotal: c2(saldoInicial + (base?.investidoInicial || 0)),
+    fimTotal: totais[totais.length - 1],
     minimoTotal: Math.min(...totais),
+    maximoTotal: Math.max(...totais),
+    fimConta: contas[contas.length - 1],
+    fimInvestido: c2(totais[totais.length - 1] - contas[contas.length - 1]),
     maximo: Math.max(...contas),
     resgateAcum: r.acumulado,
     primeiroDia: r.primeiroDia,

@@ -1,7 +1,8 @@
 {
-  "version": "1.6.196",
+  "version": "1.6.197",
   "date": "17/11/2026",
   "notes": [
-    "Projeção: o \"Mínimo projetado\" do card do topo (e da impressão) agora é o menor TOTAL do período — saldo em conta + tudo o que está investido (reserva, caixinhas e investimentos, incluindo rendimentos atualizados). Como o resgate só muda dinheiro de lugar, esse valor não depende dele e só fica negativo/vermelho quando o total mesmo não cobre. Início, Fim e Máximo continuam sendo a conta com resgate."
+    "Projeção: o card do topo inteiro agora mostra o TOTAL do dinheiro (saldo em conta + tudo o que está investido, caixinhas incluídas): \"Total no início do mês\", \"Total no fim do mês\", \"Mínimo projetado (total)\" e \"Máximo projetado (total)\". Abaixo do total do fim aparece a divisão \"conta R$ X · 💰 R$ Y\". Como o resgate só move dinheiro entre conta e investido, nenhum desses valores depende dele.",
+    "O planejamento anual segue o mesmo critério (\"Total Acumulado\" por mês e \"Total Final Previsto\"), e a impressão também. O aviso de resgate continua indicando quando a conta precisa de resgate."
   ]
 }

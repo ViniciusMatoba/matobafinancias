@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.196';
+export const APP_VERSION = '1.6.197';
 export const APP_VERSION_DATE = '17/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.197',
+    date: '17/11/2026',
+    changes: [
+      'Projeção: o card do topo inteiro agora mostra o TOTAL do dinheiro (saldo em conta + tudo o que está investido, caixinhas incluídas): "Total no início do mês", "Total no fim do mês", "Mínimo projetado (total)" e "Máximo projetado (total)". Abaixo do total do fim aparece a divisão "conta R$ X · 💰 R$ Y". Como o resgate só move dinheiro entre conta e investido, nenhum desses valores depende dele.',
+      'O planejamento anual segue o mesmo critério ("Total Acumulado" por mês e "Total Final Previsto"), e a impressão também. O aviso de resgate continua indicando quando a conta precisa de resgate.',
+    ],
+  },
   {
     version: '1.6.196',
     date: '17/11/2026',

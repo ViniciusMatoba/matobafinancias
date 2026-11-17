@@ -193,11 +193,11 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     // Mesma simulação de resgate do mês: o saldo do mês é a conta COM o resgate (nunca "negativo" quando o investido cobre)
     const baseAno = baseDaSimulacao({ transactions, wallets, from: yearStart, today, reservaGoalId });
     const simAno = simularDias({ days: yearDays, hoje: today, reservaGoalId, ajustes: ajustesInvestido, ...baseAno });
-    const efetivoCarryAno = Math.min(baseAno.carryResgate || 0, Math.max(baseAno.investidoInicial || 0, 0));
     
     // Agrupa por mês
     const months = [];
-    let prevMonthEndBalance = startBalance + efetivoCarryAno;
+    // TOTAL (conta + investido): o saldo do mês não depende do resgate simulado, que só move dinheiro de lugar
+    let prevMonthEndBalance = startBalance + baseAno.investidoInicial;
     
     for (let m = 0; m < 12; m++) {
       const monthNum = m + 1;
@@ -217,7 +217,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
         });
       });
       
-      const saldoFim = mDays.length > 0 ? (simAno[mDays[mDays.length - 1].date]?.conta ?? mDays[mDays.length - 1].saldo) : prevMonthEndBalance;
+      const saldoFim = mDays.length > 0 ? (simAno[mDays[mDays.length - 1].date]?.total ?? mDays[mDays.length - 1].saldo) : prevMonthEndBalance;
       const resgateNoMes = mDays.reduce((acc, d) => acc + (simAno[d.date]?.resgateNovo || 0), 0);
       const saldoInicio = prevMonthEndBalance;
       const resultado = entradas - saidas;
@@ -443,7 +443,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                       {resumo.primeiroDia
                         ? `a partir de ${resumo.primeiroDia.split('-').reverse().slice(0, 2).join('/')}`
                         : '(já necessário antes deste período)'}
-                      . Os saldos abaixo já consideram esse resgate.
+                      . O total não muda: o resgate só move dinheiro do investido para a conta.
                     </p>
                   )}
                   {resumo.faltaMax > 0 && (
@@ -454,27 +454,32 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                 </div>
               )}
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>{viewTab === 'mensal' ? 'Início do mês' : 'Início do período'}</p>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(resumo.inicio) }}>
-                  {formatBRL(resumo.inicio)}
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>{viewTab === 'mensal' ? 'Total no início do mês' : 'Total no início do período'}</p>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(resumo.inicioTotal) }}>
+                  {formatBRL(resumo.inicioTotal)}
                 </p>
               </div>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>{viewTab === 'mensal' ? 'Fim do mês' : 'Fim do período'}</p>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(resumo.fim) }}>
-                  {formatBRL(resumo.fim)}
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>{viewTab === 'mensal' ? 'Total no fim do mês' : 'Total no fim do período'}</p>
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(resumo.fimTotal) }}>
+                  {formatBRL(resumo.fimTotal)}
                 </p>
+                {resumo.fimInvestido !== 0 && (
+                  <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>
+                    conta {formatBRL(resumo.fimConta)} · 💰 {formatBRL(resumo.fimInvestido)}
+                  </p>
+                )}
               </div>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Mínimo projetado (conta + investido)</p>
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Mínimo projetado (total)</p>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: resumo.minimoTotal >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
                   {formatBRL(resumo.minimoTotal)}
                 </p>
               </div>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Máximo projetado</p>
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Máximo projetado (total)</p>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--entrada)' }}>
-                  {formatBRL(resumo.maximo)}
+                  {formatBRL(resumo.maximoTotal)}
                 </p>
               </div>
             </div>
@@ -889,7 +894,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                   </p>
                 </div>
                 <div>
-                  <p style={{ margin: '0 0 2px', fontSize: 10, color: 'var(--text-secondary)' }}>Saldo Final Previsto</p>
+                  <p style={{ margin: '0 0 2px', fontSize: 10, color: 'var(--text-secondary)' }}>Total Final Previsto</p>
                   <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: annualSummary.endBalance >= 0 ? 'var(--primary)' : 'var(--saida)' }}>
                     {formatBRL(annualSummary.endBalance)}
                   </p>
@@ -953,7 +958,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                         </span>
                       </div>
                       <div>
-                        <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block' }}>Saldo Acumulado</span>
+                        <span style={{ fontSize: 10, color: 'var(--text-muted)', display: 'block' }}>Total Acumulado</span>
                         <span style={{ fontSize: 12, fontWeight: 700, color: saldoColor(m.saldoFim) }}>
                           {formatBRL(m.saldoFim)}
                         </span>
@@ -1138,20 +1143,20 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
         {viewTab !== 'anual' && (
           <div className="print-summary-grid">
             <div className="print-summary-card">
-              <span className="print-summary-label">Saldo Inicial</span>
-              <strong className="print-summary-val" style={{ color: resumo.inicio >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.inicio)}</strong>
+              <span className="print-summary-label">Total Inicial (conta + investido)</span>
+              <strong className="print-summary-val" style={{ color: resumo.inicioTotal >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.inicioTotal)}</strong>
             </div>
             <div className="print-summary-card">
-              <span className="print-summary-label">Saldo Final</span>
-              <strong className="print-summary-val" style={{ color: resumo.fim >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.fim)}</strong>
+              <span className="print-summary-label">Total Final (conta + investido)</span>
+              <strong className="print-summary-val" style={{ color: resumo.fimTotal >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.fimTotal)}</strong>
             </div>
             <div className="print-summary-card">
-              <span className="print-summary-label">Mínimo Projetado (conta + investido)</span>
+              <span className="print-summary-label">Mínimo Projetado (total)</span>
               <strong className="print-summary-val" style={{ color: resumo.minimoTotal >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.minimoTotal)}</strong>
             </div>
             <div className="print-summary-card">
-              <span className="print-summary-label">Máximo Projetado</span>
-              <strong className="print-summary-val" style={{ color: '#2f855a' }}>{formatBRL(resumo.maximo)}</strong>
+              <span className="print-summary-label">Máximo Projetado (total)</span>
+              <strong className="print-summary-val" style={{ color: '#2f855a' }}>{formatBRL(resumo.maximoTotal)}</strong>
             </div>
           </div>
         )}
@@ -1166,7 +1171,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                   <th style={{ width: '18%' }}>Entradas</th>
                   <th style={{ width: '18%' }}>Saídas</th>
                   <th style={{ width: '18%' }}>Balanço</th>
-                  <th style={{ width: '21%' }}>Saldo Projetado</th>
+                  <th style={{ width: '21%' }}>Total Projetado</th>
                 </tr>
               </thead>
               <tbody>

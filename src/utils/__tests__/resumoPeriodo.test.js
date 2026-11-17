@@ -125,3 +125,47 @@ describe('minimoTotal — menor total (conta + investido) do período', () => {
     expect(resumirPeriodo({ days: [], sim: {}, saldoInicial: 50 }).minimoTotal).toBe(50)
   })
 })
+
+describe('totais do período — início, fim, mínimo e máximo em conta + investido', () => {
+  it('dezembro do relato: todos os valores são conta + investido e nenhum depende do resgate', () => {
+    const { resumo } = montar(3000, { from: '2026-12-01', to: '2026-12-31' })
+    expect(resumo.inicioTotal).toBe(4000)                       // conta 1.000 + investido 3.000
+    expect(resumo.fimTotal).toBeCloseTo(3000 - 938.37, 2)       // conta −938,37 + investido 3.000
+    expect(resumo.minimoTotal).toBeCloseTo(3000 - 938.37, 2)
+    expect(resumo.maximoTotal).toBe(4000)
+    expect(resumo.fimConta).toBe(0)                             // conta com resgate
+    expect(resumo.fimInvestido).toBeCloseTo(3000 - 938.37, 2)   // investido depois do resgate
+    expect(resumo.fimConta + resumo.fimInvestido).toBeCloseTo(resumo.fimTotal, 2)
+  })
+
+  it('mês seguinte com resgate já acumulado: o início total NÃO soma o resgate de novo', () => {
+    const { resumo } = montar(3000, { from: '2027-01-01', to: '2027-01-31' })
+    expect(resumo.inicioTotal).toBeCloseTo(3000 - 938.37, 2)    // = total do fim de dezembro
+    expect(resumo.inicio).toBe(0)                               // conta com resgate (outro número)
+  })
+
+  it('resgate já lançado não muda nenhum dos totais', () => {
+    const rg = tx('rg', 'entrada', 938.37, '2026-12-10', { resgate: true, metaId: 'g1' })
+    const sem = montar(3000, { from: '2026-12-01', to: '2026-12-31' }).resumo
+    const com = montar(3000, { from: '2026-12-01', to: '2026-12-31', extra: [rg] }).resumo
+    for (const k of ['inicioTotal', 'fimTotal', 'minimoTotal', 'maximoTotal']) expect(com[k]).toBeCloseTo(sem[k], 2)
+  })
+
+  it('sem investido: os totais são o próprio saldo da conta', () => {
+    const { resumo, days, saldoInicial } = montar(0, { from: '2026-12-01', to: '2026-12-31' })
+    expect(resumo.inicioTotal).toBe(saldoInicial)
+    expect(resumo.fimTotal).toBeCloseTo(days[days.length - 1].saldo, 2)
+    expect(resumo.fimInvestido).toBe(0)
+  })
+
+  it('rendimento (ajuste) no período aparece no total a partir da data', () => {
+    const aj = { id: 'aj2', tipo: 'investimento', ajuste: true, valor: 250, dataInicio: '2026-12-15', frequencia: 'unico', metaId: 'g1' }
+    const { txs, days, base, saldoInicial } = montar(3000, { from: '2026-12-01', to: '2026-12-31', extra: [aj] })
+    const sim = simularDias({ days, hoje: HOJE, reservaGoalId: 'g1', ajustes: [{ date: '2026-12-15', valor: 250, origem: 'reserva' }], ...base })
+    const r = resumirPeriodo({ days, sim, saldoInicial, base })
+    expect(txs.some(t => t.id === 'aj2')).toBe(true)
+    expect(r.inicioTotal).toBe(4000)
+    expect(r.fimTotal).toBeCloseTo(3250 - 938.37, 2)
+    expect(r.maximoTotal).toBe(4000)
+  })
+})
