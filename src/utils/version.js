@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.195';
+export const APP_VERSION = '1.6.196';
 export const APP_VERSION_DATE = '17/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.196',
+    date: '17/11/2026',
+    changes: [
+      'Projeção: o "Mínimo projetado" do card do topo (e da impressão) agora é o menor TOTAL do período — saldo em conta + tudo o que está investido (reserva, caixinhas e investimentos, incluindo rendimentos atualizados). Como o resgate só muda dinheiro de lugar, esse valor não depende dele e só fica negativo/vermelho quando o total mesmo não cobre. Início, Fim e Máximo continuam sendo a conta com resgate.',
+    ],
+  },
   {
     version: '1.6.195',
     date: '17/11/2026',

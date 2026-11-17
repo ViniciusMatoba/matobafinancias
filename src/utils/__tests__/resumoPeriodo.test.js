@@ -91,3 +91,37 @@ describe('baseDaSimulacao', () => {
     expect(b).toMatchObject({ carryResgate: 0, aportesAntesDoPeriodo: 0, investidoInicial: 0 })
   })
 })
+
+describe('minimoTotal — menor total (conta + investido) do período', () => {
+  it('dezembro do relato: total mínimo = conta + investido, positivo, sem depender do resgate', () => {
+    const { resumo } = montar(3000, { from: '2026-12-01', to: '2026-12-31' })
+    // conta bruta chega a −938,37 com R$ 3.000 investidos → o total nunca fica abaixo de 2.061,63
+    expect(resumo.minimoTotal).toBeCloseTo(3000 - 938.37, 2)
+    expect(resumo.minimoTotal).toBeGreaterThan(0)
+    expect(resumo.minimo).toBe(0) // a conta com resgate continua sendo outro número
+  })
+  it('investido insuficiente: o total mínimo é o mesmo da falta (negativo)', () => {
+    const { resumo } = montar(500, { from: '2026-12-01', to: '2026-12-31' })
+    expect(resumo.minimoTotal).toBeCloseTo(500 - 938.37, 2)
+    expect(resumo.minimoTotal).toBeLessThan(0)
+  })
+  it('sem investido: igual ao mínimo bruto da conta', () => {
+    const { resumo, days } = montar(0, { from: '2026-12-01', to: '2026-12-31' })
+    expect(resumo.minimoTotal).toBeCloseTo(Math.min(...days.map(d => d.saldo)), 2)
+  })
+  it('o total inclui rendimento (ajuste) e caixinhas; resgate não muda o total', () => {
+    const aj = { id: 'aj', tipo: 'investimento', ajuste: true, valor: 100, dataInicio: '2026-11-10', frequencia: 'unico', metaId: 'g1' }
+    const { txs, days, base } = montar(3000, { from: "2026-12-01", to: "2026-12-31", extra: [aj] })
+    const sim = simularDias({ days, hoje: HOJE, reservaGoalId: 'g1', ...base })
+    expect(resumirPeriodo({ days, sim, saldoInicial: 1000, base }).minimoTotal).toBeCloseTo(3100 - 938.37, 2)
+    const rg = tx('rg', 'entrada', 500, '2026-12-05', { resgate: true, metaId: 'g1' })
+    const l = [...txs, rg]
+    const d2 = buildDailyProjection(l, '2026-12-01', '2026-12-31', 1000)
+    const b2 = baseDaSimulacao({ transactions: l, wallets: [], from: '2026-12-01', today: HOJE, reservaGoalId: 'g1' })
+    const s2 = simularDias({ days: d2, hoje: HOJE, reservaGoalId: 'g1', ...b2 })
+    expect(resumirPeriodo({ days: d2, sim: s2, saldoInicial: 1000, base: b2 }).minimoTotal).toBeCloseTo(3100 - 938.37, 2)
+  })
+  it('sem dias: devolve o saldo inicial', () => {
+    expect(resumirPeriodo({ days: [], sim: {}, saldoInicial: 50 }).minimoTotal).toBe(50)
+  })
+})

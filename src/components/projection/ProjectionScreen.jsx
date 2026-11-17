@@ -466,9 +466,9 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                 </p>
               </div>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Mínimo projetado{resumo.resgateAcum > 0 ? ' (com resgate)' : ''}</p>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: resumo.minimo >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
-                  {formatBRL(resumo.minimo)}
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Mínimo projetado (conta + investido)</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: resumo.minimoTotal >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
+                  {formatBRL(resumo.minimoTotal)}
                 </p>
               </div>
               <div>
@@ -1146,8 +1146,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
               <strong className="print-summary-val" style={{ color: resumo.fim >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.fim)}</strong>
             </div>
             <div className="print-summary-card">
-              <span className="print-summary-label">Mínimo Projetado{resumo.resgateAcum > 0 ? ' (com resgate)' : ''}</span>
-              <strong className="print-summary-val" style={{ color: resumo.minimo >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.minimo)}</strong>
+              <span className="print-summary-label">Mínimo Projetado (conta + investido)</span>
+              <strong className="print-summary-val" style={{ color: resumo.minimoTotal >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.minimoTotal)}</strong>
             </div>
             <div className="print-summary-card">
               <span className="print-summary-label">Máximo Projetado</span>
