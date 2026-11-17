@@ -3,7 +3,7 @@
 const { calcFaturaCardApp, calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange } = require('../motor/caixa');
 const { ehResgateBot, sinalNaCaixinhaBot, totalInvestidoAteBot } = require('../motor/investido');
 const { alertasAssinaturasBot } = require('./assinaturas');
-const { fraseCobertura } = require('../util/cobertura');
+const { fraseCobertura, linhasSaldoConta, textoResumoPeriodo } = require('../util/cobertura');
 const { reservaDaCaixinhaBot } = require('../motor/caixinha');
 const { linhaProjecaoReserva, projecaoReservaBot, ritmoDaReservaBot } = require('../motor/reservaRitmo');
 const { CATEGORY_ORDER, collectMonthExpenses, computeSpentByCategory, expandDespesasBot, getTopExpensesForCategory } = require('../motor/competencia');
@@ -213,10 +213,11 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const [, , dd] = todayStr.split('-');
     const nomeMesHoje = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
     let msg = `🌅 *Bom dia! Resumo de ${dd} de ${nomeMesHoje}*\n\n`;
-    msg += `💰 Saldo atual: *${formatBRL(saldoAtual)}*\n\n`;
+    // conta abaixo de zero é um resgate necessário (não "saldo negativo"); com investido, mostra também o total
+    msg += `${linhasSaldoConta({ saldo: saldoAtual, investido: totalInvestidoAteBot(transactions, todayStr), rotulo: 'Saldo atual', marca: false })}\n\n`;
 
     if (occsHoje.length > 0) {
-      let entH = 0, saiH = 0;
+      let entH = 0, saiH = 0, invH = 0, resH = 0;
       msg += `📋 *Lançamentos de hoje:*\n`;
       for (const o of occsHoje) {
         const v    = o.valor;
@@ -229,9 +230,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
                         o.tx?.frequencia === 'parcelado' ? ` (${o.tx.parcelaAtual}/${o.tx.totalParcelas}x)` :
                         o.tx?.tipo === 'diario' ? ' (diário)' : '';
         msg += `${icon} ${desc}${freqTag}: *${sign}${formatBRL(v)}*\n`;
-        if (o.tipo === 'entrada') entH += v; else saiH += v; // visão de caixa: o resgate entra na conta
+        // aporte e resgate só movem dinheiro entre conta e investimento: ficam em linhas próprias no resumo
+        if (ehResgateBot(o.tx)) resH += v;
+        else if (o.tipo === 'investimento') invH += v;
+        else if (o.tipo === 'entrada') entH += v;
+        else saiH += v;
       }
-      if (occsHoje.length > 1) msg += `_Saldo do dia: ${formatBRL(entH - saiH)}_\n\n`;
+      if (occsHoje.length > 1) msg += `\n${textoResumoPeriodo({ entradas: entH, saidas: saiH, investido: invH, resgatado: resH, periodo: 'dia' })}\n\n`;
       else msg += '\n';
     } else {
       msg += `_Nenhum lançamento para hoje._\n\n`;

@@ -1,8 +1,8 @@
 {
-  "version": "1.6.199",
+  "version": "1.6.200",
   "date": "17/11/2026",
   "notes": [
-    "Telegram, /saldo: quando a conta está abaixo de zero não mostra mais saldo negativo; diz \"a conta precisa de R$ X\" e se o que você tem investido cobre (ou quanto falta). Com dinheiro investido, o /saldo ganhou a linha \"Investido · Total (conta + investido)\". Carteiras abaixo de zero também passam a dizer \"precisa de R$ X\".",
-    "Telegram, /hoje: aporte e resgate deixam de entrar como \"Saídas\"/\"Entradas\" do dia, porque só movem dinheiro entre conta e investimento. Aparecem em linhas próprias (\"Investido\" e \"Resgatado\"). O resumo mostra o \"Resultado do dia (conta + investido)\" — só entrada e saída de verdade mudam o seu dinheiro — e, quando houve aporte ou resgate, o \"Movimento na conta\". Dia com um aporte grande não parece mais um dia negativo."
+    "Telegram, /semana: aporte e resgate deixam de entrar em Entradas/Saídas (só movem dinheiro entre conta e investimento) e viram linhas próprias, \"Investido\" e \"Resgatado\". O dia do aporte não aparece mais como dia de gasto na barra. O fechamento mostra o \"Resultado da semana (conta + investido)\" — ou \"Na semana, o total diminui R$ X\", sem sinal de menos — e o \"Movimento na conta\" quando houve aporte ou resgate.",
+    "Telegram, resumo diário da manhã (N8): o saldo atual segue a mesma regra do /saldo (conta abaixo de zero vira \"a conta precisa de R$ X\" com a frase de cobertura pelo investido, e com dinheiro investido aparece \"Investido · Total\"), e o resumo dos lançamentos do dia usa o mesmo formato do /hoje."
   ]
 }

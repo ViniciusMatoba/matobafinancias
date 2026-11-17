@@ -263,3 +263,96 @@ describe('/hoje — aporte e resgate não viram "saldo negativo do dia"', () => 
     expect(nbsp(ultimaMensagem())).toContain('Nenhum lançamento para hoje')
   })
 })
+
+describe('/semana — aporte e resgate fora de Entradas/Saídas', () => {
+  const resumo = (t) => t.split('─────────────────')[1] || ''
+  const hojeIso = '2026-10-14'
+
+  it('semana com aporte: aporte vira "Investido", não pesa nas saídas nem na barra; total sem queda', async () => {
+    criarUsuario()
+    lancamento('sal', tx('entrada', 1000, '2026-10-12'))
+    lancamento('ap', tx('investimento', 1500, '2026-10-13'))
+    lancamento('mer', tx('saida', 200, hojeIso, { categoria: 'custos_fixos' }))
+    await enviarAoBot(mensagemTelegram('/semana'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Entradas: *R$ 1.000,00*')
+    expect(t).toContain('Saídas:   *R$ 200,00*')
+    expect(t).toContain('Investido: *R$ 1.500,00* (sai da conta, continua seu)')
+    expect(t).toContain('Resultado da semana (conta + investido): *R$ 800,00*')
+    expect(t).toContain('Movimento na conta: saem *R$ 700,00*')
+    expect(resumo(t)).not.toMatch(/-R\$|−R\$|R\$ -/)
+    expect(t).not.toContain('13/10 `[█') // o dia do aporte não vira "dia de gasto" na barra
+  })
+
+  it('gasto maior que entrada: o total diminui, dito sem sinal de menos', async () => {
+    criarUsuario()
+    lancamento('c', tx('saida', 300, hojeIso, { categoria: 'custos_fixos' }))
+    await enviarAoBot(mensagemTelegram('/semana'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Na semana, o total (conta + investido) diminui *R$ 300,00*')
+    expect(resumo(t)).not.toMatch(/-R\$|−R\$|R\$ -/)
+    expect(t).not.toContain('Movimento na conta')
+  })
+
+  it('resgate na semana: aparece em "Resgatado" e não vira entrada', async () => {
+    criarUsuario()
+    lancamento('rg', tx('entrada', 700, hojeIso, { resgate: true, classeInvestimento: 'acoes' }))
+    await enviarAoBot(mensagemTelegram('/semana'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Resgatado: *R$ 700,00*')
+    expect(t).toContain('Entradas: *R$ 0,00*')
+    expect(t).toContain('Movimento na conta: entra *R$ 700,00*')
+  })
+
+  it('semana comum: Entradas, Saídas e o resultado, como antes', async () => {
+    criarUsuario()
+    lancamento('e', tx('entrada', 1000, hojeIso))
+    lancamento('s', tx('saida', 400, hojeIso, { categoria: 'custos_fixos' }))
+    await enviarAoBot(mensagemTelegram('/semana'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Resultado da semana (conta + investido): *R$ 600,00*')
+    expect(t).not.toContain('Investido:')
+  })
+})
+
+describe('N8 — resumo diário da manhã', () => {
+  const so8 = { tipos: Object.fromEntries(TODOS.map(n => [n, n === 'n8'])) }
+  const roda8 = (txs) => nbsp(bot.checkNotifications([], txs, {}, so8, [], 0).map(m => (typeof m === 'string' ? m : m.text)).join('\n'))
+  const hojeIso = '2026-10-14'
+
+  it('conta abaixo de zero: sem valor negativo, diz o que a conta precisa e que o investido cobre', () => {
+    const t = roda8([
+      { id: 'e', ...tx('entrada', 3100, '2026-10-01') },
+      { id: 'a', ...tx('investimento', 3000, '2026-10-02') },
+      { id: 's', ...tx('saida', 600, '2026-10-05', { categoria: 'custos_fixos' }) }, // conta: 100 − 600 = −500
+    ])
+    expect(t).toContain('Saldo atual:* a conta precisa de *R$ 500,00*')
+    expect(t).toContain('O que você tem investido (R$ 3.000,00) cobre esse valor')
+    expect(t).toContain('Total (conta + investido): *R$ 2.500,00*')
+    expect(t).not.toMatch(/-R\$.*(Saldo|conta precisa)|(Saldo|conta precisa).*-R\$/)
+  })
+
+  it('saldo positivo sem investido: a linha do saldo continua com o valor', () => {
+    const t = roda8([{ id: 'e', ...tx('entrada', 1200, '2026-10-01') }])
+    expect(t).toContain('Saldo atual:* R$ 1.200,00')
+    expect(t).not.toContain('Investido:')
+  })
+
+  it('aporte do dia: separado em "Investido" e sem queda no resultado do dia', () => {
+    const t = roda8([
+      { id: 'e', ...tx('entrada', 4000, '2026-10-01') },
+      { id: 'a1', ...tx('investimento', 1500, hojeIso) },
+      { id: 'c', ...tx('saida', 100, hojeIso, { categoria: 'custos_fixos' }) },
+    ])
+    expect(t).toContain('Investido: *R$ 1.500,00* (sai da conta, continua seu)')
+    expect(t).toContain('No dia, o total (conta + investido) diminui *R$ 100,00*')
+    expect(t).toContain('Movimento na conta: saem *R$ 1.600,00*')
+    const resumoDia = t.split('Lançamentos de hoje')[1].split('Bom dia e boas')[0].split('\n').filter(l => /Investido:|Resultado|total|Movimento/.test(l)).join('\n')
+    expect(resumoDia).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('dia com um lançamento só não mostra resumo (como antes)', () => {
+    const t = roda8([{ id: 'e', ...tx('entrada', 500, hojeIso) }])
+    expect(t).not.toContain('Resultado do dia')
+  })
+})

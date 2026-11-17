@@ -6,7 +6,7 @@ const { APP_URL, sendMessage } = require('../infra/telegram');
 const { calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange, getProximoVencimentoBot } = require('../motor/caixa');
 const { CATEGORY_ORDER, collectMonthExpenses, computeSpentByCategory, getTopExpensesForCategory } = require('../motor/competencia');
 const { ehResgateBot, totalInvestidoAteBot } = require('../motor/investido');
-const { fraseCobertura } = require('../util/cobertura');
+const { linhasSaldoConta, textoResumoPeriodo } = require('../util/cobertura');
 const { dateStrFromDate, getNowBrasilia, todayStrBrasilia } = require('../util/datas');
 const { MESES_CURTO, MESES_LONGO, barra, formatBRL, parseBRL } = require('../util/formato');
 
@@ -21,14 +21,7 @@ async function handleSaldo(chatId, uid) {
 
   // Conta abaixo de zero não é "saldo negativo" para quem tem dinheiro investido: é um resgate necessário
   const investido = Math.max(totalInvestidoAteBot(transactions, today), 0);
-  let msg = saldo >= 0
-    ? `💰 *Saldo Global:* ${formatBRL(saldo)} ✅`
-    : `💰 *Saldo Global:* a conta precisa de *${formatBRL(-saldo)}* ⚠️\n${fraseCobertura({ precisa: -saldo, guardado: investido })}`;
-
-  // Total do dinheiro (conta + investido): só quando há investido e o total não é negativo
-  if (investido > 0 && saldo + investido >= 0) {
-    msg += `\n🏦 Investido: *${formatBRL(investido)}* · Total (conta + investido): *${formatBRL(saldo + investido)}*`;
-  }
+  let msg = linhasSaldoConta({ saldo, investido, rotulo: 'Saldo Global' });
 
   if (wallets.length > 0) {
     msg += '\n\n📂 *Por carteira:*\n';
@@ -144,25 +137,7 @@ async function handleHoje(chatId, uid) {
       else if (o.tipo === 'entrada') entradas += o.valor;
       else saidas += o.valor;
     }
-    text += `\n─────────────────\n`;
-    if (entradas  > 0) text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
-    if (saidas    > 0) text += `❌ Saídas:   *${formatBRL(saidas)}*\n`;
-    if (investido > 0) text += `💰 Investido: *${formatBRL(investido)}* (sai da conta, continua seu)\n`;
-    if (resgatado > 0) text += `↩️ Resgatado: *${formatBRL(resgatado)}* (volta do investimento para a conta)\n`;
-
-    // Total do dia (conta + investido): só entrada e saída de verdade mudam o seu dinheiro
-    const totalDia = entradas - saidas;
-    text += totalDia >= 0
-      ? `🏦 Resultado do dia (conta + investido): *${formatBRL(totalDia)}*`
-      : `🏦 No dia, o total (conta + investido) diminui *${formatBRL(-totalDia)}*`;
-
-    // Movimento da conta corrente: aqui o aporte pesa e o resgate ajuda; mostra só quando há um dos dois
-    if (investido > 0 || resgatado > 0) {
-      const conta = entradas - saidas - investido + resgatado;
-      text += conta >= 0
-        ? `\n🏧 Movimento na conta: entra *${formatBRL(conta)}*`
-        : `\n🏧 Movimento na conta: saem *${formatBRL(-conta)}*`;
-    }
+    text += `\n─────────────────\n` + textoResumoPeriodo({ entradas, saidas, investido, resgatado, periodo: 'dia' });
   }
 
   return sendMessage(chatId, text.trim());
@@ -206,14 +181,17 @@ async function handleSemana(chatId, uid) {
   const comFaturaRealSem = cartaoComFaturaRealNoMes(transactions, fromStr, hoje);
   const occs = expandRange(transactions, fromStr, hoje, { historical: true });
 
-  let entradas = 0, saidas = 0;
+  let entradas = 0, saidas = 0, investido = 0, resgatado = 0;
   const byDay = {};
 
   for (const o of occs) {
     if (o.tx?.id?.includes('-proj-') && comFaturaRealSem.has(o.tx?.cartaoId)) continue;
     if (!byDay[o.date]) byDay[o.date] = { e: 0, s: 0 };
-    if (ehResgateBot(o.tx)) { /* resgate: não é receita nem gasto */ } else if (o.tipo === 'entrada') { entradas += o.valor; byDay[o.date].e += o.valor; }
-    else                      { saidas   += o.valor; byDay[o.date].s += o.valor; }
+    // aporte e resgate só movem dinheiro entre conta e investimento: não são gasto nem receita (e não pesam na barra do dia)
+    if (ehResgateBot(o.tx)) resgatado += o.valor;
+    else if (o.tipo === 'investimento') investido += o.valor;
+    else if (o.tipo === 'entrada') { entradas += o.valor; byDay[o.date].e += o.valor; }
+    else                           { saidas   += o.valor; byDay[o.date].s += o.valor; }
   }
 
   const maxSaida = Math.max(...Object.values(byDay).map(d => d.s), 1);
@@ -229,10 +207,7 @@ async function handleSemana(chatId, uid) {
     text += `${marker} ${label} \`[${bar}]\` ${d.s > 0 ? formatBRL(d.s) : '–'}\n`;
   }
 
-  text += `\n─────────────────\n`;
-  text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
-  text += `❌ Saídas:   *${formatBRL(saidas)}*\n`;
-  text += `💰 Saldo:    *${formatBRL(entradas - saidas)}*`;
+  text += `\n─────────────────\n` + textoResumoPeriodo({ entradas, saidas, investido, resgatado, periodo: 'semana', sempre: true });
 
   return sendMessage(chatId, text.trim());
 }

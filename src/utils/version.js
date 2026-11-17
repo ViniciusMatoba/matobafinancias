@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.199';
+export const APP_VERSION = '1.6.200';
 export const APP_VERSION_DATE = '17/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.200',
+    date: '17/11/2026',
+    changes: [
+      'Telegram, /semana: aporte e resgate deixam de entrar em Entradas/Saídas (só movem dinheiro entre conta e investimento) e viram linhas próprias, "Investido" e "Resgatado". O dia do aporte não aparece mais como dia de gasto na barra. O fechamento mostra o "Resultado da semana (conta + investido)" — ou "Na semana, o total diminui R$ X", sem sinal de menos — e o "Movimento na conta" quando houve aporte ou resgate.',
+      'Telegram, resumo diário da manhã (N8): o saldo atual segue a mesma regra do /saldo (conta abaixo de zero vira "a conta precisa de R$ X" com a frase de cobertura pelo investido, e com dinheiro investido aparece "Investido · Total"), e o resumo dos lançamentos do dia usa o mesmo formato do /hoje.',
+    ],
+  },
   {
     version: '1.6.199',
     date: '17/11/2026',
