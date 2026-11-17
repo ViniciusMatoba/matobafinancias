@@ -1,4 +1,7 @@
-import { origemDe, sacarDasOrigens } from './classesInvestimento';
+import { investidoPorOrigem, origemDe, sacarDasOrigens } from './classesInvestimento';
+import { totalInvestidoAte } from './investido';
+import { buildDailyProjection, calcSaldo, expandOccurrences } from './projectionCalc';
+import { addDays } from './formatters';
 
 /**
  * Projeção dia a dia com o investido: total (conta + investido) e simulação do resgate.
@@ -95,4 +98,49 @@ export function resumirResgates(sim) {
     faltaMax = Math.max(faltaMax, s.falta);
   }
   return { primeiroDia, acumulado, faltaMax };
+}
+
+/**
+ * Base da simulação para um período que começa em `from`: investido (e investido por origem) no dia anterior, e — quando
+ * o período começa no futuro — os aportes planejados e o resgate necessário já acumulados de hoje até o dia anterior.
+ * Usada pelo mês/período da Projeção e pelo planejamento anual (mesma regra nos dois).
+ */
+export function baseDaSimulacao({ transactions, wallets, from, today, reservaGoalId = null }) {
+  const dayBefore = addDays(from, -1);
+  const investidoInicial = totalInvestidoAte(transactions, dayBefore);
+  const buckets = investidoPorOrigem(transactions, dayBefore, reservaGoalId);
+  if (from <= today) return { investidoInicial, aportesAntesDoPeriodo: 0, carryResgate: 0, buckets };
+  let aportes = 0;
+  for (const t of transactions) {
+    if (t.tipo !== 'investimento') continue;
+    for (const o of expandOccurrences(t, addDays(today, 1), dayBefore)) aportes += Number(o.valor) || 0;
+  }
+  const wInitials = (wallets || []).reduce((acc, w) => acc + (w.saldoInicial || 0), 0);
+  const ate = buildDailyProjection(transactions, today, dayBefore, calcSaldo(transactions, '2020-01-01', addDays(today, -1)) + wInitials);
+  const carryResgate = Math.max(0, ...ate.map(d => -d.saldo));
+  return { investidoInicial, aportesAntesDoPeriodo: aportes, carryResgate, buckets };
+}
+
+/**
+ * Números de resumo de um período com o resgate simulado (conta já com o resgate): início, fim, mínimo e máximo. O mínimo
+ * só fica negativo quando há FALTA real (nem o investido cobre). `jaNecessarioAntes` = há resgate acumulado, mas ele
+ * começou antes deste período (sem dia de resgate novo dentro dele). Sem dias, devolve o saldo inicial bruto.
+ */
+export function resumirPeriodo({ days, sim, saldoInicial, base }) {
+  const r = resumirResgates(sim);
+  if (!days?.length) {
+    return { inicio: saldoInicial, fim: saldoInicial, minimo: saldoInicial, maximo: saldoInicial, resgateAcum: 0, primeiroDia: null, faltaMax: 0, jaNecessarioAntes: false };
+  }
+  const efetivoCarry = Math.min(base?.carryResgate || 0, Math.max(base?.investidoInicial || 0, 0));
+  const contas = days.map(d => sim?.[d.date]?.conta ?? d.saldo);
+  return {
+    inicio: c2(saldoInicial + efetivoCarry),
+    fim: contas[contas.length - 1],
+    minimo: Math.min(...contas),
+    maximo: Math.max(...contas),
+    resgateAcum: r.acumulado,
+    primeiroDia: r.primeiroDia,
+    faltaMax: r.faltaMax,
+    jaNecessarioAntes: r.acumulado > 0 && !r.primeiroDia,
+  };
 }

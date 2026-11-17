@@ -15,7 +15,7 @@ const CHART_TYPES = {
 const CustomTooltip = ({ active, payload, saldoInicial }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    const isLineChart = payload[0].dataKey === 'saldo';
+    const isLineChart = payload[0].dataKey === 'saldo' || payload[0].dataKey === 'total';
     const isPieChart = payload[0].name !== undefined && !isLineChart;
     
     let formattedDate = '';
@@ -55,7 +55,8 @@ const CustomTooltip = ({ active, payload, saldoInicial }) => {
           const color = entry.color || entry.fill || 'var(--primary)';
           
           let formattedName = name;
-          if (name === 'saldo') formattedName = '💵 Saldo Projetado';
+          if (name === 'saldo') formattedName = data.temSimulacao ? '💵 Conta (com resgate)' : '💵 Saldo Projetado';
+          else if (name === 'total') formattedName = '🏦 Total (conta + investido)';
           else if (name === 'entradas' || name === 'Entradas') formattedName = '📈 Entradas';
           else if (name === 'saidas' || name === 'Saídas') formattedName = '📉 Saídas';
 
@@ -94,7 +95,7 @@ const CustomTooltip = ({ active, payload, saldoInicial }) => {
   return null;
 };
 
-export default function ProjectionCharts({ days, saldoInicial }) {
+export default function ProjectionCharts({ days, saldoInicial, simulacao = null }) {
   const [chartType, setChartType] = useState(CHART_TYPES.SALDO);
 
   // Process data for charts
@@ -115,13 +116,20 @@ export default function ProjectionCharts({ days, saldoInicial }) {
       return {
         date: day.date.slice(8, 10) + '/' + day.date.slice(5, 7), // DD/MM
         fullDate: day.date,
-        saldo: day.saldo,
+        // conta já com o resgate simulado (igual aos cards); sem simulação, o saldo bruto
+        saldo: simulacao?.[day.date]?.conta ?? day.saldo,
+        total: simulacao?.[day.date]?.total,
+        temSimulacao: !!simulacao?.[day.date],
+        resgateNovo: simulacao?.[day.date]?.resgateNovo || 0,
         entradas,
         saidas,
         items: day.items
       };
     });
-  }, [days]);
+  }, [days, simulacao]);
+
+  // a linha do total só ajuda quando há dinheiro investido (senão ela coincide com a conta)
+  const mostrarTotal = data.some(d => d.total !== undefined && Math.abs(d.total - d.saldo) > 0.005);
 
   const categoriesData = useMemo(() => {
     const catTotals = {};
@@ -209,6 +217,7 @@ export default function ProjectionCharts({ days, saldoInicial }) {
                 <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={(val) => `R$${val}`} />
                 <Tooltip content={<CustomTooltip saldoInicial={saldoInicial} />} />
                 <Line type="monotone" dataKey="saldo" stroke="var(--primary)" strokeWidth={3} dot={{ r: 3, fill: 'var(--bg-surface)', strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                {mostrarTotal && <Line type="monotone" dataKey="total" stroke="#a855f7" strokeWidth={2} strokeDasharray="5 4" dot={false} activeDot={{ r: 5 }} />}
               </LineChart>
             )}
 

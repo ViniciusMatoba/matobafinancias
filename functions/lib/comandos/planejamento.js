@@ -5,7 +5,8 @@ const { loadUserData } = require('../infra/dados');
 const { db } = require('../infra/firebase');
 const { sendMessage } = require('../infra/telegram');
 const { calcSaldoSimples, expandRange } = require('../motor/caixa');
-const { ehResgateBot } = require('../motor/investido');
+const { ehResgateBot, totalInvestidoAteBot } = require('../motor/investido');
+const { fraseCobertura } = require('../util/cobertura');
 const { CATEGORY_ORDER, computeSpentByCategory, getTopExpensesForCategory } = require('../motor/competencia');
 const { addDaysFn, dateStrFromDate, getNowBrasilia, todayStrBrasilia } = require('../util/datas');
 const { MESES_CURTO, MESES_LONGO, barra, formatBRL } = require('../util/formato');
@@ -32,17 +33,20 @@ async function handleProjecao(chatId, uid) {
   text += `💰 Hoje: *${formatBRL(saldoHoje)}*\n\n`;
 
   const DIAS_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  // Dinheiro investido: um dia em que a conta fica abaixo de zero é um RESGATE necessário, não um saldo negativo
+  const guardado = Math.max(totalInvestidoAteBot(txs, hoje), 0);
   for (const { dt, saldo } of saldos) {
     const ds     = dateStrFromDate(dt);
     const label  = `${DIAS_PT[dt.getDay()]} ${ds.slice(8, 10)}/${ds.slice(5, 7)}`;
     const pos    = saldo - minSaldo;
     const { bar } = barra(pos, escala, 8);
-    const icon   = saldo < 0 ? '🔴' : saldo < saldoHoje * 0.5 ? '⚠️' : '✅';
-    text += `${icon} ${label} \`[${bar}]\`\n    *${formatBRL(saldo)}*\n`;
+    const icon   = saldo < 0 ? (guardado >= -saldo ? '🟡' : '🔴') : saldo < saldoHoje * 0.5 ? '⚠️' : '✅';
+    const valor  = saldo < 0 ? `precisa de ${formatBRL(-saldo)}` : formatBRL(saldo);
+    text += `${icon} ${label} \`[${bar}]\`\n    *${valor}*\n`;
   }
 
   if (minSaldo < 0) {
-    text += `\n⚠️ _Saldo negativo previsto no período!_`;
+    text += `\n⚠️ _A conta vai precisar de ${formatBRL(-minSaldo)} no período._\n${fraseCobertura({ precisa: -minSaldo, guardado })}`;
   }
 
   return sendMessage(chatId, text.trim());

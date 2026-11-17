@@ -1,7 +1,17 @@
-export const APP_VERSION = '1.6.194';
-export const APP_VERSION_DATE = '03/11/2026';
+export const APP_VERSION = '1.6.195';
+export const APP_VERSION_DATE = '17/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.195',
+    date: '17/11/2026',
+    changes: [
+      'Projeção: o resumo do topo (Início, Fim, Mínimo e Máximo) agora usa a conta com o resgate simulado, igual às linhas dos dias. Quando o investido cobre, o Mínimo projetado mostra R$ 0,00 "(com resgate)" em vez de um valor negativo em vermelho; vermelho só quando falta dinheiro de verdade (nem o investido cobre).',
+      'O aviso "Necessário resgate de R$ X…" agora aparece em qualquer mês (antes só no mês atual, então em meses futuros só restava o número vermelho sem explicação). Se o resgate já era necessário antes do período, o aviso diz isso.',
+      'Gráfico: a linha de saldo mostra a conta com resgate e ganhou a linha tracejada do Total (conta + investido). Planejamento anual e impressão usam a mesma conta com resgate, com "⚠️ resgatar R$ X" no mês que precisar.',
+      'Telegram: o resumo semanal e o /projecao não mostram mais saldo com sinal de menos. Passam a dizer "a conta vai precisar de R$ X" e se o que você tem investido cobre, ou quanto falta mesmo resgatando tudo.',
+    ],
+  },
   {
     version: '1.6.194',
     date: '03/11/2026',

@@ -6,9 +6,9 @@ import { formatBRL, TYPE_CONFIG, todayStr, addDays } from '../../utils/formatter
 import { buildDailyProjection, calcSaldo, expandOccurrences } from '../../utils/projectionCalc';
 import { PERCENTUAL_CATEGORIES } from '../../utils/categories';
 import { acharCaixinhaReserva, reservaDaCaixinha } from '../../utils/caixinha';
-import { simularDias, resumirResgates } from '../../utils/coberturaProjecao';
+import { baseDaSimulacao, resumirPeriodo, simularDias } from '../../utils/coberturaProjecao';
 import { docsResgate, ehAjuste, tipoDoTx, totalInvestidoAte } from '../../utils/investido';
-import { investidoPorOrigem, origemDe, rotuloOrigem } from '../../utils/classesInvestimento';
+import { origemDe, rotuloOrigem } from '../../utils/classesInvestimento';
 import ProjectionCharts from './ProjectionCharts';
 
 const TIPO_ICONS = {
@@ -134,10 +134,6 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     return map;
   }, [cards, days, transactions]);
 
-  const saldoFim = days.length > 0 ? days[days.length - 1].saldo : saldoInicial;
-  const minSaldo = days.length > 0 ? Math.min(...days.map(d => d.saldo)) : saldoInicial;
-  const maxSaldo = days.length > 0 ? Math.max(...days.map(d => d.saldo)) : saldoInicial;
-
   // Saldo de hoje no contexto da projeção (para comparar com Saldo Global da Home)
   const saldoHoje = useMemo(() => {
     if (viewTab === 'mensal' && !isAtCurrentMonth) return null;
@@ -162,27 +158,22 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
   );
 
   // Lista que começa no futuro: investido, aportes planejados e resgate necessário já acumulados até o dia anterior
-  const baseSimulacao = useMemo(() => {
-    if (!days.length) return { investidoInicial: 0, aportesAntesDoPeriodo: 0, carryResgate: 0 };
-    const dayBefore = addDays(from, -1);
-    const investidoInicial = totalInvestidoAte(transactions, dayBefore);
-    const buckets = investidoPorOrigem(transactions, dayBefore, reservaGoalId);
-    if (from <= today) return { investidoInicial, aportesAntesDoPeriodo: 0, carryResgate: 0, buckets };
-    let aportes = 0;
-    transactions.filter(t => t.tipo === 'investimento').forEach(t => {
-      expandOccurrences(t, addDays(today, 1), dayBefore).forEach(o => { aportes += Number(o.valor) || 0; });
-    });
-    const wInitials = wallets?.reduce((acc, w) => acc + (w.saldoInicial || 0), 0) || 0;
-    const ate = buildDailyProjection(transactions, today, dayBefore, calcSaldo(transactions, FAR_PAST, addDays(today, -1)) + wInitials);
-    const carryResgate = Math.max(0, ...ate.map(d => -d.saldo));
-    return { investidoInicial, aportesAntesDoPeriodo: aportes, carryResgate, buckets };
-  }, [days, from, today, transactions, wallets, reservaGoalId]);
+  const baseSimulacao = useMemo(
+    () => (days.length
+      ? baseDaSimulacao({ transactions, wallets, from, today, reservaGoalId })
+      : { investidoInicial: 0, aportesAntesDoPeriodo: 0, carryResgate: 0 }),
+    [days, from, today, transactions, wallets, reservaGoalId]
+  );
 
   const simulacao = useMemo(
     () => simularDias({ days, hoje: today, reservaGoalId, ajustes: ajustesInvestido, ...baseSimulacao }),
     [days, today, baseSimulacao, reservaGoalId, ajustesInvestido]
   );
-  const resumoResgate = useMemo(() => resumirResgates(simulacao), [simulacao]);
+  // Resumo do período COM o resgate simulado (conta já com o resgate): o mínimo só fica negativo quando há falta real
+  const resumo = useMemo(
+    () => resumirPeriodo({ days, sim: simulacao, saldoInicial, base: baseSimulacao }),
+    [days, simulacao, saldoInicial, baseSimulacao]
+  );
 
   // ── Cálculo do Planejamento Anual ──────────────────────────────────────────
   const annualData = useMemo(() => {
@@ -198,10 +189,15 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
     
     // Projeta todos os dias do ano
     const yearDays = buildDailyProjection(transactions, yearStart, yearEnd, startBalance);
+
+    // Mesma simulação de resgate do mês: o saldo do mês é a conta COM o resgate (nunca "negativo" quando o investido cobre)
+    const baseAno = baseDaSimulacao({ transactions, wallets, from: yearStart, today, reservaGoalId });
+    const simAno = simularDias({ days: yearDays, hoje: today, reservaGoalId, ajustes: ajustesInvestido, ...baseAno });
+    const efetivoCarryAno = Math.min(baseAno.carryResgate || 0, Math.max(baseAno.investidoInicial || 0, 0));
     
     // Agrupa por mês
     const months = [];
-    let prevMonthEndBalance = startBalance;
+    let prevMonthEndBalance = startBalance + efetivoCarryAno;
     
     for (let m = 0; m < 12; m++) {
       const monthNum = m + 1;
@@ -221,7 +217,8 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
         });
       });
       
-      const saldoFim = mDays.length > 0 ? mDays[mDays.length - 1].saldo : prevMonthEndBalance;
+      const saldoFim = mDays.length > 0 ? (simAno[mDays[mDays.length - 1].date]?.conta ?? mDays[mDays.length - 1].saldo) : prevMonthEndBalance;
+      const resgateNoMes = mDays.reduce((acc, d) => acc + (simAno[d.date]?.resgateNovo || 0), 0);
       const saldoInicio = prevMonthEndBalance;
       const resultado = entradas - saidas;
       
@@ -232,14 +229,15 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
         entradas,
         saidas,
         resultado,
-        saldoFim
+        saldoFim,
+        resgateNoMes
       });
       
       prevMonthEndBalance = saldoFim;
     }
     
     return months;
-  }, [transactions, wallets, selectedYear, viewTab]);
+  }, [transactions, wallets, selectedYear, viewTab, today, reservaGoalId, ajustesInvestido]);
 
   // Totais anuais
   const annualSummary = useMemo(() => {
@@ -435,40 +433,48 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                       💰 Investido {formatBRL(totalInvestido)}{reservaLiquida > 0 ? ` (reserva ${formatBRL(reservaLiquida)})` : ''} · Total {formatBRL(saldoHoje + totalInvestido)}
                     </p>
                   )}
-                  {resumoResgate.acumulado > 0 && (
-                    <p style={{ margin: '2px 0 0', fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>
-                      ⚠️ Necessário resgate de {formatBRL(resumoResgate.acumulado)} do investido a partir de {resumoResgate.primeiroDia ? resumoResgate.primeiroDia.split('-').reverse().slice(0, 2).join('/') : '—'}
+                </div>
+              ) : null}
+              {(resumo.resgateAcum > 0 || resumo.faltaMax > 0) && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  {resumo.resgateAcum > 0 && (
+                    <p style={{ margin: 0, fontSize: 11, color: '#f59e0b', fontWeight: 600 }}>
+                      ⚠️ Necessário resgate de {formatBRL(resumo.resgateAcum)} do investido{' '}
+                      {resumo.primeiroDia
+                        ? `a partir de ${resumo.primeiroDia.split('-').reverse().slice(0, 2).join('/')}`
+                        : '(já necessário antes deste período)'}
+                      . Os saldos abaixo já consideram esse resgate.
                     </p>
                   )}
-                  {resumoResgate.faltaMax > 0 && (
+                  {resumo.faltaMax > 0 && (
                     <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--saida)', fontWeight: 600 }}>
-                      ⛔ Mesmo resgatando tudo faltam até {formatBRL(resumoResgate.faltaMax)}
+                      ⛔ Mesmo resgatando tudo faltam até {formatBRL(resumo.faltaMax)}
                     </p>
                   )}
                 </div>
-              ) : null}
+              )}
               <div>
                 <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>{viewTab === 'mensal' ? 'Início do mês' : 'Início do período'}</p>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(saldoInicial) }}>
-                  {formatBRL(saldoInicial)}
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(resumo.inicio) }}>
+                  {formatBRL(resumo.inicio)}
                 </p>
               </div>
               <div>
                 <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>{viewTab === 'mensal' ? 'Fim do mês' : 'Fim do período'}</p>
-                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(saldoFim) }}>
-                  {formatBRL(saldoFim)}
+                <p style={{ margin: 0, fontSize: 17, fontWeight: 700, color: saldoColor(resumo.fim) }}>
+                  {formatBRL(resumo.fim)}
                 </p>
               </div>
               <div>
-                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Mínimo projetado</p>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: minSaldo >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
-                  {formatBRL(minSaldo)}
+                <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Mínimo projetado{resumo.resgateAcum > 0 ? ' (com resgate)' : ''}</p>
+                <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: resumo.minimo >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
+                  {formatBRL(resumo.minimo)}
                 </p>
               </div>
               <div>
                 <p style={{ margin: '0 0 2px', fontSize: 11, color: 'var(--text-secondary)' }}>Máximo projetado</p>
                 <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--entrada)' }}>
-                  {formatBRL(maxSaldo)}
+                  {formatBRL(resumo.maximo)}
                 </p>
               </div>
             </div>
@@ -491,7 +497,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
             </button>
 
             {isChartMode ? (
-              <ProjectionCharts days={days} saldoInicial={saldoInicial} />
+              <ProjectionCharts days={days} saldoInicial={resumo.inicio} simulacao={simulacao} />
             ) : (
               <>
                 {/* Legenda */}
@@ -951,6 +957,11 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                         <span style={{ fontSize: 12, fontWeight: 700, color: saldoColor(m.saldoFim) }}>
                           {formatBRL(m.saldoFim)}
                         </span>
+                        {m.resgateNoMes > 0 && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', display: 'block', marginTop: 2 }}>
+                            ⚠️ resgatar {formatBRL(m.resgateNoMes)}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1128,19 +1139,19 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
           <div className="print-summary-grid">
             <div className="print-summary-card">
               <span className="print-summary-label">Saldo Inicial</span>
-              <strong className="print-summary-val" style={{ color: saldoInicial >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(saldoInicial)}</strong>
+              <strong className="print-summary-val" style={{ color: resumo.inicio >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.inicio)}</strong>
             </div>
             <div className="print-summary-card">
               <span className="print-summary-label">Saldo Final</span>
-              <strong className="print-summary-val" style={{ color: saldoFim >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(saldoFim)}</strong>
+              <strong className="print-summary-val" style={{ color: resumo.fim >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.fim)}</strong>
             </div>
             <div className="print-summary-card">
-              <span className="print-summary-label">Mínimo Projetado</span>
-              <strong className="print-summary-val" style={{ color: minSaldo >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(minSaldo)}</strong>
+              <span className="print-summary-label">Mínimo Projetado{resumo.resgateAcum > 0 ? ' (com resgate)' : ''}</span>
+              <strong className="print-summary-val" style={{ color: resumo.minimo >= 0 ? '#2f855a' : '#c53030' }}>{formatBRL(resumo.minimo)}</strong>
             </div>
             <div className="print-summary-card">
               <span className="print-summary-label">Máximo Projetado</span>
-              <strong className="print-summary-val" style={{ color: '#2f855a' }}>{formatBRL(maxSaldo)}</strong>
+              <strong className="print-summary-val" style={{ color: '#2f855a' }}>{formatBRL(resumo.maximo)}</strong>
             </div>
           </div>
         )}
@@ -1165,7 +1176,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                     <td className="print-pos">{formatBRL(m.entradas)}</td>
                     <td className="print-neg">{formatBRL(m.saidas)}</td>
                     <td className={m.resultado >= 0 ? "print-pos" : "print-neg"}>{formatBRL(m.resultado)}</td>
-                    <td><strong>{formatBRL(m.saldoFim)}</strong></td>
+                    <td><strong>{formatBRL(m.saldoFim)}</strong>{m.resgateNoMes > 0 ? <span style={{ display: 'block', fontSize: 9 }}>com resgate de {formatBRL(m.resgateNoMes)}</span> : null}</td>
                   </tr>
                 ))}
               </tbody>

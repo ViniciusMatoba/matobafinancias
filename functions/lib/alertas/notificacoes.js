@@ -3,6 +3,7 @@
 const { calcFaturaCardApp, calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange } = require('../motor/caixa');
 const { ehResgateBot, sinalNaCaixinhaBot, totalInvestidoAteBot } = require('../motor/investido');
 const { alertasAssinaturasBot } = require('./assinaturas');
+const { fraseCobertura } = require('../util/cobertura');
 const { reservaDaCaixinhaBot } = require('../motor/caixinha');
 const { linhaProjecaoReserva, projecaoReservaBot, ritmoDaReservaBot } = require('../motor/reservaRitmo');
 const { CATEGORY_ORDER, collectMonthExpenses, computeSpentByCategory, expandDespesasBot, getTopExpensesForCategory } = require('../motor/competencia');
@@ -183,12 +184,15 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     msgN7 += `💰 Saldo do caixa na semana: *${formatBRL(entradas - saidas)}*\n\n`;
     msgN7 += `📅 *Projeção até fim de ${nomeMesN7.charAt(0).toUpperCase() + nomeMesN7.slice(1)}*\n`;
     msgN7 += `Saldo atual: ${formatBRL(saldoAtualN7)}\n`;
-    msgN7 += `Saldo projetado (${endOfMonthStr.slice(8)}/${endOfMonthStr.slice(5,7)}): *${formatBRL(saldoFimMes)}*\n`;
+    const fimMesTxt = `${endOfMonthStr.slice(8)}/${endOfMonthStr.slice(5,7)}`;
+    if (saldoFimMes >= 0) msgN7 += `Saldo projetado (${fimMesTxt}): *${formatBRL(saldoFimMes)}*\n`;
+    else msgN7 += `Até ${fimMesTxt} a conta vai precisar de *${formatBRL(-saldoFimMes)}*\n`;
     if (diasRestantes > 0 && saldoFimMes > 0) {
       const gastoPorDia = saldoFimMes / diasRestantes;
       msgN7 += `💡 Pode gastar até *${formatBRL(gastoPorDia)}/dia* com os ${diasRestantes} dias restantes.`;
     } else if (saldoFimMes < 0) {
-      msgN7 += `⚠️ _Projeção indica saldo negativo no fim do mês. Revise os gastos._`;
+      // o buraco da conta é um resgate necessário, não um saldo negativo: diz se o investido cobre
+      msgN7 += fraseCobertura({ precisa: -saldoFimMes, guardado: totalInvestidoAteBot(transactions, todayStr) });
     }
     msgs.push(msgN7.trim());
   }

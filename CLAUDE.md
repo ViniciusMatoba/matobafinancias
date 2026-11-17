@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.194
+- **Versão atual**: v1.6.195
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.194 — 03/11/2026
+**Versão**: v1.6.195 — 17/11/2026
 
 **Últimas features**:
+- v1.6.195 — PROJEÇÃO SEM "NEGATIVO FALSO" NO RESUMO: o card (Início/Fim/Mínimo/Máximo), a impressão, o gráfico e o anual usam a CONTA COM RESGATE SIMULADO (`resumirPeriodo` em `coberturaProjecao.js`; `baseDaSimulacao` é a base única da simulação — mês/período e ano). Mínimo só fica negativo quando há falta real (nem o investido cobre); mostra "(com resgate)". O aviso "Necessário resgate…" saiu do bloco do mês atual e aparece em qualquer período ("já necessário antes deste período" quando o resgate vem de meses anteriores). Gráfico recebe `simulacao` (linha da conta com resgate + linha tracejada do Total). Anual: `saldoFim` = conta simulada, `resgateNoMes` no card e na impressão (resultado = entradas − saídas continua de caixa, por isso não fecha com fim − início quando há resgate simulado). Bot: `functions/lib/util/cobertura.js` (`fraseCobertura`) usada no N7 (fim do mês) e no `/projecao` — "a conta vai precisar de R$ X", sem sinal de menos; guardado = total investido (`totalInvestidoAteBot`). Ainda NÃO feito: `/previsao` (30 dias) e N15 (saldo baixo) seguem com o saldo bruto
 - v1.6.194 — CAIXINHAS NO INVESTIR + ATUALIZAR VALOR (RENDIMENTO): novo card `investments/InvestidoCard.jsx` ("Minhas caixinhas e investimentos"; `valoresDoInvestido`) e a alocação por classe agora usa `investidoPorOrigem` (Reserva e Caixinha à parte; `origemDe`: metaId sem classe = `caixinha`). AJUSTE DE VALOR = lançamento `tipo:"investimento"` + `ajuste:true`, `valor` COM SINAL, `metaId` (caixinha) ou `classeInvestimento` (classe) — criado por `docAjusteValor` (você informa o valor real, grava a diferença). NÃO é movimento: `expandOccurrences`/`expandRange`/`expandDespesas`/`expandDespesasBot` o ignoram (conta, gastos e listas não o veem); só somam `totalInvestidoAte`/`investidoPorOrigem` (+ bot `totalInvestidoAteBot`), `saldoCaixinha` (reduce direto, já soma) e `simularDias({ajustes})`. `agruparAportes` o ignora. Desfazer = remover o doc (histórico no card). Se criar um novo percurso que itere `transactions` sem expandir e olhe `tipo==="investimento"`, lembrar de pular `ajuste`
 - v1.6.193 — Fix do campo de valor do Resgate: usar o padrão do formulário principal (`onChange` = `formatBRLInput`, `onBlur` = `normalizeBRLInput`); `normalizeBRLInput` a cada tecla forçava ",00" e quebrava a digitação
 - v1.6.192 — TIPO RESGATE NOS LANÇAMENTOS: botão "Resgate" no seletor de tipo (`TYPE_CONFIG.resgate`, só exibição — o gravado é entrada + `resgate:true`). Form próprio `transactions/ResgateFields.jsx` (early return no `TransactionForm` quando `form.tipo==="resgate"`; ao editar, `ehResgate(initial)` volta ao tipo Resgate). Helpers em `classesInvestimento.js`: `opcoesDeOrigem` (disponível por origem na data, ignora o próprio resgate ao editar), `origemInicial`, `docDeResgate` (reserva → `metaId`; classe → `classeInvestimento`; grava os dois campos, um null). `tipoDoTx` (investido.js) é o tipo de EXIBIÇÃO: usado em Lançamentos (ícone, selo, filtro próprio "Resgate"), Home e Projeção. Excesso sobre o disponível só avisa. Fora: comando /resgatar do Telegram; resgate dividido em várias origens num lançamento só; recorrência
