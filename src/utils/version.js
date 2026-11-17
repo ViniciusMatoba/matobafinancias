@@ -1,7 +1,15 @@
-export const APP_VERSION = '1.6.198';
+export const APP_VERSION = '1.6.199';
 export const APP_VERSION_DATE = '17/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.199',
+    date: '17/11/2026',
+    changes: [
+      'Telegram, /saldo: quando a conta está abaixo de zero não mostra mais saldo negativo; diz "a conta precisa de R$ X" e se o que você tem investido cobre (ou quanto falta). Com dinheiro investido, o /saldo ganhou a linha "Investido · Total (conta + investido)". Carteiras abaixo de zero também passam a dizer "precisa de R$ X".',
+      'Telegram, /hoje: aporte e resgate deixam de entrar como "Saídas"/"Entradas" do dia, porque só movem dinheiro entre conta e investimento. Aparecem em linhas próprias ("Investido" e "Resgatado"). O resumo mostra o "Resultado do dia (conta + investido)" — só entrada e saída de verdade mudam o seu dinheiro — e, quando houve aporte ou resgate, o "Movimento na conta". Dia com um aporte grande não parece mais um dia negativo.',
+    ],
+  },
   {
     version: '1.6.198',
     date: '17/11/2026',

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import {
-  bot, fake, fixarRelogio, instalarTelegramFalso, enviarAoBot, mensagemTelegram, ultimaMensagem, criarUsuario, lancamento,
+  bot, fake, UID, fixarRelogio, instalarTelegramFalso, enviarAoBot, mensagemTelegram, ultimaMensagem, criarUsuario, lancamento,
 } from './helpers'
 
 /**
@@ -149,5 +149,117 @@ describe('N15 — saldo abaixo do mínimo', () => {
 
   it('saldo acima do mínimo não avisa', () => {
     expect(roda15([{ id: 'e', ...tx('entrada', 1000, '2026-10-01') }])).toHaveLength(0)
+  })
+})
+
+describe('/saldo — conta abaixo de zero é resgate necessário', () => {
+  const semear = (investido) => {
+    criarUsuario()
+    lancamento('e', tx('entrada', 100 + investido, '2026-10-01'))
+    if (investido) lancamento('a', tx('investimento', investido, '2026-10-02', { metaId: 'g1' }))
+    lancamento('s', tx('saida', 600, '2026-10-05', { categoria: 'custos_fixos' })) // conta: 100 − 600 = −500
+  }
+
+  it('com investido: sem valor negativo, diz o que a conta precisa e que o investido cobre', async () => {
+    semear(3000)
+    await enviarAoBot(mensagemTelegram('/saldo'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Saldo Global:* a conta precisa de *R$ 500,00* ⚠️')
+    expect(t).toContain('O que você tem investido (R$ 3.000,00) cobre esse valor')
+    expect(t).toContain('Investido: *R$ 3.000,00* · Total (conta + investido): *R$ 2.500,00*')
+    expect(t).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('sem investido: diz que não há valor investido e não mostra o total', async () => {
+    semear(0)
+    await enviarAoBot(mensagemTelegram('/saldo'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('a conta precisa de *R$ 500,00*')
+    expect(t).toContain('Não há valor investido para cobrir')
+    expect(t).not.toContain('Total (conta + investido)')
+    expect(t).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('carteira abaixo de zero também não mostra sinal de menos', async () => {
+    semear(0)
+    fake.seed('wallets/w9', { userId: UID, nome: 'Nubank', saldoInicial: 0 })
+    await enviarAoBot(mensagemTelegram('/saldo'))
+    expect(nbsp(ultimaMensagem())).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('saldo positivo com investido: mantém o saldo e acrescenta investido e total', async () => {
+    criarUsuario()
+    lancamento('e', tx('entrada', 4000, '2026-10-01'))
+    lancamento('a', tx('investimento', 3000, '2026-10-02'))
+    await enviarAoBot(mensagemTelegram('/saldo'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Saldo Global:* R$ 1.000,00 ✅')
+    expect(t).toContain('Investido: *R$ 3.000,00* · Total (conta + investido): *R$ 4.000,00*')
+  })
+
+  it('saldo positivo sem investido: igual ao de antes', async () => {
+    criarUsuario()
+    lancamento('e', tx('entrada', 1200, '2026-10-01'))
+    await enviarAoBot(mensagemTelegram('/saldo'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Saldo Global:* R$ 1.200,00 ✅')
+    expect(t).not.toContain('Investido')
+  })
+})
+
+describe('/hoje — aporte e resgate não viram "saldo negativo do dia"', () => {
+  const hoje = '2026-10-14'
+  const resumo = (t) => t.split('─────────────────')[1] || ''
+  // a lista de lançamentos do dia usa "-R$" nas saídas (notação de movimento); o RESUMO (depois da linha) não pode ter sinal
+  const dia = (tipo, valor, extra = {}) => tx(tipo, valor, hoje, { categoria: tipo === 'saida' ? 'custos_fixos' : undefined, ...extra })
+
+  it('dia só com aporte: separa o investido e mostra o total do dia sem queda', async () => {
+    criarUsuario()
+    lancamento('ap', dia('investimento', 1500))
+    await enviarAoBot(mensagemTelegram('/hoje'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Investido: *R$ 1.500,00* (sai da conta, continua seu)')
+    expect(t).toContain('Resultado do dia (conta + investido): *R$ 0,00*')
+    expect(t).toContain('Movimento na conta: saem *R$ 1.500,00*')
+    expect(t).not.toContain('Saídas:')
+    expect(resumo(t)).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('gasto de verdade no dia: o total diminui, dito sem sinal de menos', async () => {
+    criarUsuario()
+    lancamento('c', dia('saida', 300))
+    await enviarAoBot(mensagemTelegram('/hoje'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('No dia, o total (conta + investido) diminui *R$ 300,00*')
+    expect(t).not.toContain('Movimento na conta') // sem aporte nem resgate, é a mesma coisa
+    expect(resumo(t)).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('resgate no dia: volta para a conta e não é receita', async () => {
+    criarUsuario()
+    lancamento('rg', tx('entrada', 700, hoje, { resgate: true, classeInvestimento: 'acoes' }))
+    await enviarAoBot(mensagemTelegram('/hoje'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Resgatado: *R$ 700,00*')
+    expect(t).not.toContain('Entradas:')
+    expect(t).toContain('Resultado do dia (conta + investido): *R$ 0,00*')
+    expect(t).toContain('Movimento na conta: entra *R$ 700,00*')
+  })
+
+  it('entrada e saída comuns: mesmo cálculo de antes, com o novo rótulo', async () => {
+    criarUsuario()
+    lancamento('e', dia('entrada', 1000))
+    lancamento('s', dia('saida', 400))
+    await enviarAoBot(mensagemTelegram('/hoje'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Entradas: *R$ 1.000,00*')
+    expect(t).toContain('Saídas:   *R$ 400,00*')
+    expect(t).toContain('Resultado do dia (conta + investido): *R$ 600,00*')
+  })
+
+  it('dia sem lançamentos continua igual', async () => {
+    criarUsuario()
+    await enviarAoBot(mensagemTelegram('/hoje'))
+    expect(nbsp(ultimaMensagem())).toContain('Nenhum lançamento para hoje')
   })
 })
