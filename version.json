@@ -1,8 +1,10 @@
 {
-  "version": "1.6.194",
-  "date": "03/11/2026",
+  "version": "1.6.195",
+  "date": "17/11/2026",
   "notes": [
-    "Tela Investir: novo card \"Minhas caixinhas e investimentos\" com cada caixinha (a reserva marcada com 🛡️, no mesmo saldo da tela Metas) e cada classe de investimento sem caixinha, mais o total investido. O dinheiro das caixinhas agora aparece como caixinha; antes ele caía em \"Outro\" na alocação por classe, que agora mostra a Reserva e as Caixinhas à parte.",
-    "Atualizar valor (rendimento): em cada linha do card, \"Atualizar valor\" pede quanto vale hoje e grava a diferença como rendimento (ou perda, se for menor). Isso atualiza o total investido, o saldo da caixinha na tela Metas, a Home, a Projeção e o Telegram, sem mexer na conta corrente, nos gastos nem nos aportes. As atualizações ficam num histórico com \"Desfazer\"."
+    "Projeção: o resumo do topo (Início, Fim, Mínimo e Máximo) agora usa a conta com o resgate simulado, igual às linhas dos dias. Quando o investido cobre, o Mínimo projetado mostra R$ 0,00 \"(com resgate)\" em vez de um valor negativo em vermelho; vermelho só quando falta dinheiro de verdade (nem o investido cobre).",
+    "O aviso \"Necessário resgate de R$ X…\" agora aparece em qualquer mês (antes só no mês atual, então em meses futuros só restava o número vermelho sem explicação). Se o resgate já era necessário antes do período, o aviso diz isso.",
+    "Gráfico: a linha de saldo mostra a conta com resgate e ganhou a linha tracejada do Total (conta + investido). Planejamento anual e impressão usam a mesma conta com resgate, com \"⚠️ resgatar R$ X\" no mês que precisar.",
+    "Telegram: o resumo semanal e o /projecao não mostram mais saldo com sinal de menos. Passam a dizer \"a conta vai precisar de R$ X\" e se o que você tem investido cobre, ou quanto falta mesmo resgatando tudo."
   ]
 }
