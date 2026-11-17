@@ -1,7 +1,16 @@
-export const APP_VERSION = '1.6.200';
+export const APP_VERSION = '1.6.201';
 export const APP_VERSION_DATE = '17/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.201',
+    date: '17/11/2026',
+    changes: [
+      'Telegram, /resumo e /mes: o aporte deixa de contar como gasto. Os "Gastos" do mês (por competência) não incluem mais aportes, que aparecem numa linha própria ("Investido"); o "Resultado (conta + investido)" é entradas menos gastos e, quando negativo, vira "No mês, o total diminui R$ X", sem sinal de menos. O "Saiu do caixa" continua incluindo os aportes e avisa isso.',
+      'Varredura do mesmo ajuste nas demais mensagens do bot: o alerta de saldo (N6) agora diz "a conta precisa de R$ X" em vez de mostrar valor negativo; o resumo semanal (N7) separa aporte e resgate de Entradas/Saídas e mostra o resultado da semana em palavras; /proximas, /saldofinal, a linha "hoje" do /projecao e do /previsao também dizem "precisa de R$ X" com a cobertura pelo investido, e as variações viram "R$ X a mais/a menos".',
+      'App, Painel: "Gastos" e "Resultado do Período" não contam mais os aportes como gasto (linha "Investido" à parte). Home: quando o Saldo Global está abaixo de zero, aparece a explicação "A conta precisa de R$ X (resgate do investido)" com o total conta + investido, ou quanto falta se nem o investido cobre.',
+    ],
+  },
   {
     version: '1.6.200',
     date: '17/11/2026',

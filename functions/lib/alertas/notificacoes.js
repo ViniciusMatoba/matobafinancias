@@ -144,12 +144,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     // Urgente: reavisa se a situação mudar, ou a cada 3 dias enquanto continuar
     if (saldoAtual < 0) {
       msgs.push({
-        text: `🚨 *Saldo atual negativo!*\nSeu saldo está em *${formatBRL(saldoAtual)}* agora. Revise seus lançamentos e evite novos gastos até regularizar.${linhaReserva(saldoAtual)}`,
+        // a conta abaixo de zero é um resgate necessário, não um "saldo negativo": o valor vai sem sinal de menos
+        text: `🚨 *Conta sem saldo!*\nA conta precisa de *${formatBRL(-saldoAtual)}* agora. Revise seus lançamentos e evite novos gastos até regularizar.${linhaReserva(saldoAtual)}`,
         estado: { chave: 'saldo-negativo', sig: `atual:${Math.round(saldoAtual / 100)}`, repetirDias: 3 },
       });
     } else if (saldoProjetado < 0) {
       msgs.push({
-        text: `📉 *Alerta: saldo pode ficar negativo!*\nSaldo atual ${formatBRL(saldoAtual)} · Projeção *${formatBRL(saldoProjetado)}* em 7 dias.${linhaReserva(saldoProjetado)}`,
+        text: `📉 *Alerta: a conta pode ficar sem saldo!*\nSaldo atual ${formatBRL(saldoAtual)} · em 7 dias a conta vai precisar de *${formatBRL(-saldoProjetado)}*.${linhaReserva(saldoProjetado)}`,
         estado: { chave: 'saldo-negativo', sig: `proj:${Math.round(saldoProjetado / 100)}`, repetirDias: 3 },
       });
     }
@@ -163,10 +164,13 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
     const fromStr7 = dateStrFromDate(d7ago);
     const comFaturaReal7 = cartaoComFaturaRealNoMes(transactions, fromStr7, todayStr);
     const occs7 = expandRange(transactions, fromStr7, todayStr, { historical: true });
-    let entradas = 0, saidas = 0;
+    let entradas = 0, saidas = 0, investido7 = 0, resgatado7 = 0;
     for (const o of occs7) {
       if (o.tx?.id?.includes('-proj-') && comFaturaReal7.has(o.tx?.cartaoId)) continue;
-      if (ehResgateBot(o.tx)) { /* resgate: não é receita nem gasto */ } else if (o.tipo === 'entrada') entradas += o.valor;
+      // aporte e resgate só movem dinheiro entre conta e investimento: linhas próprias, fora de Entradas/Saídas
+      if (ehResgateBot(o.tx)) resgatado7 += o.valor;
+      else if (o.tipo === 'investimento') investido7 += o.valor;
+      else if (o.tipo === 'entrada') entradas += o.valor;
       else saidas += o.valor;
     }
 
@@ -179,9 +183,7 @@ function checkNotifications(cards, transactions, config, prefs, goals = [], wall
 
     const nomeMesN7 = hoje.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
     let msgN7 = `📊 *Resumo Semanal*\n\n`;
-    msgN7 += `✅ Entradas: ${formatBRL(entradas)}\n`;
-    msgN7 += `❌ Saiu do caixa: ${formatBRL(saidas)}\n`;
-    msgN7 += `💰 Saldo do caixa na semana: *${formatBRL(entradas - saidas)}*\n\n`;
+    msgN7 += `${textoResumoPeriodo({ entradas, saidas, investido: investido7, resgatado: resgatado7, periodo: 'semana', sempre: true })}\n\n`;
     msgN7 += `📅 *Projeção até fim de ${nomeMesN7.charAt(0).toUpperCase() + nomeMesN7.slice(1)}*\n`;
     msgN7 += `Saldo atual: ${formatBRL(saldoAtualN7)}\n`;
     const fimMesTxt = `${endOfMonthStr.slice(8)}/${endOfMonthStr.slice(5,7)}`;

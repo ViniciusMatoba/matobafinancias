@@ -59,13 +59,13 @@ describe('N4/N5 — orçamento por categoria', () => {
 describe('N6 — saldo negativo', () => {
   it('saldo atual negativo é urgente e repete a cada 3 dias', () => {
     const m = roda(['n6'], { txs: [entrada(100), saida(500, 'custos_fixos', { dataInicio: HOJE })] })
-    expect(m[0].text).toContain('Saldo atual negativo')
+    expect(m[0].text).toContain('Conta sem saldo')
     expect(m[0].estado.chave).toBe('saldo-negativo')
     expect(m[0].estado.repetirDias).toBe(3)
   })
   it('saldo hoje positivo mas negativo em 7 dias avisa a projeção', () => {
     const m = roda(['n6'], { txs: [entrada(100), saida(500, 'custos_fixos', { dataInicio: '2026-10-18' })] })
-    expect(m[0].text).toContain('saldo pode ficar negativo')
+    expect(m[0].text).toContain('a conta pode ficar sem saldo')
     expect(m[0].estado.sig.startsWith('proj:')).toBe(true)
   })
   it('saldo positivo não avisa', () => {

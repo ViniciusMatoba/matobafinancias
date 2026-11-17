@@ -17,7 +17,7 @@ describe('N6 com reserva', () => {
   it('reserva cobre o negativo: o aviso diz isso', () => {
     const salario = { id: 'e1', tipo: 'entrada', frequencia: 'unico', dataInicio: '2026-09-01', valor: 5500, descricao: 'Salário' }
     const [t] = roda([salario, saida, aporteReserva], { investimentos: { reservaGoalId: 'g1' } }) // saldo −500
-    expect(t).toContain('Saldo atual negativo')
+    expect(t).toContain('Conta sem saldo')
     expect(t).toContain('A reserva (R$ 5.000,00) cobre esse valor')
   })
 
@@ -31,13 +31,29 @@ describe('N6 com reserva', () => {
     const salario = { id: 'e1', tipo: 'entrada', frequencia: 'unico', dataInicio: '2026-09-01', valor: 3300, descricao: 'Salário' }
     const aporte = { id: 'a2', tipo: 'investimento', frequencia: 'unico', dataInicio: '2026-09-02', valor: 3000, descricao: 'Aporte' }
     const [t] = roda([salario, aporte, { ...saida, valor: 600 }], {}) // saldo −300
-    expect(t).toContain('Saldo atual negativo')
+    expect(t).toContain('Conta sem saldo')
     expect(t).toContain('investido (R$ 3.000,00) cobre esse valor')
   })
 
   it('sem reserva configurada o texto não muda', () => {
     const [t] = roda([saida], {})
-    expect(t).toContain('Saldo atual negativo')
+    expect(t).toContain('Conta sem saldo')
     expect(t).not.toContain('reserva')
+  })
+})
+
+describe('N6 — sem valor com sinal de menos', () => {
+  it('conta abaixo de zero: o valor vem sem sinal ("a conta precisa de R$ X")', () => {
+    const [t] = roda([saida, aporteReserva], { investimentos: { reservaGoalId: 'g1' } }) // saldo −6.000
+    expect(t).toContain('A conta precisa de *R$ 6.000,00* agora')
+    expect(t).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+  it('projeção em 7 dias: "a conta vai precisar de R$ X", sem sinal', () => {
+    const futuro = { ...saida, dataInicio: '2026-10-18', valor: 900 }
+    const entrada = { id: 'e1', tipo: 'entrada', frequencia: 'unico', dataInicio: '2026-10-01', valor: 500, descricao: 'Salário' }
+    const [t] = roda([entrada, futuro], {})
+    expect(t).toContain('a conta pode ficar sem saldo')
+    expect(t).toContain('em 7 dias a conta vai precisar de *R$ 400,00*')
+    expect(t).not.toMatch(/-R\$|−R\$|R\$ -/)
   })
 })

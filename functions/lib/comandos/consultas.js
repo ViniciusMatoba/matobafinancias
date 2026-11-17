@@ -6,9 +6,18 @@ const { APP_URL, sendMessage } = require('../infra/telegram');
 const { calcSaldoSimples, cartaoComFaturaRealNoMes, expandRange, getProximoVencimentoBot } = require('../motor/caixa');
 const { CATEGORY_ORDER, collectMonthExpenses, computeSpentByCategory, getTopExpensesForCategory } = require('../motor/competencia');
 const { ehResgateBot, totalInvestidoAteBot } = require('../motor/investido');
-const { linhasSaldoConta, textoResumoPeriodo } = require('../util/cobertura');
+const { linhasSaldoConta, textoResumoMes, textoResumoPeriodo } = require('../util/cobertura');
 const { dateStrFromDate, getNowBrasilia, todayStrBrasilia } = require('../util/datas');
 const { MESES_CURTO, MESES_LONGO, barra, formatBRL, parseBRL } = require('../util/formato');
+
+/** Gastos do mês por competência SEM os aportes, e o total aportado no mês (aporte só move dinheiro, não é gasto). */
+function gastosEInvestidoDoMes(transactions, mes) {
+  const lista = collectMonthExpenses(transactions, mes);
+  return {
+    gastos: lista.filter(e => e.tipo !== 'investimento').reduce((s, e) => s + e.valor, 0),
+    investido: lista.filter(e => e.tipo === 'investimento').reduce((s, e) => s + e.valor, 0),
+  };
+}
 
 async function handleSaldo(chatId, uid) {
   const today = todayStrBrasilia();
@@ -53,16 +62,13 @@ async function handleResumo(chatId, uid) {
     else                      saidas   += o.valor;
   }
 
-  // Gastos = quando aconteceram (compra/parcela); Saiu do caixa = quando a fatura/conta foi debitada
-  const gastos = collectMonthExpenses(transactions, month).reduce((s, e) => s + e.valor, 0);
+  // Gastos = quando aconteceram (compra/parcela), SEM aportes; Saiu do caixa = quando a fatura/conta foi debitada
+  const { gastos, investido } = gastosEInvestidoDoMes(transactions, month);
 
   const nomeMes = now.toLocaleString('pt-BR', { month: 'long', timeZone: 'America/Sao_Paulo' });
   return sendMessage(chatId,
     `📊 *Resumo de ${nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1)}*\n\n` +
-    `✅ Entradas: *${formatBRL(entradas)}*\n` +
-    `❌ Gastos:   *${formatBRL(gastos)}*\n` +
-    `💰 Resultado: *${formatBRL(entradas - gastos)}*\n\n` +
-    `🏦 Saiu do caixa: ${formatBRL(saidas)}\n` +
+    `${textoResumoMes({ entradas, gastos, investido, saiuCaixa: saidas })}\n` +
     `_Gastos = quando a compra aconteceu (parcelas mês a mês). Saiu do caixa = quando a conta/fatura foi paga._`
   );
 }
@@ -238,17 +244,13 @@ async function handleMes(chatId, uid, args) {
     else                      saidas   += o.valor;
   }
 
-  // Gastos = quando aconteceram (compra/parcela); Saiu do caixa = quando a fatura/conta foi debitada
-  const gastos = collectMonthExpenses(transactions, mesStr).reduce((s, e) => s + e.valor, 0);
+  // Gastos = quando aconteceram (compra/parcela), SEM aportes; Saiu do caixa = quando a fatura/conta foi debitada
+  const { gastos, investido } = gastosEInvestidoDoMes(transactions, mesStr);
 
   const nomeMes = MESES_LONGO[month];
-  const saldo   = entradas - gastos;
 
   let text = `📊 *${nomeMes} ${year}*\n\n`;
-  text += `✅ Entradas: *${formatBRL(entradas)}*\n`;
-  text += `❌ Gastos:   *${formatBRL(gastos)}*\n`;
-  text += `💰 Resultado: *${formatBRL(saldo)}*\n\n`;
-  text += `🏦 Saiu do caixa: ${formatBRL(saidas)}\n`;
+  text += `${textoResumoMes({ entradas, gastos, investido, saiuCaixa: saidas })}\n`;
   text += `_Use /categoria para ver a divisão por categoria._`;
 
   return sendMessage(chatId, text.trim());

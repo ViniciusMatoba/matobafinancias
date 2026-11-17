@@ -164,9 +164,9 @@ describe('memória de avisos (não repetir) pelo agendador', () => {
     await executar('2026-10-14')
     await executar('2026-10-15')
     await executar('2026-10-16')
-    expect(mensagensEnviadas().filter(t => t.includes('Saldo atual negativo'))).toHaveLength(1)
+    expect(mensagensEnviadas().filter(t => t.includes('Conta sem saldo'))).toHaveLength(1)
     await executar('2026-10-17')
-    expect(mensagensEnviadas().filter(t => t.includes('Saldo atual negativo'))).toHaveLength(2)
+    expect(mensagensEnviadas().filter(t => t.includes('Conta sem saldo'))).toHaveLength(2)
   })
 
   it('o estado fica em alertasEstado/{uid} por canal', async () => {
@@ -185,7 +185,7 @@ describe('memória de avisos (não repetir) pelo agendador', () => {
     await executar('2026-10-15')
     fake.seed(`transactions/${UID}/entries/t99`, { tipo: 'saida', frequencia: 'unico', dataInicio: '2026-10-16', descricao: 'Outra', valor: 9000, categoria: 'conforto' })
     await executar('2026-10-17')
-    expect(mensagensEnviadas().filter(t => t.includes('Saldo atual negativo'))).toHaveLength(2)
+    expect(mensagensEnviadas().filter(t => t.includes('Conta sem saldo'))).toHaveLength(2)
   })
 })
 
@@ -218,7 +218,7 @@ describe('falhas de envio', () => {
     await executar('2026-10-14')
     instalarTelegramFalso()
     await executar('2026-10-15')
-    expect(mensagensEnviadas().filter(t => t.includes('Saldo atual negativo'))).toHaveLength(1)
+    expect(mensagensEnviadas().filter(t => t.includes('Conta sem saldo'))).toHaveLength(1)
   })
 
   it('bot bloqueado pelo usuário desativa o Telegram dele', async () => {
@@ -316,8 +316,8 @@ describe('onboarding do Telegram e o agendador', () => {
     chamadasTelegram.length = 0
 
     await executar('2026-10-14') // 07h
-    expect(pushesEnviados.some(p => JSON.stringify(p).includes('negativo'))).toBe(true)
-    expect(mensagensEnviadas().filter(t => t.includes('Saldo atual negativo'))).toHaveLength(0)
+    expect(pushesEnviados.some(p => JSON.stringify(p).includes('Conta sem saldo'))).toBe(true)
+    expect(mensagensEnviadas().filter(t => t.includes('Conta sem saldo'))).toHaveLength(0)
   })
 })
 

@@ -6,7 +6,7 @@ const { db } = require('../infra/firebase');
 const { sendMessage } = require('../infra/telegram');
 const { calcSaldoSimples, expandRange } = require('../motor/caixa');
 const { ehResgateBot, totalInvestidoAteBot } = require('../motor/investido');
-const { fraseCobertura } = require('../util/cobertura');
+const { fraseCobertura, valorConta, variacaoEmPalavras } = require('../util/cobertura');
 const { CATEGORY_ORDER, computeSpentByCategory, getTopExpensesForCategory } = require('../motor/competencia');
 const { addDaysFn, dateStrFromDate, getNowBrasilia, todayStrBrasilia } = require('../util/datas');
 const { MESES_CURTO, MESES_LONGO, barra, formatBRL } = require('../util/formato');
@@ -30,7 +30,7 @@ async function handleProjecao(chatId, uid) {
   const escala   = Math.max(maxSaldo - minSaldo, 1);
 
   let text = `📈 *Projeção — próximos 7 dias*\n\n`;
-  text += `💰 Hoje: *${formatBRL(saldoHoje)}*\n\n`;
+  text += `💰 Hoje: *${valorConta(saldoHoje)}*\n\n`;
 
   const DIAS_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   // Dinheiro investido: um dia em que a conta fica abaixo de zero é um RESGATE necessário, não um saldo negativo
@@ -156,7 +156,13 @@ async function handleProximas(chatId, uid) {
 
   text += `─────────────────\n`;
   text += `💸 Total previsto: *${formatBRL(totalSaidas)}*\n`;
-  text += `💰 Saldo esperado: *${formatBRL(saldo - totalSaidas)}*`;
+  const esperado = saldo - totalSaidas;
+  if (esperado >= 0) {
+    text += `💰 Saldo esperado: *${formatBRL(esperado)}*`;
+  } else {
+    // o buraco da conta é um resgate necessário, não um saldo negativo: diz se o investido cobre
+    text += `💰 Ao fim dos 7 dias a conta vai precisar de *${formatBRL(-esperado)}*\n${fraseCobertura({ precisa: -esperado, guardado: totalInvestidoAteBot(transactions, hoje) })}`;
+  }
 
   return sendMessage(chatId, text.trim());
 }
@@ -198,7 +204,7 @@ async function handlePrevisao(chatId, uid) {
 
   return sendMessage(chatId,
     `📊 *Projeção — próximos 30 dias*\n\n` +
-    `💰 Saldo hoje: *${formatBRL(saldoHoje)}*\n` +
+    `💰 Saldo hoje: *${valorConta(saldoHoje)}*\n` +
     `📈 Entradas previstas: *${formatBRL(entradas)}*\n` +
     `📉 Saídas previstas: *${formatBRL(saidas)}*\n` +
     `─────────────────\n` +
@@ -313,6 +319,8 @@ async function handleSaldoFinal(chatId, uid, args) {
   // ── Calcula saldo para cada fim de mês ────────────────────────────────────
   // saldo "anterior" = saldo atual para calcular o delta do primeiro mês
   let saldoAnterior = calcSaldoSimples(transactions, hoje, walletInitials);
+  // dinheiro investido hoje: referência para dizer se cobre os meses em que a conta fica abaixo de zero
+  const guardado = Math.max(totalInvestidoAteBot(transactions, hoje), 0);
 
   const linhas = meses.map(({ ano, mes }) => {
     const ultimoDia = new Date(ano, mes, 0).getDate();
@@ -333,9 +341,10 @@ async function handleSaldoFinal(chatId, uid, args) {
 
   for (const { ano, mes, saldo, delta, isPast } of linhas) {
     const nomeMes  = MESES_LONGO[mes];
-    const saldoFmt = formatBRL(saldo);
-    const deltaFmt = `${delta >= 0 ? '+' : ''}${formatBRL(delta)}`;
-    const icon     = saldo < 0 ? '🔴' : delta >= 0 ? '✅' : '⚠️';
+    // conta abaixo de zero = resgate necessário (sem sinal de menos); 🟡 quando o investido de hoje cobre, 🔴 quando não
+    const saldoFmt = valorConta(saldo);
+    const deltaFmt = variacaoEmPalavras(delta);
+    const icon     = saldo < 0 ? (guardado >= -saldo ? '🟡' : '🔴') : delta >= 0 ? '✅' : '⚠️';
     const arrow    = delta > 50 ? '▲' : delta < -50 ? '▼' : '➡️';
     const pastTag  = isPast ? ' _(histórico)_' : '';
 
@@ -344,6 +353,10 @@ async function handleSaldoFinal(chatId, uid, args) {
     text += `   ${arrow} ${deltaFmt} em relação ao mês anterior\n\n`;
   }
 
+  // algum mês com a conta abaixo de zero: diz se o investido cobre o pior caso
+  const pior = Math.min(...linhas.map(l => l.saldo));
+  if (pior < 0) text += `${fraseCobertura({ precisa: -pior, guardado })}\n\n`;
+
   // Resumo quando há mais de um mês
   if (linhas.length > 1) {
     const primeiro = linhas[0];
@@ -351,7 +364,7 @@ async function handleSaldoFinal(chatId, uid, args) {
     const evolucao = ultimo.saldo - calcSaldoSimples(transactions, hoje, walletInitials);
     const tendIcon = evolucao >= 0 ? '📈' : '📉';
     text += `─────────────────\n`;
-    text += `${tendIcon} Evolução no período: *${evolucao >= 0 ? '+' : ''}${formatBRL(evolucao)}*\n`;
+    text += `${tendIcon} Evolução no período: *${variacaoEmPalavras(evolucao)}*\n`;
     text += `_(de ${MESES_CURTO[primeiro.mes]} a ${MESES_CURTO[ultimo.mes]}/${ultimo.ano})_`;
   }
 

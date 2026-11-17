@@ -356,3 +356,124 @@ describe('N8 — resumo diário da manhã', () => {
     expect(t).not.toContain('Resultado do dia')
   })
 })
+
+describe('/resumo e /mes — aporte não é gasto', () => {
+  const NBSP = nbsp
+  const semear = () => {
+    criarUsuario()
+    lancamento('sal', tx('entrada', 1000, '2026-10-01'))
+    lancamento('ap', tx('investimento', 1500, '2026-10-05'))
+    lancamento('mer', tx('saida', 300, '2026-10-08', { categoria: 'custos_fixos' }))
+  }
+
+  for (const cmd of ['/resumo', '/mes']) {
+    it(`${cmd}: gastos sem o aporte, investido à parte e resultado em palavras (sem sinal de menos)`, async () => {
+      semear()
+      await enviarAoBot(mensagemTelegram(cmd))
+      const t = NBSP(ultimaMensagem())
+      expect(t).toContain('Entradas: *R$ 1.000,00*')
+      expect(t).toContain('Gastos:   *R$ 300,00*')
+      expect(t).toContain('Investido: *R$ 1.500,00* (sai da conta, continua seu)')
+      expect(t).toContain('Resultado (conta + investido): *R$ 700,00*')
+      expect(t).toContain('Saiu do caixa: R$ 1.800,00 (inclui os aportes)')
+      expect(t).not.toMatch(/-R\$|−R\$|R\$ -/)
+    })
+  }
+
+  it('gasto maior que a entrada: "o total diminui", sem sinal de menos', async () => {
+    criarUsuario()
+    lancamento('sal', tx('entrada', 200, '2026-10-01'))
+    lancamento('mer', tx('saida', 900, '2026-10-08', { categoria: 'custos_fixos' }))
+    await enviarAoBot(mensagemTelegram('/resumo'))
+    const t = NBSP(ultimaMensagem())
+    expect(t).toContain('No mês, o total (conta + investido) diminui *R$ 700,00*')
+    expect(t).not.toContain('Investido:')
+    expect(t).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('mês sem aporte: continua igual (Entradas, Gastos, Resultado, Saiu do caixa)', async () => {
+    criarUsuario()
+    lancamento('sal', tx('entrada', 1000, '2026-10-01'))
+    lancamento('mer', tx('saida', 300, '2026-10-08', { categoria: 'custos_fixos' }))
+    await enviarAoBot(mensagemTelegram('/mes'))
+    const t = NBSP(ultimaMensagem())
+    expect(t).toContain('Resultado (conta + investido): *R$ 700,00*')
+    expect(t).toContain('Saiu do caixa: R$ 300,00')
+    expect(t).not.toContain('inclui os aportes')
+  })
+})
+
+describe('N7 — bloco da semana (aporte e resgate fora de Entradas/Saídas)', () => {
+  const sem = (txs) => resumoSemanal(txs)
+  it('aporte vira "Investido"; o resultado da semana não cai por causa dele', () => {
+    const t = sem([
+      { id: 'e', ...tx('entrada', 1000, '2026-10-12') },
+      { id: 'a', ...tx('investimento', 1500, '2026-10-13') },
+      { id: 's', ...tx('saida', 200, '2026-10-14', { categoria: 'custos_fixos' }) },
+    ])
+    expect(t).toContain('Entradas: *R$ 1.000,00*')
+    expect(t).toContain('Saídas:   *R$ 200,00*')
+    expect(t).toContain('Investido: *R$ 1.500,00* (sai da conta, continua seu)')
+    expect(t).toContain('Resultado da semana (conta + investido): *R$ 800,00*')
+    expect(t).toContain('Movimento na conta: saem *R$ 700,00*')
+    expect(t.split('Projeção até fim')[0]).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+  it('semana só com gasto: "o total diminui", sem sinal de menos', () => {
+    const t = sem([{ id: 's', ...tx('saida', 300, '2026-10-14', { categoria: 'custos_fixos' }) }])
+    expect(t).toContain('Na semana, o total (conta + investido) diminui *R$ 300,00*')
+    expect(t.split('Projeção até fim')[0]).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+})
+
+describe('/proximas, /saldofinal e as linhas "hoje" — sem sinal de menos', () => {
+  const semear = (investido, saida = 800, data = '2026-10-16') => {
+    criarUsuario()
+    lancamento('e', tx('entrada', 500 + investido, '2026-10-01'))
+    if (investido) lancamento('a', tx('investimento', investido, '2026-10-02'))
+    lancamento('s', tx('saida', saida, data, { categoria: 'custos_fixos' })) // conta: 500 − saída
+  }
+
+  it('/proximas: saldo esperado negativo vira "a conta vai precisar de R$ X" e o investido cobre', async () => {
+    semear(3000)
+    await enviarAoBot(mensagemTelegram('/proximas'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Ao fim dos 7 dias a conta vai precisar de *R$ 300,00*')
+    expect(t).toContain('cobre esse valor')
+    expect(t.split('─────────────────')[1]).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('/proximas: saldo esperado positivo continua igual', async () => {
+    semear(0, 100)
+    await enviarAoBot(mensagemTelegram('/proximas'))
+    expect(nbsp(ultimaMensagem())).toContain('Saldo esperado: *R$ 400,00*')
+  })
+
+  it('/saldofinal: mês com a conta abaixo de zero mostra "precisa de", 🟡 se o investido cobre, e a variação em palavras', async () => {
+    semear(3000, 1438.37, '2026-10-25')
+    await enviarAoBot(mensagemTelegram('/saldofinal 10'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('Saldo: *precisa de R$ 938,37*')
+    expect(t).toContain('🟡')
+    expect(t).toContain('R$ 1.438,37 a menos em relação ao mês anterior')
+    expect(t).toContain('cobre esse valor')
+    expect(t).not.toMatch(/-R\$|−R\$|R\$ -/)
+  })
+
+  it('/saldofinal: sem investido o ícone é vermelho e diz que não há valor investido', async () => {
+    semear(0, 1438.37, '2026-10-25')
+    await enviarAoBot(mensagemTelegram('/saldofinal 10'))
+    const t = nbsp(ultimaMensagem())
+    expect(t).toContain('🔴')
+    expect(t).toContain('Não há valor investido para cobrir')
+  })
+
+  it('/projecao e /previsao: "hoje" com a conta abaixo de zero vira "precisa de R$ X"', async () => {
+    criarUsuario()
+    lancamento('e', tx('entrada', 100, '2026-10-01'))
+    lancamento('s', tx('saida', 600, '2026-10-05', { categoria: 'custos_fixos' })) // conta: −500
+    await enviarAoBot(mensagemTelegram('/projecao'))
+    expect(nbsp(ultimaMensagem())).toContain('Hoje: *precisa de R$ 500,00*')
+    await enviarAoBot(mensagemTelegram('/previsao'))
+    expect(nbsp(ultimaMensagem())).toContain('Saldo hoje: *precisa de R$ 500,00*')
+  })
+})

@@ -119,11 +119,14 @@ export default function ReportsScreen({ transactions, wallets = [], cards = [], 
       }
     });
 
-    const gastos = periodDespesas.reduce((s, e) => s + e.valor, 0);
+    // Aporte NÃO é gasto: só move dinheiro da conta para o investimento (continua seu). Fica numa linha própria.
+    const gastos = periodDespesas.filter(e => e.tipo !== 'investimento').reduce((s, e) => s + e.valor, 0);
+    const investido = periodDespesas.filter(e => e.tipo === 'investimento').reduce((s, e) => s + e.valor, 0);
 
     return {
       entradas,
       gastos,
+      investido,
       saiuCaixa,
       liquido: entradas - gastos,
     };
@@ -447,6 +450,11 @@ export default function ReportsScreen({ transactions, wallets = [], cards = [], 
                 <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>
                   Saiu do caixa: {formatBRL(statsGerais.saiuCaixa)}
                 </p>
+                {statsGerais.investido > 0 && (
+                  <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--investimento)' }}>
+                    💰 Investido: {formatBRL(statsGerais.investido)} (não é gasto)
+                  </p>
+                )}
               </div>
             </div>
 
@@ -461,7 +469,7 @@ export default function ReportsScreen({ transactions, wallets = [], cards = [], 
                 </div>
                 <div>
                   <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Resultado do Período</p>
-                  <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>Receitas − gastos do período</p>
+                  <p style={{ margin: 0, fontSize: 10, color: 'var(--text-muted)' }}>Receitas − gastos do período (aportes não contam como gasto)</p>
                 </div>
               </div>
               <span style={{ fontSize: 18, fontWeight: 700, color: statsGerais.liquido >= 0 ? 'var(--entrada)' : 'var(--saida)' }}>
@@ -968,7 +976,7 @@ export default function ReportsScreen({ transactions, wallets = [], cards = [], 
             <div className="print-summary-card">
               <span className="print-summary-label">Total Gastos</span>
               <strong className="print-summary-val" style={{ color: '#c53030' }}>{formatBRL(statsGerais.gastos)}</strong>
-              <span className="print-summary-label" style={{ fontSize: 10 }}>Saiu do caixa: {formatBRL(statsGerais.saiuCaixa)}</span>
+              <span className="print-summary-label" style={{ fontSize: 10 }}>Saiu do caixa: {formatBRL(statsGerais.saiuCaixa)}{statsGerais.investido > 0 ? ` · Investido: ${formatBRL(statsGerais.investido)}` : ''}</span>
             </div>
             <div className="print-summary-card">
               <span className="print-summary-label">Balanço Líquido</span>

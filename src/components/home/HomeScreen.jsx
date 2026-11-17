@@ -276,6 +276,14 @@ export default function HomeScreen({ transactions, cards, wallets, goals, config
               </button>
             )}
           </div>
+          {/* Conta abaixo de zero não é falta de dinheiro quando há investido: é um resgate necessário */}
+          {!saldoPositivo && valuesVisible && (
+            <p style={{ margin: '6px 0 0', fontSize: 12, color: totalInvestido > 0 && saldoAcumulado + totalInvestido >= 0 ? '#f59e0b' : 'var(--saida)', fontWeight: 600 }}>
+              {totalInvestido > 0 && saldoAcumulado + totalInvestido >= 0
+                ? `⚠️ A conta precisa de ${formatBRL(-saldoAcumulado)} (resgate do investido) · Total conta + investido: ${formatBRL(saldoAcumulado + totalInvestido)}`
+                : `⚠️ A conta precisa de ${formatBRL(-saldoAcumulado)}${totalInvestido > 0 ? ` e mesmo resgatando tudo faltam ${formatBRL(-(saldoAcumulado + totalInvestido))}` : ''}`}
+            </p>
+          )}
         </div>
 
         {/* Contas/Carteiras em Scroll Horizontal */}

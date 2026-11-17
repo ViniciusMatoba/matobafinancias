@@ -78,7 +78,7 @@ npm run release   # ✅ USAR ESTE — fluxo completo (Git Push + deploy no GitHu
 ## Sistema de Versão
 
 - **Arquivo**: `src/utils/version.js` — exporta `APP_VERSION`, `APP_VERSION_DATE`, `CHANGELOG[]`
-- **Versão atual**: v1.6.200
+- **Versão atual**: v1.6.201
 
 ### Regra de bump
 
@@ -118,9 +118,10 @@ Verificações ocorrem: na abertura, ao ganhar foco e a cada 60 segundos.
 
 ## Estado Atual (atualizar após cada sessão)
 
-**Versão**: v1.6.200 — 17/11/2026
+**Versão**: v1.6.201 — 17/11/2026
 
 **Últimas features**:
+- v1.6.201 — VARREDURA "SEM NEGATIVO FALSO" (bot + app): `/resumo` e `/mes` com `gastosEInvestidoDoMes` (Gastos SEM aportes; `textoResumoMes`); N6 ("Conta sem saldo", valor sem sinal; marcadores dos testes mudaram de "Saldo atual negativo"); N7 bloco da semana com `textoResumoPeriodo`; `/proximas`, `/saldofinal` (🟡 coberto / 🔴 não; `variacaoEmPalavras`), "Hoje" do `/projecao` e `/previsao` via `valorConta`. App: Painel (`statsGerais`: gastos sem `tipo investimento`, linha "Investido"), Home (linha explicativa quando o Saldo Global < 0: resgate necessário + total conta+investido). Competência continua contando aporte em "Liberdade" nas CATEGORIAS (orçamento) — só os totais "Gastos/Resultado" o excluem. Ainda REAL com sinal: listas de lançamentos (notação de movimento), carteiras da Home (saldo da carteira), Sobra segura (conta)
 - v1.6.200 — `/semana` e N8 (bot): auxiliares únicos em `functions/lib/util/cobertura.js` — `fraseCobertura`, `linhasSaldoConta` (topo do `/saldo` e do N8: conta < 0 → "a conta precisa de R$ X" + cobertura; com investido, "Investido · Total") e `textoResumoPeriodo` (dia/semana: Entradas, Saídas, Investido, Resgatado, "Resultado … (conta + investido)" = entradas − saídas, "Movimento na conta" só com aporte/resgate). `/hoje`, `/semana` e N8 usam o mesmo texto; aporte e resgate saem de Entradas/Saídas (e a barra do `/semana` só pesa gasto). Todos os avisos/comandos de saldo do bot seguem agora a regra "buraco da conta = resgate necessário"; o que ainda mostra saldo/valor REAL com sinal: listas de lançamentos (notação de movimento), `/resumo`, `/mes`
 - v1.6.199 — `/saldo` e `/hoje` (bot): `/saldo` com conta < 0 → "a conta precisa de R$ X" + `fraseCobertura`; com investido e total >= 0 mostra "Investido · Total (conta + investido)"; carteira < 0 → "precisa de R$ X". `/hoje`: aporte (`tipo investimento`) e resgate saem de Entradas/Saídas e viram linhas "Investido"/"Resgatado"; "Resultado do dia (conta + investido)" = entradas − saídas (aporte/resgate só movem dinheiro); "Movimento na conta" = entradas − saídas − aporte + resgate (só quando há aporte ou resgate). A LISTA de lançamentos do dia continua com "-R$" nas saídas (notação de movimento). Seguem com saldo REAL: `/semana`, N8
 - v1.6.198 — `/previsao` e N15 (bot) SEM NEGATIVO: `/previsao` com saldo em 30 dias < 0 mostra "Em 30 dias a conta vai precisar de R$ X" + `fraseCobertura` (guardado = `totalInvestidoAteBot`); N15 com conta < 0 mostra "A conta precisa de R$ (mínimo − saldo) para voltar ao mínimo" + cobertura, e com conta positiva abaixo do mínimo acrescenta "Você tem R$ X investidos" (estado `saldo-baixo` inalterado). Com isso N6, N7, N15, N22, `/projecao` e `/previsao` já seguem a regra "buraco da conta = resgate necessário". Pendente conhecido: `/saldo`, `/hoje`, `/semana` e N8 mostram o saldo REAL da conta (negativo real continua negativo)

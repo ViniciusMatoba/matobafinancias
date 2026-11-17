@@ -53,4 +53,29 @@ function textoResumoPeriodo({ entradas, saidas, investido = 0, resgatado = 0, pe
   return l.join('\n');
 }
 
-module.exports = { fraseCobertura, linhasSaldoConta, textoResumoPeriodo };
+/**
+ * Resumo do MÊS (`/resumo` e `/mes`): entradas, gastos (por competência, SEM aportes), investido, resultado e o que saiu do
+ * caixa. Aporte não é gasto — só move dinheiro da conta para o investimento —, então o resultado do mês é entradas − gastos
+ * e, quando negativo, é dito como "o total diminui R$ X" (sem sinal de menos).
+ */
+function textoResumoMes({ entradas, gastos, investido = 0, saiuCaixa }) {
+  const l = [`✅ Entradas: *${formatBRL(entradas)}*`, `❌ Gastos:   *${formatBRL(gastos)}*`];
+  if (investido > 0) l.push(`💰 Investido: *${formatBRL(investido)}* (sai da conta, continua seu)`);
+  const resultado = entradas - gastos;
+  l.push(resultado >= 0
+    ? `🏦 Resultado (conta + investido): *${formatBRL(resultado)}*`
+    : `🏦 No mês, o total (conta + investido) diminui *${formatBRL(-resultado)}*`);
+  return `${l.join('\n')}\n\n🏦 Saiu do caixa: ${formatBRL(saiuCaixa)}${investido > 0 ? ' (inclui os aportes)' : ''}`;
+}
+
+/** Valor de saldo da conta SEM sinal de menos: "R$ 500,00" ou, abaixo de zero, "precisa de R$ 500,00". */
+function valorConta(saldo) {
+  return saldo >= 0 ? formatBRL(saldo) : `precisa de ${formatBRL(-saldo)}`;
+}
+
+/** Variação entre dois saldos em palavras ("R$ 500,00 a mais" / "R$ 500,00 a menos"), sem sinal de menos. */
+function variacaoEmPalavras(delta) {
+  return delta >= 0 ? `${formatBRL(delta)} a mais` : `${formatBRL(-delta)} a menos`;
+}
+
+module.exports = { fraseCobertura, linhasSaldoConta, textoResumoPeriodo, textoResumoMes, valorConta, variacaoEmPalavras };
