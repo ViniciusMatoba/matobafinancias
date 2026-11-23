@@ -77,7 +77,9 @@ export function simularDias({ days, hoje, investidoInicial = 0, carryResgate = 0
       saldoReal: d.saldo,
       resgateNovo: Math.round(resgateNovo * 100) / 100,
       resgateAcum: Math.round(efetivo * 100) / 100,
-      falta: Math.round((R - efetivo) * 100) / 100,
+      // falta DO DIA: quanto a conta ainda fica abaixo de zero mesmo com o resgate simulado (não o pior buraco do período:
+      // depois que uma entrada cobre o buraco, a falta some)
+      falta: Math.max(0, Math.round(-(d.saldo + efetivo) * 100) / 100),
       adiavel: resgateNovo > 0 && d.saldo + aportesPlanejados >= 0,
       origem,
     };

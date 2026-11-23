@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.201';
-export const APP_VERSION_DATE = '17/11/2026';
+export const APP_VERSION = '1.6.202';
+export const APP_VERSION_DATE = '23/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.202',
+    date: '23/11/2026',
+    changes: [
+      'Fix na Projeção: o aviso "falta R$ X" aparecia em todos os dias seguintes a um buraco, mesmo depois de uma entrada (salário) cobri-lo — por isso um dia com total de R$ 3.335,05 mostrava "falta R$ 276,16". A falta agora é calculada por dia: só aparece enquanto a conta ainda fica abaixo de zero mesmo com o resgate simulado e some quando uma entrada cobre o buraco. O aviso do topo ("Mesmo resgatando tudo faltam até R$ X") continua mostrando o pior dia do período, e não aparece mais em meses seguintes em que a falta já foi coberta.',
+    ],
+  },
   {
     version: '1.6.201',
     date: '17/11/2026',

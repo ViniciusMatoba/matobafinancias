@@ -103,3 +103,42 @@ describe('simularDias — regras', () => {
     expect(resumirResgates({})).toEqual({ primeiroDia: null, acumulado: 0, faltaMax: 0 })
   })
 })
+
+describe('falta é do DIA (não o pior buraco do período)', () => {
+  /** Conta 500, investido 2.723,84; em 20/11 sai 3.500 (buraco de 3.000 → faltam 276,16); em 25/11 entra um salário de 5.000. */
+  const montar = (extra = []) => {
+    const txs = [
+      tx('ap0', 'investimento', 2723.84, '2026-10-01'),
+      tx('gr', 'saida', 3500, '2026-11-20'),
+      tx('sal', 'entrada', 5000, '2026-11-25'),
+      ...extra,
+    ]
+    const days = buildDailyProjection(txs, '2026-11-19', '2026-11-30', 500)
+    return { days, sim: simularDias({ days, hoje: HOJE, investidoInicial: totalInvestidoAte(txs, '2026-11-18') }) }
+  }
+
+  it('no dia do buraco: falta 276,16; depois do salário a falta some e o total volta a ser positivo', () => {
+    const { sim } = montar()
+    expect(sim['2026-11-20']).toMatchObject({ saldoReal: -3000, resgateNovo: 2723.84, falta: 276.16 })
+    expect(sim['2026-11-24'].falta).toBe(276.16)          // enquanto o buraco existe, a falta continua
+    expect(sim['2026-11-25'].falta).toBe(0)               // o salário cobriu: sem falta
+    expect(sim['2026-11-25'].conta).toBeGreaterThan(0)
+    expect(sim['2026-11-25'].total).toBeGreaterThan(0)
+    expect(sim['2026-11-30'].falta).toBe(0)
+  })
+
+  it('o aviso de falta do período continua sendo o pior dia', () => {
+    expect(resumirResgates(montar().sim).faltaMax).toBe(276.16)
+  })
+
+  it('nunca há falta em um dia em que a conta simulada não é negativa', () => {
+    const { sim } = montar()
+    for (const d of Object.values(sim)) { if (d.conta >= 0) expect(d.falta).toBe(0) }
+  })
+
+  it('novo buraco menor depois do primeiro, com o investido já todo usado: a falta volta a aparecer naquele dia', () => {
+    const { sim } = montar([tx('gr2', 'saida', 5000 + 2800, '2026-11-27')]) // depois do salário a conta fica negativa de novo
+    expect(sim['2026-11-26'].falta).toBe(0)
+    expect(sim['2026-11-27'].falta).toBeGreaterThan(0)
+  })
+})
