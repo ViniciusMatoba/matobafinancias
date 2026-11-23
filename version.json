@@ -1,7 +1,7 @@
 {
-  "version": "1.6.202",
+  "version": "1.6.203",
   "date": "23/11/2026",
   "notes": [
-    "Fix na Projeção: o aviso \"falta R$ X\" aparecia em todos os dias seguintes a um buraco, mesmo depois de uma entrada (salário) cobri-lo — por isso um dia com total de R$ 3.335,05 mostrava \"falta R$ 276,16\". A falta agora é calculada por dia: só aparece enquanto a conta ainda fica abaixo de zero mesmo com o resgate simulado e some quando uma entrada cobre o buraco. O aviso do topo (\"Mesmo resgatando tudo faltam até R$ X\") continua mostrando o pior dia do período, e não aparece mais em meses seguintes em que a falta já foi coberta."
+    "Projeção: corrige o espaçamento do card do dia quando há aviso de resgate. A mensagem \"⚠️ Resgatar R$ X · prazo\" (e \"Falta R$ X\") ficava espremida na coluna estreita do saldo e quebrava. Agora ela ocupa uma faixa de largura total logo abaixo do dia, com texto maior, e a coluna do saldo fica só com o total, a conta e o investido. Também atualizado o texto ao abrir o dia: o total não muda com o resgate."
   ]
 }
