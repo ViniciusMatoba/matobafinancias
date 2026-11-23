@@ -1,7 +1,14 @@
-export const APP_VERSION = '1.6.202';
+export const APP_VERSION = '1.6.203';
 export const APP_VERSION_DATE = '23/11/2026';
 
 export const CHANGELOG = [
+  {
+    version: '1.6.203',
+    date: '23/11/2026',
+    changes: [
+      'Projeção: corrige o espaçamento do card do dia quando há aviso de resgate. A mensagem "⚠️ Resgatar R$ X · prazo" (e "Falta R$ X") ficava espremida na coluna estreita do saldo e quebrava. Agora ela ocupa uma faixa de largura total logo abaixo do dia, com texto maior, e a coluna do saldo fica só com o total, a conta e o investido. Também atualizado o texto ao abrir o dia: o total não muda com o resgate.',
+    ],
+  },
   {
     version: '1.6.202',
     date: '23/11/2026',

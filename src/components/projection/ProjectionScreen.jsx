@@ -647,16 +647,6 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                               💰 {formatBRL(sim.investido)}
                             </span>
                           )}
-                          {sim && sim.resgateNovo > 0 && (
-                            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: '#f59e0b', background: 'rgba(245,158,11,0.14)', whiteSpace: 'nowrap' }}>
-                              ⚠️ resgatar {formatBRL(sim.resgateNovo)}{sim.origem?.some(o => o.liquidez !== 'imediata') ? ' · prazo' : ''}
-                            </span>
-                          )}
-                          {sim && sim.falta > 0 && (
-                            <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, color: 'var(--saida)', background: 'rgba(239,68,68,0.12)', whiteSpace: 'nowrap' }}>
-                              falta {formatBRL(sim.falta)}
-                            </span>
-                          )}
                           {podeAbrir && (
                             <span style={{ color: 'var(--text-muted)', display: 'flex' }}>
                               {isOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -664,6 +654,31 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                           )}
                         </div>
                       </button>
+
+                      {/* Avisos de resgate/falta: faixa de largura total (na coluna estreita do saldo o texto quebrava) */}
+                      {sim && (sim.resgateNovo > 0 || sim.falta > 0) && (
+                        <div style={{
+                          display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 10px 8px',
+                          borderTop: '1px dashed var(--border)',
+                        }}>
+                          {sim.resgateNovo > 0 && (
+                            <span style={{
+                              fontSize: 11, fontWeight: 700, lineHeight: 1.3, padding: '3px 8px', borderRadius: 6,
+                              color: '#f59e0b', background: 'rgba(245,158,11,0.14)', maxWidth: '100%', wordBreak: 'break-word',
+                            }}>
+                              ⚠️ Resgatar {formatBRL(sim.resgateNovo)}{sim.origem?.some(o => o.liquidez !== 'imediata') ? ' · prazo' : ''}
+                            </span>
+                          )}
+                          {sim.falta > 0 && (
+                            <span style={{
+                              fontSize: 11, fontWeight: 700, lineHeight: 1.3, padding: '3px 8px', borderRadius: 6,
+                              color: 'var(--saida)', background: 'rgba(239,68,68,0.12)', maxWidth: '100%', wordBreak: 'break-word',
+                            }}>
+                              Falta {formatBRL(sim.falta)}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
                       {/* Expansão: detalhes */}
                       {isOpen && podeAbrir && (
@@ -674,7 +689,7 @@ export default function ProjectionScreen({ transactions, wallets, cards = [], ta
                         }}>
                           {sim && (sim.resgateNovo > 0 || sim.falta > 0) && (
                             <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--text-secondary)' }}>
-                              {sim.resgateNovo > 0 && `A conta ficaria em ${formatBRL(sim.saldoReal)}. Para cobrir este dia é necessário resgatar ${formatBRL(sim.resgateNovo)} do investido (acumulado ${formatBRL(sim.resgateAcum)}). O saldo exibido já considera esse resgate.${textoOrigem(sim.origem)}`}
+                              {sim.resgateNovo > 0 && `A conta ficaria em ${formatBRL(sim.saldoReal)}. Para cobrir este dia é necessário resgatar ${formatBRL(sim.resgateNovo)} do investido (acumulado ${formatBRL(sim.resgateAcum)}). O total do dia não muda: o resgate só move dinheiro do investido para a conta.${textoOrigem(sim.origem)}`}
                               {sim.resgateNovo > 0 && sim.adiavel && ' Outra saída: adiar o aporte planejado.'}
                               {sim.falta > 0 && ` Mesmo resgatando todo o investido faltam ${formatBRL(sim.falta)}.`}
                             </p>
